@@ -2,8 +2,6 @@
 
 Plataforma de networking profissional para Analistas Técnicos/as de Políticas Sociais (ATPS).
 
-**Status:** Fases 0–10 concluídas — https://redeatps.org
-
 ---
 
 ## O que é
