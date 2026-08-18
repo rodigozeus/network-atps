@@ -1,0 +1,33 @@
+services:
+  atps-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - uploads:/app/uploads
+    env_file:
+      - .env
+    networks:
+      - internal
+      - db-network
+    restart: unless-stopped
+
+  atps-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8512:80"
+    networks:
+      - internal
+    depends_on:
+      - atps-api
+    restart: unless-stopped
+
+networks:
+  internal:
+  db-network:
+    external: true
+
+volumes:
+  uploads:

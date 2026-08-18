@@ -1,0 +1,30 @@
+.spinner {
+  display: inline-block;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+/* Sizes */
+.sm { width: 14px; height: 14px; border-width: 2px; }
+.md { width: 24px; height: 24px; border-width: 3px; }
+.lg { width: 40px; height: 40px; border-width: 4px; }
+
+/* Colors — sets the visible arc */
+.primary {
+  border-top-color: var(--color-primary);
+  border-right-color: var(--color-primary);
+}
+.current {
+  border-top-color: currentColor;
+  border-right-color: currentColor;
+}
+.white {
+  border-top-color: #fff;
+  border-right-color: #fff;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

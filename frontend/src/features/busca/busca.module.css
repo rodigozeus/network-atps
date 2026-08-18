@@ -1,0 +1,310 @@
+/* ── Page wrapper ─────────────────────────────── */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  min-width: 0;
+  width: 100%;
+}
+
+/* ── Search bar ───────────────────────────────── */
+.searchBar {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-end;
+}
+
+.searchInput {
+  flex: 1;
+}
+
+/* ── Two-column layout ────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: var(--sp-6);
+  align-items: start;
+}
+
+/* ── Sidebar ──────────────────────────────────── */
+.sidebar {
+  background: var(--color-surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  position: sticky;
+  top: calc(var(--header-h) + var(--sp-5));
+}
+
+.sidebarTitle {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.filterLabel {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.filterInput {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: var(--font-sm);
+  font-family: var(--font);
+  color: var(--color-text);
+  background: var(--color-background);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--r);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--t), box-shadow var(--t);
+}
+
+.filterInput:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(241, 94, 35, 0.12);
+}
+
+.filterInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ── Results area ─────────────────────────────── */
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.resultsHeader {
+  display: flex;
+  align-items: center;
+}
+
+.resultsCount {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+}
+
+/* ── Results grid ─────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--sp-4);
+  min-width: 0;
+  width: 100%;
+}
+
+/* ── Center / empty / error states ───────────── */
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-16) 0;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-16) 0;
+  gap: var(--sp-2);
+}
+
+.emptyTitle {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.emptySub {
+  font-size: var(--font-sm);
+  color: var(--color-text-muted);
+}
+
+.errorText {
+  color: var(--color-danger);
+  font-size: var(--font-sm);
+}
+
+/* ── Load more sentinel ───────────────────────── */
+.loadMore {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-4) 0;
+  min-height: 48px;
+}
+
+/* ── Result card ──────────────────────────────── */
+.resultCard {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  gap: var(--sp-3);
+  background: var(--color-surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow);
+  padding: var(--sp-4);
+  text-decoration: none;
+  color: inherit;
+  border: 1.5px solid transparent;
+  transition: box-shadow var(--t), transform var(--t), border-color var(--t);
+}
+
+.resultCard:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+}
+
+.resultAvatarInitials {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-full);
+  background: var(--color-primary-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.resultAvatarImg {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-full);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.resultCardBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.resultName {
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resultCargo {
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resultOrg {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resultTemas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-top: var(--sp-2);
+}
+
+.temasExtra {
+  font-size: var(--font-xs);
+  color: var(--color-text-muted);
+  align-self: center;
+  padding: 2px 6px;
+}
+
+/* ── Filter toggle (mobile only) ─────────────────── */
+.filterToggle {
+  display: none;
+}
+
+/* ── Responsive ───────────────────────────────── */
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    display: none;
+  }
+
+  .sidebar.sidebarOpen {
+    display: flex;
+  }
+
+  .filterToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 8px 14px;
+    font-size: var(--font-sm);
+    font-weight: 500;
+    font-family: var(--font);
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--r);
+    cursor: pointer;
+    transition: border-color var(--t), color var(--t), background var(--t);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .filterToggle:hover,
+  .filterToggleActive {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background: var(--color-primary-bg);
+  }
+
+  .searchBar {
+    flex-wrap: wrap;
+  }
+
+  .searchInput {
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .resultCard {
+    padding: var(--sp-3);
+  }
+}

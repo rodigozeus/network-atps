@@ -1,0 +1,39 @@
+Migrations da Rede ATPS — Alembic (single-database configuration)
+
+Para aplicar todas as migrações pendentes:
+    alembic upgrade head
+
+Para reverter uma migração:
+    alembic downgrade -1
+
+Para gerar uma nova migração automática:
+    alembic revision --autogenerate -m "descricao"
+
+────────────────────────────────────────────────────────────
+Histórico de revisões
+────────────────────────────────────────────────────────────
+
+1f5041d00621  create_initial_tables                 2026-04-27
+    Criação das tabelas iniciais: analistas, formacoes, temas_atuacao.
+    email_institucional era o identificador principal (único, NOT NULL).
+
+a3b8c2d1e4f5  email_pessoal_primary_identifier      2026-04-28
+    email_pessoal passa a ser o identificador de acesso (NOT NULL, unique).
+    email_institucional torna-se opcional (nullable).
+
+b4c9d3e2f6a7  telefone_institucional_nullable        2026-04-28
+    telefone_institucional passa a ser opcional (nullable).
+
+c5d0e4f3a8b9  campo_ativo_analistas                 2026-04-28
+    Adiciona coluna `ativo` (boolean, default true) à tabela analistas,
+    permitindo desativar contas sem excluí-las.
+
+d6e1f5a4b9c0  role_andeps                           2026-04-28
+    Adiciona valor 'andeps' ao enum `role`, criando um nível intermediário
+    entre analista e admin.
+
+e7f2a6b3c1d8  campo_pendente_revisao                2026-05-11
+    Adiciona coluna `pendente_revisao` (boolean, default false) à tabela
+    analistas. Usada para sinalizar cadastros cujo nome não foi encontrado
+    na lista de servidores ATPs (portal da transparência). Esses perfis
+    começam inativos e ficam destacados no painel admin para revisão manual.

@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+
+# Variáveis de ambiente — NUNCA commitar
+.env
+*.env
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+
+# Docker
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Alembic (não versionar cache local)
+backend/alembic/versions/__pycache__/
+
+# Claude Code
+.claude/
+
+# Arquivos locais não versionados
+old/
+visual_ref/
+*.pdf
+servidor.csv

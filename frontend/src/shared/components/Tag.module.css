@@ -1,0 +1,44 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-xs);
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  white-space: nowrap;
+  line-height: 1.4;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Active = em exercício atual */
+.primary.active {
+  background-color: var(--color-primary-bg);
+  color: var(--color-primary-dark);
+  border: 1px solid rgba(241, 94, 35, 0.25);
+}
+
+.primary.inactive {
+  background-color: #f0f0f0;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.neutral.active, .neutral.inactive {
+  background-color: #f0f0f0;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.success.active {
+  background-color: #d1e7dd;
+  color: #0a4228;
+  border: 1px solid #a3cfbb;
+}
+
+.success.inactive {
+  background-color: #f0f0f0;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
