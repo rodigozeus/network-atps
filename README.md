@@ -2,7 +2,7 @@
 
 Plataforma de networking profissional para Analistas Técnicos/as de Políticas Sociais (ATPS).
 
-**Status:** Fases 0–10 concluídas — https://atps.damaceno.org
+**Status:** Fases 0–10 concluídas — https://redeatps.org
 
 ---
 
@@ -49,7 +49,7 @@ A Rede ATPS é uma plataforma web onde cada analista cria e mantém seu perfil p
 | Servidor web | nginx |
 | Containers | Docker + docker-compose |
 | CI/CD | GitHub Actions (self-hosted runner) |
-| Acesso público | Cloudflare Tunnel → `atps.damaceno.org` |
+| Acesso público | Cloudflare Tunnel → `redeatps.org` |
 
 ---
 
@@ -60,7 +60,7 @@ GitHub (push em main)
   └── GitHub Actions — runner damaceno-atps
         └── docker compose -f docker-compose.prod.yml up --build
               ├── atps-frontend  (nginx + React build)  → 127.0.0.1:8512
-              │     Cloudflare Tunnel → atps.damaceno.org
+              │     Cloudflare Tunnel → redeatps.org
               └── atps-api       (FastAPI)
                     └── db-network → postgres:5432/atps_db
 ```
