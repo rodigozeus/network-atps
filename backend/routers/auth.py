@@ -117,7 +117,7 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
         if analista.pendente_revisao:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Cadastro pendente de verificação. Seu nome não foi encontrado na lista de ATPs. Aguarde a análise de um administrador.",
+                detail="Cadastro pendente de verificação. Não foi possível confirmar automaticamente seu vínculo como ATPS junto ao Portal da Transparência. Aguarde a análise de um administrador — você receberá um e-mail assim que sua conta for ativada.",
             )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

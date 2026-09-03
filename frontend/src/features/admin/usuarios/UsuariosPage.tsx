@@ -92,7 +92,7 @@ export default function UsuariosPage() {
 
   function statusBadge(a: AnalistaAdminOut) {
     if (a.pendente_revisao) {
-      return <span className={styles.badgePendente} title="Nome não encontrado na lista de ATPs">Ag. revisão</span>
+      return <span className={styles.badgePendente} title="Vínculo como ATPS não confirmado automaticamente no Portal da Transparência">Ag. revisão</span>
     }
     return (
       <span className={a.ativo ? styles.badgeAtivo : styles.badgeInativo}>
