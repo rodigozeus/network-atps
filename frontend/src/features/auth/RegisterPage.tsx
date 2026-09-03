@@ -33,7 +33,7 @@ const TERMO_LGPD = `A Rede ATPS é uma plataforma voltada à conexão profission
 
 1. Quais dados coletamos e por quê
 — Nome, e-mail pessoal e senha: necessários para criar e proteger sua conta.
-— CPF: utilizado uma única vez, no momento do cadastro, exclusivamente para consultar a base pública de servidores do Portal da Transparência do Governo Federal e confirmar seu vínculo como ATPS. Após essa consulta, o CPF é convertido em um código criptográfico irreversível (hash) e o número original é descartado — nem mesmo os administradores da plataforma têm acesso ao seu CPF.
+— CPF: utilizado uma única vez, no momento do cadastro, exclusivamente para consultar a base pública de servidores do Portal da Transparência do Governo Federal e confirmar seu vínculo como ATPS. Após essa consulta, o CPF é criptografado e o número original é descartado — nem mesmo os administradores da plataforma têm acesso ao seu CPF.
 — Dados profissionais complementares (e-mail institucional, celular, órgão de lotação, cargo, formação acadêmica, temas de atuação, foto): fornecidos por você, de forma opcional, para compor seu perfil profissional.
 
 2. Finalidade do tratamento
@@ -49,7 +49,7 @@ O tratamento se baseia no seu consentimento (art. 7º, I, LGPD), livremente conc
 Você pode, a qualquer momento: acessar e corrigir seus dados na página "Meu Perfil"; revogar a visibilidade do e-mail pessoal e do celular; e excluir permanentemente sua conta e todos os seus dados, de forma irreversível, na opção "Excluir minha conta" do seu perfil.
 
 6. Armazenamento e segurança
-Sua senha e seu CPF são armazenados apenas na forma de hash (criptografia unidirecional), nunca em texto puro. Os dados ficam em banco de dados protegido, acessível apenas pela equipe técnica responsável pela operação da plataforma.
+Sua senha e seu CPF são armazenados de forma criptografada, nunca em texto puro. Os dados ficam em banco de dados protegido, acessível apenas pela equipe técnica responsável pela operação da plataforma.
 
 Ao marcar a caixa abaixo, você declara que leu e concorda com este Termo de Consentimento, incluindo a consulta do seu CPF ao Portal da Transparência para fins de verificação do vínculo funcional, nos termos aqui descritos.`
 
@@ -192,7 +192,7 @@ export default function RegisterPage() {
             />
             <p className={styles.notice} style={{ marginTop: 'var(--sp-2)' }}>
               Usado apenas uma vez para confirmar seu vínculo como ATPS junto ao
-              Portal da Transparência. Em seguida é convertido em hash e o número
+              Portal da Transparência. Em seguida é criptografado e o número
               original é descartado — não é armazenado nem fica acessível a ninguém.
             </p>
           </div>
