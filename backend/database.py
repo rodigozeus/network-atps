@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     smtp_from: str | None = None
     frontend_url: str = "http://localhost:5173"
 
+    cpf_hash_secret: str
+    portal_transparencia_token: str | None = None
+
     class Config:
         env_file = ".env"
         extra = "ignore"

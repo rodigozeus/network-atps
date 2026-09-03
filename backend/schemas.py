@@ -1,5 +1,6 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from cpf_utils import cpf_valido
 from models import NivelFormacao, Role, Turma
 
 
@@ -35,6 +36,24 @@ class AnalistaBase(BaseModel):
 
 class AnalistaCreate(AnalistaBase):
     senha: str
+    cpf: str
+    aceite_termos: bool
+
+    @field_validator("cpf")
+    @classmethod
+    def _valida_cpf(cls, v: str) -> str:
+        if not cpf_valido(v):
+            raise ValueError("CPF inválido")
+        return v
+
+    @field_validator("aceite_termos")
+    @classmethod
+    def _valida_aceite(cls, v: bool) -> bool:
+        if not v:
+            raise ValueError(
+                "É necessário concordar com o Termo de Consentimento (LGPD) para se cadastrar"
+            )
+        return v
 
 class AnalistaUpdate(BaseModel):
     """Todos os campos opcionais — PUT /perfil/me atualiza só o que vier."""
@@ -222,3 +241,6 @@ class EsqueciSenhaIn(BaseModel):
 class RedefinirSenhaIn(BaseModel):
     token: str
     senha: str = Field(min_length=8)
+
+class ExcluirContaIn(BaseModel):
+    senha: str

@@ -7,10 +7,11 @@ from database import get_db
 from models import Analista, Formacao, TemaAtuacao
 from schemas import (
     AnalistaOut, AnalistaUpdate, AnalistaPublico,
+    ExcluirContaIn,
     FormacaoBase, FormacaoOut,
     TemaBase, TemaOut,
 )
-from auth import get_current_user
+from auth import get_current_user, verify_password
 
 router = APIRouter(tags=["perfil"])
 
@@ -36,6 +37,23 @@ def update_meu_perfil(
     db.commit()
     db.refresh(analista)
     return analista
+
+
+@router.delete("/perfil/me", status_code=status.HTTP_204_NO_CONTENT)
+def excluir_minha_conta(
+    body: ExcluirContaIn,
+    analista: Analista = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Exclusão definitiva da conta e de todos os dados pessoais, conforme LGPD."""
+    if not verify_password(body.senha, analista.senha_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Senha incorreta")
+
+    if analista.foto_path and os.path.exists(analista.foto_path):
+        os.remove(analista.foto_path)
+
+    db.delete(analista)
+    db.commit()
 
 
 # --- Perfil público de outro analista ---

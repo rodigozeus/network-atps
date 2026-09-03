@@ -1,12 +1,11 @@
 import csv
 import io
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
 from auth import get_current_admin
-from csv_utils import CSV_PATH, resetar_cache
 from database import get_db
 from models import Analista, Formacao, NivelFormacao, Role, TemaAtuacao
 from schemas import (
@@ -265,51 +264,3 @@ def exportar_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=analistas.csv"},
     )
-
-
-@router.get("/lista-servidores")
-def info_lista_servidores(
-    _: Analista = Depends(get_current_admin),
-):
-    if not CSV_PATH.exists():
-        return {"existe": False, "total_servidores": 0}
-    count = 0
-    with open(CSV_PATH, encoding="utf-8-sig") as f:
-        reader = csv.reader(f, delimiter=";")
-        next(reader, None)  # skip header
-        for row in reader:
-            if len(row) >= 3 and row[2].strip():
-                count += 1
-    return {"existe": True, "total_servidores": count}
-
-
-@router.post("/lista-servidores")
-async def upload_lista_servidores(
-    arquivo: UploadFile = File(...),
-    admin: Analista = Depends(get_current_admin),
-):
-    if admin.role != Role.admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Apenas administradores podem atualizar a lista.")
-
-    if not (arquivo.filename or "").lower().endswith(".csv"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O arquivo deve ser um CSV.")
-
-    conteudo = await arquivo.read()
-    try:
-        texto = conteudo.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Encoding inválido. Use UTF-8.")
-
-    reader = csv.reader(io.StringIO(texto), delimiter=";")
-    cabecalho = next(reader, None)
-    if not cabecalho or len(cabecalho) < 3:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato inválido. Esperado: campos separados por ponto-e-vírgula com pelo menos 3 colunas.")
-
-    total = sum(1 for row in reader if len(row) >= 3 and row[2].strip())
-    if total == 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nenhum nome encontrado no arquivo.")
-
-    CSV_PATH.write_bytes(conteudo)
-    resetar_cache()
-
-    return {"total_servidores": total}

@@ -36,6 +36,8 @@ class Analista(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     nome: Mapped[str] = mapped_column(String(200), nullable=False)
     senha_hash: Mapped[str] = mapped_column(String(200), nullable=False)
+    cpf_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True, index=True)
+    termos_aceitos_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     role: Mapped[Role] = mapped_column(Enum(Role), default=Role.analista, nullable=False)
 
     # Contato

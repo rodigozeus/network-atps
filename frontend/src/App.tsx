@@ -13,7 +13,6 @@ import AdminRoute from '@features/admin/AdminRoute'
 import AdminLayout from '@features/admin/AdminLayout'
 import UsuariosPage from '@features/admin/usuarios/UsuariosPage'
 import StatsPage from '@features/admin/stats/StatsPage'
-import ConfiguracoesPage from '@features/admin/configuracoes/ConfiguracoesPage'
 
 function PlaceholderPage({ title, desc }: { title: string; desc?: string }) {
   return (
@@ -54,7 +53,6 @@ export default function App() {
                 <Route path="/admin" element={<Navigate to="/admin/usuarios" replace />} />
                 <Route path="/admin/usuarios" element={<UsuariosPage />} />
                 <Route path="/admin/stats" element={<StatsPage />} />
-                <Route path="/admin/configuracoes" element={<ConfiguracoesPage />} />
               </Route>
             </Route>
           </Route>

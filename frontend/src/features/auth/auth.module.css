@@ -77,6 +77,66 @@
   margin: 0;
 }
 
+.confirmedNotice {
+  background: #d1e7dd;
+  border: 1px solid #a3cfbb;
+  border-radius: var(--r);
+  padding: var(--sp-4) var(--sp-5);
+  color: #0a4228;
+  font-size: var(--font-sm);
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.confirmedNotice p {
+  margin: 0;
+}
+
+.termosLabel {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: var(--sp-2);
+}
+
+.termosBox {
+  max-height: 180px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  background: var(--color-background);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--r);
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--font-xs);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkboxLabel input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: var(--font-xs);
+  margin-top: var(--sp-2);
+}
+
 .footer {
   margin-top: var(--sp-6);
   text-align: center;

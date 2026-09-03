@@ -29,4 +29,5 @@ export const perfilApi = {
   },
   getAnalista: (id: number | string) =>
     api.get<AnalistaPublico>(`/analistas/${id}`).then((r) => r.data),
+  deleteMe: (senha: string) => api.delete('/perfil/me', { data: { senha } }),
 }

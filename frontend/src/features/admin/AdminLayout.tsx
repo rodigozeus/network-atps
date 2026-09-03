@@ -34,14 +34,6 @@ export default function AdminLayout() {
           >
             Estatísticas
           </NavLink>
-          <NavLink
-            to="/admin/configuracoes"
-            className={({ isActive }) =>
-              [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
-            }
-          >
-            Configurações
-          </NavLink>
         </nav>
       </aside>
       <div className={styles.adminContent}>

@@ -13,8 +13,9 @@ from auth import (
     create_access_token, create_refresh_token,
     _decode_token, get_current_user,
 )
-from csv_utils import nome_consta_na_lista
+from cpf_utils import hash_cpf, limpar_cpf
 from email_utils import enviar_email_redefinicao_senha
+from portal_transparencia import consultar_situacao_atps
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -36,12 +37,24 @@ def _hash_reset_token(token: str) -> str:
 
 @router.post("/register", response_model=AnalistaOut, status_code=status.HTTP_201_CREATED)
 def register(body: AnalistaCreate, db: Session = Depends(get_db)):
-    encontrado = nome_consta_na_lista(body.nome)
+    cpf_limpo = limpar_cpf(body.cpf)
+    cpf_hash_valor = hash_cpf(cpf_limpo)
+
+    if db.query(Analista).filter(Analista.cpf_hash == cpf_hash_valor).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="CPF já cadastrado")
+
+    # Confirmação de vínculo ATPS é feita exclusivamente via Portal da Transparência.
+    # Qualquer resultado que não seja uma confirmação positiva (CPF não encontrado, ou
+    # API indisponível/não configurada) deixa o cadastro pendente de revisão manual.
+    encontrado = consultar_situacao_atps(cpf_limpo) is True
+
     analista = Analista(
         nome=body.nome,
         email_pessoal=body.email_pessoal,
         telefone_institucional=body.telefone_institucional,
         senha_hash=hash_password(body.senha),
+        cpf_hash=cpf_hash_valor,
+        termos_aceitos_em=datetime.now(timezone.utc),
         ativo=encontrado,
         pendente_revisao=not encontrado,
     )
@@ -53,7 +66,7 @@ def register(body: AnalistaCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="E-mail já cadastrado",
+            detail="E-mail ou CPF já cadastrado",
         )
     return analista
 

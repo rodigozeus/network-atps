@@ -91,6 +91,8 @@ export interface AnalistaCreate {
   nome: string
   email_pessoal: string
   senha: string
+  cpf: string
+  aceite_termos: boolean
 }
 
 export interface AnalistaUpdate {

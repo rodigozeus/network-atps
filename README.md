@@ -17,13 +17,15 @@ A Rede ATPS é uma plataforma web onde cada analista cria e mantém seu perfil p
 - **Autenticação** — registro e login por e-mail pessoal (privado por padrão, compartilhado só com consentimento explícito); JWT com refresh token; rotas protegidas; após login redireciona direto para a busca
 - **Redefinição de senha por e-mail** — fluxo "esqueci minha senha" com token de uso único (válido por 1h, hash `sha256` no banco); envio por SMTP configurável, com fallback para log no console em dev quando o SMTP não está configurado
 - **Bloqueio por tentativas de login** — 5 tentativas incorretas bloqueiam a conta por 15 minutos
-- **Validação de cadastro por lista de servidores** — nome informado no registro é conferido contra uma lista de ATPs (CSV carregado pelo admin); encontrado → conta ativada na hora; não encontrado → conta fica `pendente_revisao` até um admin aprovar manualmente
+- **Validação de cadastro por CPF (Portal da Transparência)** — no registro, o CPF é consultado uma única vez na API de Dados do Portal da Transparência para confirmar vínculo ativo como ATPS; confirmado → conta ativada na hora; não confirmado (ou API indisponível/não configurada) → conta fica `pendente_revisao` até um admin aprovar manualmente. O CPF nunca é armazenado — só um hash (HMAC-SHA256) para impedir cadastro duplicado
+- **Termo de Consentimento LGPD no cadastro** — aceite obrigatório, explicando uso do CPF, finalidade dos dados e direitos do titular
 - **Perfil completo** — ministério → secretaria → departamento → CG → coordenação (com siglas), contatos, controle de visibilidade (celular e e-mail pessoal), cargo FCE, portal URL, turma (2012, 2016, CPNU 2024), foto de perfil
 - **Formação acadêmica** — múltiplos registros por nível (graduação, especialização, mestrado, doutorado)
 - **Temas de atuação** — lista dinâmica com flag de exercício atual (habilita busca por histórico)
 - **Busca multi-critério** — palavra-chave geral, filtros por ministério, secretaria, tema e formação, combinados livremente; sincronizado com URL (compartilhável); scroll infinito no frontend (carrega a próxima página automaticamente ao aproximar do fim da lista)
 - **Ordenação ponderada** — sem filtros ativos, perfis aparecem em ordem aleatória ponderada pela completude: cada campo preenchido (13 itens únicos — contatos, lotação, cargo, foto, formação, temas) aumenta o peso no sorteio; todos têm chance de aparecer no topo, mas perfis mais completos têm até 14× mais probabilidade; perfis sem foto são sempre exibidos ao final da lista
-- **Painel administrativo Andeps** — gestão de usuários (busca, filtro por status/pendência, edição, ativação/desativação/reativação, exclusão permanente), estatísticas da carreira (por ministério, formação e tema, com gráficos), exportação CSV completa, tela de configurações para atualizar a lista de servidores; roles: `admin` (acesso total) e `andeps` (sem edição de perfil, sem exclusão)
+- **Painel administrativo Andeps** — gestão de usuários (busca, filtro por status/pendência, edição, ativação/desativação/reativação, exclusão permanente), estatísticas da carreira (por ministério, formação e tema, com gráficos), exportação CSV completa; roles: `admin` (acesso total) e `andeps` (sem edição de perfil, sem exclusão)
+- **Exclusão de conta pelo próprio usuário** — apaga permanentemente todos os dados pessoais (perfil, formações, temas, foto), conforme LGPD
 - **Layout responsivo** — experiência otimizada para mobile: header compacto, sidebar de filtros colapsável, cards em coluna única em telas pequenas, padding adaptado em todos os formulários
 - **Consentimento LGPD** — ativação de visibilidade de celular/e-mail pessoal exige confirmação explícita; celular exibido como link direto para o WhatsApp com mensagem pré-preenchida
 - **CI/CD automático** — push em `main` → build → migrations Alembic → deploy no damaceno com smoke test
@@ -79,7 +81,7 @@ network-atps/
 │   │   │   ├── auth/       # Login, registro, esqueci/redefinir senha
 │   │   │   ├── perfil/     # Criação e edição de perfil
 │   │   │   ├── busca/      # Busca e descoberta (scroll infinito)
-│   │   │   └── admin/      # Painel Andeps (usuários, stats, exportação, configurações)
+│   │   │   └── admin/      # Painel Andeps (usuários, stats, exportação)
 │   │   ├── shared/
 │   │   │   ├── components/ # Button, Input, Card, Tag, Badge, Spinner, Layout
 │   │   │   ├── hooks/      # useAuth, useApi
@@ -95,10 +97,11 @@ network-atps/
 │   │   ├── auth.py         # Registro, login, refresh, esqueci/redefinir senha, JWT
 │   │   ├── perfil.py       # CRUD completo + foto upload
 │   │   ├── busca.py        # Busca multi-critério paginada
-│   │   └── admin.py        # Usuários, stats, exportação CSV, lista de servidores
+│   │   └── admin.py        # Usuários, stats, exportação CSV
 │   ├── auth.py              # Hash de senha, tokens JWT, dependências de autenticação
 │   ├── email_utils.py       # Envio de e-mail de redefinição de senha (SMTP)
-│   ├── csv_utils.py         # Validação de nome contra a lista de servidores
+│   ├── cpf_utils.py         # Validação e hash (HMAC-SHA256) do CPF
+│   ├── portal_transparencia.py  # Consulta à API de Dados para confirmar vínculo ATPS
 │   ├── models.py
 │   ├── schemas.py
 │   ├── database.py
@@ -132,7 +135,7 @@ O frontend usa **CSS Modules** com design tokens centralizados em `index.css` (p
 - Após login: redirecionado automaticamente para `/busca`
 - Após registro: redirecionado para `/login`
 - `/esqueci-senha` → `/redefinir-senha?token=...`: fluxo de recuperação de senha, público (fora do `Layout` autenticado)
-- Cadastro não encontrado na lista de servidores: fica pendente de revisão manual por um admin antes de poder logar
+- Cadastro sem confirmação de vínculo ATPS pelo Portal da Transparência: fica pendente de revisão manual por um admin antes de poder logar
 
 ---
 
@@ -143,7 +146,9 @@ analistas
   id, nome, senha_hash, criado_em, atualizado_em
   role: analista | andeps | admin
   ativo: bool (soft delete — desativação sem perda de dados)
-  pendente_revisao: bool (cadastro não encontrado na lista de servidores)
+  pendente_revisao: bool (vínculo ATPS não confirmado pelo Portal da Transparência)
+  cpf_hash (hash HMAC-SHA256 — o CPF em si nunca é armazenado)
+  termos_aceitos_em (data/hora do aceite do Termo de Consentimento LGPD no cadastro)
   email_pessoal (obrigatório — identificador de acesso, privado por padrão)
   email_institucional (opcional)
   visibilidade_email_pessoal
@@ -196,6 +201,18 @@ Nenhum dado de contato pessoal é exposto a visitantes não autenticados.
 
 O tratamento dos dados pessoais dos analistas cadastrados tem como base legal o **legítimo interesse** no contexto de uma rede profissional de servidores públicos da carreira ATPS, conforme art. 7º, IX da LGPD, e o **consentimento explícito** (art. 7º, I) para os dados de contato de acesso opcional.
 
+### Termo de Consentimento no cadastro
+
+O registro exige aceite explícito (checkbox obrigatório) de um Termo de Consentimento que explica, em linguagem clara: quais dados são coletados e por quê, o uso do CPF para verificação de vínculo, finalidade do tratamento, compartilhamento, base legal e os direitos do titular. A data/hora do aceite fica registrada em `termos_aceitos_em`.
+
+### CPF — uso único, nunca armazenado
+
+O CPF informado no cadastro é usado **uma única vez**, no momento do registro, exclusivamente para consultar a API de Dados do Portal da Transparência e confirmar o vínculo ativo como ATPS. Em seguida ele é descartado — só um hash HMAC-SHA256 (`cpf_hash`) é persistido, apenas para impedir cadastro duplicado. Nem administradores têm acesso ao CPF em texto claro.
+
+### Exclusão de conta (direito ao apagamento)
+
+Qualquer usuário pode excluir permanentemente sua conta na própria página de perfil ("Zona de risco"). A exclusão exige confirmação explícita (checkbox + senha), avisa que é irreversível, e apaga definitivamente todos os dados pessoais — perfil, formações, temas de atuação e foto.
+
 ---
 
 ## Segurança
@@ -204,7 +221,7 @@ O tratamento dos dados pessoais dos analistas cadastrados tem como base legal o 
 - Autenticação stateless com JWT (access 7d + refresh 30d)
 - Redefinição de senha por token de uso único (hash `sha256`, validade de 1h, invalidado após o uso)
 - Bloqueio de login após 5 tentativas incorretas (15 minutos)
-- Validação de identidade no cadastro contra lista de servidores (nomes fora da lista exigem aprovação manual de um admin)
+- Validação de identidade no cadastro por CPF, consultado ao Portal da Transparência (CPFs não confirmados exigem aprovação manual de um admin) — CPF nunca é armazenado, só um hash HMAC-SHA256
 - HTTPS automático via Cloudflare
 - Dados sensíveis (celular, e-mail pessoal) só exibidos após consentimento explícito e apenas para usuários autenticados
 - Variáveis de ambiente via `.env` (nunca vão ao repositório)
