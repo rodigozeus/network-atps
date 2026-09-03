@@ -139,15 +139,22 @@ export default function ProfilePage() {
         <Button onClick={() => setEditMode(true)}>Editar Perfil</Button>
       </div>
 
-      <div className={styles.formCard} style={{ marginTop: 'var(--sp-8)', border: '1px solid var(--color-danger)' }}>
-        <p className={styles.formCardTitle}>Zona de risco</p>
-        <p className={styles.modalText} style={{ marginBottom: 'var(--sp-4)' }}>
-          Excluir sua conta apaga permanentemente todos os seus dados pessoais e profissionais
-          da Rede ATPS, em conformidade com a LGPD. Essa ação não pode ser desfeita.
-        </p>
-        <Button variant="danger" onClick={() => setShowDeleteModal(true)}>
+      <div style={{ textAlign: 'center', marginTop: 'var(--sp-10)' }}>
+        <button
+          type="button"
+          onClick={() => setShowDeleteModal(true)}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            color: 'var(--color-text-muted)',
+            fontSize: 'var(--font-xs)',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+          }}
+        >
           Excluir minha conta
-        </Button>
+        </button>
       </div>
 
       {showDeleteModal && (
