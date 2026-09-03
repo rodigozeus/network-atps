@@ -154,16 +154,23 @@ def excluir_usuario(
 @router.post("/usuarios/{analista_id}/reativar", response_model=AnalistaAdminOut)
 def reativar_usuario(
     analista_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _: Analista = Depends(get_current_admin),
 ):
     analista = db.get(Analista, analista_id)
     if analista is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analista não encontrado")
+
+    ativou_conta = not analista.ativo
     analista.ativo = True
     analista.pendente_revisao = False
     db.commit()
     db.refresh(analista)
+
+    if ativou_conta:
+        background_tasks.add_task(enviar_email_conta_ativada, analista.email_pessoal, analista.nome)
+
     return analista
 
 
