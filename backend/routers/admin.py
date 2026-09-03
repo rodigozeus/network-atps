@@ -1,12 +1,13 @@
 import csv
 import io
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
 from auth import get_current_admin
 from database import get_db
+from email_utils import enviar_email_conta_ativada
 from models import Analista, Formacao, NivelFormacao, Role, TemaAtuacao
 from schemas import (
     AdminStats,
@@ -69,6 +70,7 @@ def listar_usuarios(
 def editar_usuario(
     analista_id: int,
     body: AnalistaAdminUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     admin: Analista = Depends(get_current_admin),
 ):
@@ -87,6 +89,8 @@ def editar_usuario(
         )
 
     updates = body.model_dump(exclude_unset=True)
+    ativou_conta = updates.get('ativo') is True and not analista.ativo
+
     for field, value in updates.items():
         setattr(analista, field, value)
 
@@ -95,6 +99,10 @@ def editar_usuario(
 
     db.commit()
     db.refresh(analista)
+
+    if ativou_conta:
+        background_tasks.add_task(enviar_email_conta_ativada, analista.email_pessoal, analista.nome)
+
     return analista
 
 

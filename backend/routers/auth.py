@@ -14,7 +14,11 @@ from auth import (
     _decode_token, get_current_user,
 )
 from cpf_utils import hash_cpf, limpar_cpf
-from email_utils import enviar_email_redefinicao_senha
+from email_utils import (
+    enviar_email_redefinicao_senha,
+    enviar_email_boas_vindas,
+    enviar_email_cadastro_recebido,
+)
 from portal_transparencia import consultar_situacao_atps
 from pydantic import BaseModel
 
@@ -36,7 +40,7 @@ def _hash_reset_token(token: str) -> str:
 
 
 @router.post("/register", response_model=AnalistaOut, status_code=status.HTTP_201_CREATED)
-def register(body: AnalistaCreate, db: Session = Depends(get_db)):
+def register(body: AnalistaCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     cpf_limpo = limpar_cpf(body.cpf)
     cpf_hash_valor = hash_cpf(cpf_limpo)
 
@@ -68,6 +72,12 @@ def register(body: AnalistaCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_409_CONFLICT,
             detail="E-mail ou CPF já cadastrado",
         )
+
+    if analista.ativo:
+        background_tasks.add_task(enviar_email_boas_vindas, analista.email_pessoal, analista.nome)
+    else:
+        background_tasks.add_task(enviar_email_cadastro_recebido, analista.email_pessoal, analista.nome)
+
     return analista
 
 
