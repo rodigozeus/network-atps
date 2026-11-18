@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   IconAddressBook, IconAffiliate, IconAlertTriangle, IconAt, IconBrandLinkedin, IconBrandWhatsapp, IconBriefcase, IconBuilding,
-  IconBuildingCommunity, IconCertificate, IconCircleCheck, IconFileCv, IconMail, IconPencil, IconPhone, IconSchool, IconStar,
+  IconBuildingCommunity, IconCertificate, IconCircleCheck, IconFileCv, IconMail, IconPencil, IconPhone, IconSchool, IconSparkles, IconStar,
   IconStarFilled, IconTrash,
 } from '@tabler/icons-react'
-import type { AnalistaPublico } from '@shared/api/types'
+import type { AnalistaPublico, EventoPerfil } from '@shared/api/types'
 import { buscaApi } from '@shared/api/busca'
 import { perfilApi } from '@shared/api/perfil'
 import { Avatar, Spinner } from '@shared/components'
@@ -15,6 +15,7 @@ import { formatPhone } from '@shared/utils/phone'
 import { NIVEIS, TURMAS, gradienteOrgao, lotacao, ordenarFormacoes, telLink } from '@shared/utils/analista'
 import styles from './perfil.module.css'
 import { isLinkGovBr, isLinkLattes, isLinkLinkedin } from '@shared/utils/url'
+import { dataEvento, rotuloEvento } from '@shared/utils/novidades'
 
 interface Proximo {
   p: AnalistaPublico
@@ -27,11 +28,13 @@ export default function PublicProfilePage() {
   const [params, setParams] = useSearchParams()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const { ehFavorito, alternar } = useFavoritos()
+  const { ehFavorito, alternar, novidadesDe, marcarVisto } = useFavoritos()
   const [perfil, setPerfil] = useState<AnalistaPublico | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [proximos, setProximos] = useState<Proximo[]>([])
   const [aviso, setAviso] = useState(false)
+  // Novidades guardadas ao abrir: continuam na tela depois de marcadas como vistas
+  const [novidades, setNovidades] = useState<EventoPerfil[]>([])
 
   const proprio = !!user && String(user.id) === id
 
@@ -43,6 +46,14 @@ export default function PublicProfilePage() {
       .catch(() => setPerfil(null))
       .finally(() => setCarregando(false))
   }, [id])
+
+  const eventosNovos = perfil ? novidadesDe(perfil.id) : undefined
+  useEffect(() => {
+    if (!perfil || !eventosNovos?.length) return
+    setNovidades(eventosNovos)
+    marcarVisto(perfil.id)
+  }, [perfil, eventosNovos, marcarVisto])
+  useEffect(() => { setNovidades([]) }, [id])
 
   useEffect(() => {
     if (perfil) document.title = `${perfil.nome} · Rede ATPS`
@@ -147,6 +158,21 @@ export default function PublicProfilePage() {
               )}
             </div>
           </div>
+
+          {novidades.length > 0 && (
+            <section className={styles.novidades} aria-labelledby="titulo-novidades">
+              <h2 id="titulo-novidades"><IconSparkles size={18} aria-hidden />Novidades desde a sua última visita</h2>
+              <ul>
+                {novidades.map((e, i) => (
+                  <li key={i}>
+                    <span className={styles.novidadeTipo}>{rotuloEvento(e)}</span>
+                    <span>{e.descricao}</span>
+                    <time dateTime={e.criado_em}>{dataEvento(e)}</time>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <div className={styles.colunas}>
             <div>

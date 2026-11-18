@@ -4,7 +4,9 @@ from sqlalchemy.orm import Session
 
 from auth import get_usuario_regular
 from database import get_db
-from models import Analista, Favorito, condicao_perfil_visivel
+from models import Analista, Favorito, condicao_perfil_visivel, now_utc
+from novidades import novidades_de
+from schemas import EventoPerfilOut, NovidadesOut
 
 router = APIRouter(prefix="/favoritos", tags=["favoritos"])
 
@@ -19,6 +21,25 @@ def listar_ids(eu: Analista = Depends(get_usuario_regular), db: Session = Depend
         .order_by(Favorito.criado_em.desc())
     )
     return list(db.scalars(stmt))
+
+
+@router.get("/novidades", response_model=list[NovidadesOut])
+def listar_novidades(eu: Analista = Depends(get_usuario_regular), db: Session = Depends(get_db)):
+    """Favoritos com mudança de lotação, novo tema ou nova formação desde a última visita
+    ao perfil (ou desde que foram favoritados). Mais recentes primeiro."""
+    return [
+        NovidadesOut(analista_id=i, eventos=[EventoPerfilOut.model_validate(e) for e in eventos])
+        for i, eventos in novidades_de(db, eu.id).items()
+    ]
+
+
+@router.post("/{analista_id}/visto", status_code=status.HTTP_204_NO_CONTENT)
+def marcar_visto(analista_id: int, eu: Analista = Depends(get_usuario_regular), db: Session = Depends(get_db)):
+    """Abriu o perfil do favorito: as novidades até agora deixam de ser novidade."""
+    favorito = db.get(Favorito, (eu.id, analista_id))
+    if favorito is not None:
+        favorito.visto_em = now_utc()
+        db.commit()
 
 
 @router.put("/{analista_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -5,6 +5,7 @@ import { caminhoSiglas } from '@shared/utils/analista'
 import { ChipsFormacao, ChipsTemas } from './Chips'
 import Contatos from './Contatos'
 import BotaoFavorito from './BotaoFavorito'
+import MarcaNovidade from './MarcaNovidade'
 import styles from './busca.module.css'
 
 export default function AnalistaLinha({ a }: { a: AnalistaPublico }) {
@@ -15,6 +16,7 @@ export default function AnalistaLinha({ a }: { a: AnalistaPublico }) {
         <Avatar id={a.id} nome={a.nome} fotoPath={a.foto_path} tamanho={60} className={styles.lAvatar} />
         <div className={styles.lNome}>
           <h3><Link to={`/analistas/${a.id}`}>{a.nome}</Link></h3>
+          <MarcaNovidade id={a.id} className={styles.lNovidade} />
           {a.cargo_fce && <p className={styles.role}>{a.cargo_fce}</p>}
         </div>
       </div>

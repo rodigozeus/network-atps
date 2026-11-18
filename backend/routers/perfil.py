@@ -22,6 +22,7 @@ from schemas import (
     TemaBase, TemaCatalogoOut, TemaOut,
 )
 from auth import get_current_user, get_usuario_regular, verify_password
+import novidades
 from consentimentos import (
     EXIBIR_CELULAR, EXIBIR_EMAIL_PESSOAL, EXIBIR_PERFIL,
     registrar, registrar_aceite_obrigatorios, validar_versoes,
@@ -93,6 +94,7 @@ def update_meu_perfil(
     if novo_nome is not None and novo_nome.strip() != analista.nome.strip():
         _verificar_novo_nome(analista, novo_nome)
 
+    lotacao_antes = novidades.foto_lotacao(analista)
     for field, value in updates.items():
         if field in AUTORIZACOES_EXIBICAO:
             if value is None:
@@ -102,6 +104,7 @@ def update_meu_perfil(
                 acao = AcaoConsentimento.aceito if value == valor_exibir else AcaoConsentimento.revogado
                 registrar(analista, tipo, acao, request)
         setattr(analista, field, value)
+    novidades.registrar_lotacao(db, analista, lotacao_antes)
     db.commit()
     db.refresh(analista)
     return analista
@@ -225,6 +228,8 @@ def add_formacao(
 ):
     formacao = Formacao(analista_id=analista.id, **body.model_dump())
     db.add(formacao)
+    db.flush()
+    novidades.registrar_formacao(db, formacao)
     db.commit()
     db.refresh(formacao)
     return formacao
@@ -239,6 +244,7 @@ def delete_formacao(
     formacao = db.get(Formacao, formacao_id)
     if formacao is None or formacao.analista_id != analista.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Formação não encontrada")
+    novidades.remover_item(db, "formacao", formacao.id)
     db.delete(formacao)
     db.commit()
 
@@ -253,6 +259,8 @@ def add_tema(
 ):
     tema = TemaAtuacao(analista_id=analista.id, **body.model_dump())
     db.add(tema)
+    db.flush()
+    novidades.registrar_tema(db, tema)
     db.commit()
     db.refresh(tema)
     return tema
@@ -267,6 +275,7 @@ def delete_tema(
     tema = db.get(TemaAtuacao, tema_id)
     if tema is None or tema.analista_id != analista.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tema não encontrado")
+    novidades.remover_item(db, "tema", tema.id)
     db.delete(tema)
     db.commit()
 

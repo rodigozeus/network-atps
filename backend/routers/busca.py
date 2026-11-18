@@ -1,10 +1,14 @@
+from datetime import date
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, exists, func, case
 
 from auth import get_usuario_regular
 from database import get_db
-from models import Analista, Favorito, Formacao, NivelFormacao, TemaAtuacao, condicao_perfil_visivel
+from models import Analista, EventoPerfil, Favorito, Formacao, NivelFormacao, TemaAtuacao, condicao_perfil_visivel
+from novidades import condicao_novidade
 from schemas import AnalistaPublico, BuscaResponse
 
 router = APIRouter(prefix="/busca", tags=["busca"])
@@ -28,6 +32,13 @@ def buscar(
     formacao: str | None = Query(None, description="Filtra por curso ou instituição"),
     nivel_formacao: NivelFormacao | None = Query(None, description="Tem formação neste nível"),
     favoritos: bool = Query(False, description="Só analistas favoritados por quem está logado"),
+    novidades: bool = Query(False, description="Só favoritos com novidades desde a última visita"),
+    ordem: Literal["relevancia", "nome", "recentes"] = Query(
+        "relevancia",
+        description="relevancia: perfis mais completos primeiro, com rodízio diário; "
+                    "nome: ordem alfabética; recentes: quem entrou na Rede há menos tempo. "
+                    "Em qualquer ordem, os favoritos de quem está logado vêm primeiro.",
+    ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=30),
     db: Session = Depends(get_db),
@@ -100,6 +111,18 @@ def buscar(
             )
         )
 
+    if novidades:
+        query = query.filter(
+            exists().where(
+                EventoPerfil.analista_id == Analista.id,
+                Favorito.analista_id == eu.id,
+                *condicao_novidade(),
+            )
+        )
+
+    eh_favorito = exists().where(Favorito.analista_id == eu.id, Favorito.favorito_id == Analista.id)
+    favoritos_primeiro = case((eh_favorito, 0), else_=1)
+
     tem_foto = case((Analista.foto_path.is_(None), 1), else_=0)
 
     campos_preenchidos = (
@@ -120,12 +143,23 @@ def buscar(
         + case((exists().where(TemaAtuacao.analista_id == Analista.id), 1), else_=0)
     )
 
-    score = func.random() * (1 + campos_preenchidos)
+    # Rodízio estável: muda a cada dia, mas é o mesmo entre as páginas de uma busca
+    # (com random() a página 2 podia repetir ou pular pessoas da página 1).
+    semente = date.today().toordinal()
+    sorteio = func.mod(Analista.id * 7919 + semente * 104729, 10007)
+    score = sorteio * (1 + campos_preenchidos)
+
+    if ordem == "nome":
+        criterios = (func.lower(Analista.nome), Analista.id)
+    elif ordem == "recentes":
+        criterios = (Analista.criado_em.desc(), Analista.id.desc())
+    else:
+        criterios = (tem_foto, score.desc(), Analista.id)
 
     total = query.count()
     analistas = (
         query
-        .order_by(tem_foto, score.desc())
+        .order_by(favoritos_primeiro, *criterios)
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()

@@ -1,5 +1,6 @@
 import { api } from './client'
 import { semEndpoint } from './semEndpoint'
+import type { NovidadesFavorito } from './types'
 
 const CHAVE_LOCAL = 'favoritos'
 
@@ -50,6 +51,28 @@ export const favoritosApi = {
     }
     const ids = lerLocal().filter((id) => id !== analistaId)
     salvarLocal(favorito ? [...ids, analistaId] : ids)
+  },
+
+  /** Favoritos com mudanças desde a última visita (vazio sem o endpoint) */
+  listarNovidades: async (): Promise<NovidadesFavorito[]> => {
+    if (modoLocal) return []
+    try {
+      const { data } = await api.get<NovidadesFavorito[]>('/favoritos/novidades')
+      return data
+    } catch (err) {
+      if (semEndpoint(err)) return []
+      throw err
+    }
+  },
+
+  /** Abriu o perfil: as novidades até agora deixam de ser novidade */
+  marcarVisto: async (analistaId: number): Promise<void> => {
+    if (modoLocal) return
+    try {
+      await api.post(`/favoritos/${analistaId}/visto`)
+    } catch (err) {
+      if (!semEndpoint(err)) throw err
+    }
   },
 
   /** true enquanto os favoritos estão só no navegador (back-end sem o endpoint) */

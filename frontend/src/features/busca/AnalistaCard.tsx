@@ -6,6 +6,7 @@ import { caminhoSiglas, gradienteOrgao, orgaoCurto } from '@shared/utils/analist
 import { ChipsFormacao, ChipsTemas } from './Chips'
 import Contatos from './Contatos'
 import BotaoFavorito from './BotaoFavorito'
+import MarcaNovidade from './MarcaNovidade'
 import styles from './busca.module.css'
 
 export default function AnalistaCard({ a }: { a: AnalistaPublico }) {
@@ -16,6 +17,7 @@ export default function AnalistaCard({ a }: { a: AnalistaPublico }) {
       <div className={styles.cover} style={{ background: gradienteOrgao(a.ministerio_sigla ?? a.ministerio) }}>
         <img className={styles.coverArt} src="/ministerio.png" alt="" />
         {org && <span className={styles.orgTag}>{org}</span>}
+        <MarcaNovidade id={a.id} className={styles.novidade} />
         <BotaoFavorito id={a.id} className={styles.fav} classeAviso={styles.favMsg} />
       </div>
       <div className={styles.inner}>

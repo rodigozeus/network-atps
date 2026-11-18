@@ -202,6 +202,24 @@ class Favorito(Base):
         ForeignKey("analistas.id", ondelete="CASCADE"), primary_key=True, index=True
     )
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+    # Última vez que quem favoritou viu as novidades deste perfil (None: desde criado_em).
+    visto_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class EventoPerfil(Base):
+    """Mudança relevante num perfil (lotação, novo tema, nova formação), mostrada como
+    novidade a quem favoritou a pessoa. Apagada após novidades.RETENCAO_DIAS."""
+    __tablename__ = "eventos_perfil"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    analista_id: Mapped[int] = mapped_column(
+        ForeignKey("analistas.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    tipo: Mapped[str] = mapped_column(String(20), nullable=False)  # lotacao | tema | formacao
+    # Id do tema ou da formação: se o item for removido, a novidade some junto.
+    ref_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    descricao: Mapped[str] = mapped_column(String(500), nullable=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc, index=True)
 
 
 class TemaAtuacao(Base):

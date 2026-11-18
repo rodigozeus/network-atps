@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  IconAdjustmentsHorizontal, IconChevronDown, IconLayoutGrid, IconList, IconSearch, IconStar, IconStarFilled,
+  IconAdjustmentsHorizontal, IconChevronDown, IconLayoutGrid, IconList, IconSearch, IconSparkles, IconStar, IconStarFilled,
 } from '@tabler/icons-react'
 import { buscaApi } from '@shared/api/busca'
 import { favoritosApi } from '@shared/api/favoritos'
 import { lotacoesApi } from '@shared/api/lotacoes'
 import { temasApi } from '@shared/api/temas'
-import type { AnalistaPublico, BuscaParams, NivelFormacao } from '@shared/api/types'
+import type { AnalistaPublico, BuscaParams, NivelFormacao, OrdemBusca } from '@shared/api/types'
 import { Spinner } from '@shared/components'
 import { useFavoritos } from '@shared/hooks/useFavoritos'
 import { NIVEIS, ORDEM_NIVEIS } from '@shared/utils/analista'
@@ -17,6 +17,12 @@ import AnalistaLinha from './AnalistaLinha'
 import styles from './busca.module.css'
 
 const PAGE_SIZE = 20
+const ORDENS: Record<OrdemBusca, string> = {
+  relevancia: 'Perfis mais completos',
+  nome: 'Nome (A–Z)',
+  recentes: 'Chegaram há pouco',
+}
+const lerOrdem = (v: string | null): OrdemBusca => (v && v in ORDENS ? (v as OrdemBusca) : 'relevancia')
 const BUSCA_MIN = 260 // abaixo disso, os filtros vão para o painel do botão "Filtros"
 type Vista = 'cards' | 'linhas'
 
@@ -31,7 +37,7 @@ const lerVista = (): Vista => {
 export default function SearchPage() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const { favoritos } = useFavoritos()
+  const { favoritos, novidades } = useFavoritos()
 
   // filtros vivem no endereço, para poder compartilhar e voltar
   const filtros = useMemo(() => ({
@@ -40,6 +46,8 @@ export default function SearchPage() {
     tema: params.get('tema') ?? '',
     nivel: (params.get('nivel_formacao') ?? '') as NivelFormacao | '',
     soFavoritos: params.get('favoritos') === '1',
+    soNovidades: params.get('novidades') === '1',
+    ordem: lerOrdem(params.get('ordem')),
   }), [params])
 
   const [texto, setTexto] = useState(filtros.q)
@@ -79,6 +87,8 @@ export default function SearchPage() {
     tema: filtros.tema || undefined,
     nivel_formacao: filtros.nivel || undefined,
     favoritos: filtros.soFavoritos || undefined,
+    novidades: filtros.soNovidades || undefined,
+    ordem: filtros.ordem === 'relevancia' ? undefined : filtros.ordem,
     page,
     page_size: PAGE_SIZE,
   }), [filtros])
@@ -158,7 +168,8 @@ export default function SearchPage() {
     return () => ro.disconnect()
   }, [])
 
-  const ativos = [filtros.ministerio, filtros.tema, filtros.nivel].filter(Boolean).length + (filtros.soFavoritos ? 1 : 0)
+  const ativos = [filtros.ministerio, filtros.tema, filtros.nivel].filter(Boolean).length
+    + (filtros.soFavoritos ? 1 : 0) + (filtros.soNovidades ? 1 : 0)
 
   const trocarVista = () => {
     const nova: Vista = vista === 'cards' ? 'linhas' : 'cards'
@@ -230,6 +241,22 @@ export default function SearchPage() {
                 {filtros.soFavoritos ? <IconStarFilled size={18} aria-hidden /> : <IconStar size={18} aria-hidden />}
                 Favoritos
               </button>
+              {(novidades.size > 0 || filtros.soNovidades) && (
+                <button type="button" className={styles.filtro} aria-pressed={filtros.soNovidades}
+                  title="Favoritos que mudaram de lotação, tema ou formação desde a sua última visita"
+                  onClick={() => mudarFiltro('novidades', filtros.soNovidades ? '' : '1')}>
+                  <IconSparkles size={18} aria-hidden />
+                  Novidades
+                  {novidades.size > 0 && <span className={styles.badgeClaro}>{novidades.size}</span>}
+                </button>
+              )}
+              <label className={[styles.select, styles.ordem].join(' ')}>
+                <select value={filtros.ordem} onChange={(e) => mudarFiltro('ordem', e.target.value === 'relevancia' ? '' : e.target.value)}
+                  aria-label="Ordenar por" title="Seus favoritos aparecem sempre primeiro">
+                  {(Object.keys(ORDENS) as OrdemBusca[]).map((o) => <option key={o} value={o}>{ORDENS[o]}</option>)}
+                </select>
+                <IconChevronDown size={18} aria-hidden />
+              </label>
             </div>
             <button type="button" className={styles.vistaBtn} onClick={trocarVista} data-trocou={trocouVista % 2}
               aria-label={vista === 'cards' ? 'Ver em lista' : 'Ver em cards'} title={vista === 'cards' ? 'Ver em lista' : 'Ver em cards'}>
@@ -243,7 +270,7 @@ export default function SearchPage() {
         ) : erro && !visiveis.length ? (
           <p className={styles.empty}>{erro}</p>
         ) : !visiveis.length ? (
-          <p className={styles.empty}>Nenhuma pessoa encontrada para essa busca.</p>
+          <p className={styles.empty}>{filtros.soNovidades ? 'Nenhum favorito com novidades no momento.' : 'Nenhuma pessoa encontrada para essa busca.'}</p>
         ) : vista === 'cards' ? (
           <div className={styles.grid}>{visiveis.map((a) => <AnalistaCard key={a.id} a={a} />)}</div>
         ) : (

@@ -251,6 +251,18 @@ class TemaCatalogoOut(BaseModel):
     total: int
 
 
+class EventoPerfilOut(BaseModel):
+    tipo: str
+    descricao: str
+    criado_em: datetime
+    model_config = {"from_attributes": True}
+
+
+class NovidadesOut(BaseModel):
+    analista_id: int
+    eventos: list[EventoPerfilOut]
+
+
 class BuscaResponse(BaseModel):
     items: list[AnalistaPublico]
     total: int

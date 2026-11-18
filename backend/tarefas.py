@@ -6,6 +6,7 @@
 1. Reverificação periódica do vínculo no Portal da Transparência.
 2. Exclusão de contas com vínculo suspenso cujo prazo de contestação venceu.
 3. Aviso por e-mail quando há nova versão de documento obrigatório.
+4. Limpeza das novidades de perfil mais antigas que a retenção (novidades.RETENCAO_DIAS).
 
 Os logs nunca incluem CPF, nome ou e-mail — só contagens e ids internos.
 """
@@ -28,6 +29,7 @@ from email_utils import (
     enviar_email_vinculo_suspenso,
 )
 from models import Analista
+from novidades import RETENCAO_DIAS, apagar_antigas
 from portal_transparencia import MOTIVOS, StatusVerificacao, consultar_situacao_atps
 from routers.perfil import remover_foto
 
@@ -132,9 +134,13 @@ def avisar_novos_termos(db: Session, agora: datetime) -> None:
     logger.info("Aviso de novos termos: %d e-mails enviados", avisadas)
 
 
+def limpar_novidades(db: Session, agora: datetime) -> None:
+    logger.info("Novidades com mais de %d dias apagadas: %d", RETENCAO_DIAS, apagar_antigas(db, agora))
+
+
 def executar() -> None:
     agora = datetime.now(timezone.utc)
-    for tarefa in (reverificar_vinculos, excluir_suspensos_vencidos, avisar_novos_termos):
+    for tarefa in (reverificar_vinculos, excluir_suspensos_vencidos, avisar_novos_termos, limpar_novidades):
         db = SessionLocal()
         try:
             tarefa(db, agora)

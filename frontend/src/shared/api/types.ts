@@ -165,6 +165,10 @@ export interface BuscaParams {
   nivel_formacao?: NivelFormacao
   /** Novo no back-end: só analistas favoritados por quem está logado */
   favoritos?: boolean
+  /** Só favoritos com novidades desde a última visita */
+  novidades?: boolean
+  /** Os favoritos vêm primeiro em qualquer ordem */
+  ordem?: OrdemBusca
   page?: number
   page_size?: number
 }
@@ -187,4 +191,18 @@ export interface TemaCatalogo {
 
 export interface ApiError {
   detail: string | Array<{ loc: string[]; msg: string; type: string }>
+}
+
+export type OrdemBusca = 'relevancia' | 'nome' | 'recentes'
+
+/** Mudança no perfil de um favorito: lotação, novo tema ou nova formação */
+export interface EventoPerfil {
+  tipo: 'lotacao' | 'tema' | 'formacao'
+  descricao: string
+  criado_em: string
+}
+
+export interface NovidadesFavorito {
+  analista_id: number
+  eventos: EventoPerfil[]
 }
