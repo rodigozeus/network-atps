@@ -10,5 +10,7 @@ export default function AdminRoute() {
 
   if (user?.role !== 'admin' && user?.role !== 'andeps') return <Navigate to="/" replace />
 
+  if (user && user.pendencias.length > 0) return <Navigate to="/busca" replace />
+
   return <Outlet />
 }

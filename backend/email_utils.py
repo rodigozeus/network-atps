@@ -56,17 +56,32 @@ def enviar_email_boas_vindas(destinatario: str, nome: str) -> None:
     _enviar_email(destinatario, "Bem-vindo(a) à Rede ATPS", corpo)
 
 
-def enviar_email_cadastro_recebido(destinatario: str, nome: str) -> None:
-    """Cadastro criado inativo, pendente de revisão manual."""
+def enviar_email_cadastro_recebido(destinatario: str, nome: str, motivo: str) -> None:
+    """Cadastro pendente de revisão manual (inclusive tentativa com CPF já cadastrado,
+    que recebe a mesma mensagem para não revelar que o CPF está na Rede)."""
     corpo = (
         f"Olá, {nome}!\n\n"
         "Recebemos seu cadastro na Rede ATPS.\n\n"
-        "Não conseguimos confirmar automaticamente seu vínculo como ATPS junto ao "
-        "Portal da Transparência do Governo Federal, então sua conta está "
-        "pendente de verificação e precisará ser aprovada por um administrador.\n\n"
-        "Você receberá um novo e-mail assim que sua conta for ativada."
+        f"{motivo}\n\n"
+        "Por isso, seu cadastro está pendente de verificação e será analisado por um "
+        "administrador. Você receberá um novo e-mail com o resultado."
     )
     _enviar_email(destinatario, "Cadastro recebido — Rede ATPS", corpo)
+
+
+def enviar_email_alerta_cpf_em_uso(destinatario: str, nome: str) -> None:
+    """Avisa o titular de uma conta que alguém tentou criar outra conta com o mesmo CPF."""
+    link = f"{settings.frontend_url}/esqueci-senha"
+    corpo = (
+        f"Olá, {nome}!\n\n"
+        "Alguém tentou criar uma nova conta na Rede ATPS usando o CPF vinculado à sua conta. "
+        "A nova conta não foi criada e a tentativa foi encaminhada para análise de um administrador.\n\n"
+        "Se foi você e perdeu o acesso, redefina sua senha:\n\n"
+        f"{link}\n\n"
+        "Se não foi você, nenhuma ação é necessária — sua conta continua protegida. "
+        "Um administrador poderá entrar em contato."
+    )
+    _enviar_email(destinatario, "Tentativa de cadastro com seu CPF — Rede ATPS", corpo)
 
 
 def enviar_email_conta_ativada(destinatario: str, nome: str) -> None:
@@ -80,3 +95,39 @@ def enviar_email_conta_ativada(destinatario: str, nome: str) -> None:
         "Bem-vindo(a) à Rede ATPS!"
     )
     _enviar_email(destinatario, "Sua conta na Rede ATPS foi ativada", corpo)
+
+
+def enviar_email_vinculo_suspenso(destinatario: str, nome: str, prazo_dias: int, exclusao_em: str) -> None:
+    """Reverificação periódica não confirmou o vínculo: perfil oculto, prazo para contestar."""
+    corpo = (
+        f"Olá, {nome}!\n\n"
+        "Na verificação periódica da Rede ATPS, não conseguimos confirmar seu vínculo como "
+        "Analista Técnico(a) de Políticas Sociais junto ao Portal da Transparência.\n\n"
+        "Por isso, seu perfil foi ocultado dos demais usuários. "
+        f"Se você continua na carreira (ou é aposentado(a) dela), responda a este e-mail em até "
+        f"{prazo_dias} dias para contestar — se possível, com um comprovante de vínculo.\n\n"
+        f"Sem contestação, sua conta e seus dados serão excluídos em {exclusao_em}."
+    )
+    _enviar_email(destinatario, "Vínculo não confirmado — Rede ATPS", corpo)
+
+
+def enviar_email_conta_excluida_vinculo(destinatario: str, nome: str) -> None:
+    corpo = (
+        f"Olá, {nome}!\n\n"
+        "Como seu vínculo com a carreira de ATPS não foi confirmado no prazo informado, "
+        "sua conta na Rede ATPS e os dados associados a ela foram excluídos.\n\n"
+        "Se isso foi um engano, você pode se cadastrar novamente."
+    )
+    _enviar_email(destinatario, "Conta excluída — Rede ATPS", corpo)
+
+
+def enviar_email_termos_atualizados(destinatario: str, nome: str) -> None:
+    link = f"{settings.frontend_url}/login"
+    corpo = (
+        f"Olá, {nome}!\n\n"
+        "Atualizamos o Termo de Consentimento e/ou a Autorização de consulta do CPF da Rede ATPS.\n\n"
+        "No seu próximo acesso, você verá a nova versão e precisará aceitá-la para continuar "
+        "usando a Rede. Se preferir não aceitar, você pode excluir sua conta na mesma tela.\n\n"
+        f"{link}"
+    )
+    _enviar_email(destinatario, "Atualização dos termos — Rede ATPS", corpo)

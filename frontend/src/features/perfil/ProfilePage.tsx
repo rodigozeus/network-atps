@@ -8,6 +8,7 @@ import ProfileCard from './ProfileCard'
 import ProfileEditForm from './ProfileEditForm'
 import FormacaoList from './FormacaoList'
 import TemaList from './TemaList'
+import PrivacidadeCard from './PrivacidadeCard'
 import styles from './perfil.module.css'
 
 type EditTab = 'perfil' | 'formacao'
@@ -41,7 +42,7 @@ export default function ProfilePage() {
     setDeleteError(null)
     try {
       await perfilApi.deleteMe(deleteSenha)
-      logout()
+      await logout()
       navigate('/login', { replace: true })
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status
@@ -138,6 +139,8 @@ export default function ProfilePage() {
       <div className={styles.actions}>
         <Button onClick={() => setEditMode(true)}>Editar Perfil</Button>
       </div>
+
+      <PrivacidadeCard profile={profile} onChange={setProfile} />
 
       <div style={{ textAlign: 'center', marginTop: 'var(--sp-10)' }}>
         <button

@@ -1,3 +1,10 @@
+x-logging: &logging
+  # Rotação dos logs dos containers (antes cresciam sem limite).
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   atps-api:
     build:
@@ -10,6 +17,23 @@ services:
     networks:
       - internal
       - db-network
+    logging: *logging
+    restart: unless-stopped
+
+  # Tarefas diárias: reverificação do vínculo no Portal da Transparência, exclusão
+  # de contas com prazo de contestação vencido e aviso de novos termos (tarefas.py).
+  atps-tarefas:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["python", "tarefas.py", "--loop"]
+    volumes:
+      - uploads:/app/uploads
+    env_file:
+      - .env
+    networks:
+      - db-network
+    logging: *logging
     restart: unless-stopped
 
   atps-frontend:
@@ -22,6 +46,7 @@ services:
       - internal
     depends_on:
       - atps-api
+    logging: *logging
     restart: unless-stopped
 
 networks:

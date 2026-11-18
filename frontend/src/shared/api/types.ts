@@ -1,6 +1,7 @@
 export type Role = 'analista' | 'andeps' | 'admin'
 export type NivelFormacao = 'graduacao' | 'especializacao' | 'mestrado' | 'doutorado'
 export type Turma = 'turma_2012' | 'turma_2016' | 'turma_2024_cpnu'
+export type Pendencia = 'cpf' | 'termos' | 'vinculo'
 
 export interface Formacao {
   id: number
@@ -39,6 +40,12 @@ export interface AnalistaOut {
   role: Role
   ativo: boolean
   pendente_revisao: boolean
+  perfil_oculto: boolean
+  /** cpf: informar CPF; termos: aceitar versão atual; vinculo: vínculo suspenso */
+  pendencias: Pendencia[]
+  motivo_pendencia: string | null
+  vinculo_suspenso_em: string | null
+  vinculo_exclusao_em: string | null
   criado_em: string
   atualizado_em: string
   formacoes: Formacao[]
@@ -76,10 +83,9 @@ export interface BuscaResponse {
   pages: number
 }
 
-export interface TokenOut {
-  access_token: string
-  refresh_token: string
-  token_type: string
+export interface RegistroOut {
+  ativo: boolean
+  motivo: string | null
 }
 
 export interface LoginIn {
@@ -93,6 +99,32 @@ export interface AnalistaCreate {
   senha: string
   cpf: string
   aceite_termos: boolean
+  aceite_consulta_cpf: boolean
+  /** Versão de cada documento exibida ao usuário */
+  versoes: Record<string, number>
+}
+
+export interface RegularizarIn {
+  cpf?: string
+  aceite_termos: boolean
+  aceite_consulta_cpf: boolean
+  versoes: Record<string, number>
+}
+
+export interface DocumentoLegal {
+  tipo: string
+  versao: number
+  vigente_desde: string
+  titulo: string
+  texto: string
+  hash: string
+}
+
+export interface Consentimento {
+  tipo: string
+  acao: 'aceito' | 'revogado'
+  documento_versao: number | null
+  criado_em: string
 }
 
 export interface AnalistaUpdate {
@@ -103,6 +135,7 @@ export interface AnalistaUpdate {
   celular?: string
   visibilidade_email_pessoal?: boolean
   visibilidade_celular?: boolean
+  perfil_oculto?: boolean
   ministerio?: string
   ministerio_sigla?: string
   secretaria?: string

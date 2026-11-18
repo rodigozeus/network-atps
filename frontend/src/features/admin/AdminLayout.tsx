@@ -34,6 +34,14 @@ export default function AdminLayout() {
           >
             Estatísticas
           </NavLink>
+          <NavLink
+            to="/admin/conflitos"
+            className={({ isActive }) =>
+              [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
+            }
+          >
+            Conflitos de CPF
+          </NavLink>
         </nav>
       </aside>
       <div className={styles.adminContent}>

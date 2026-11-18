@@ -7,6 +7,9 @@ import { useAuthContext } from './AuthContext'
 import { Button, Input } from '@shared/components'
 import { formatCpf, cpfValido } from '@shared/utils/cpf'
 import styles from './auth.module.css'
+import {
+  AUTORIZACAO_CONSULTA_CPF, DocumentoBox, TERMO_CONSENTIMENTO, useDocumentosAtuais,
+} from './DocumentosLegais'
 
 const schema = z
   .object({
@@ -21,6 +24,9 @@ const schema = z
     aceite_termos: z.boolean().refine((v) => v === true, {
       message: 'É necessário ler e concordar com o Termo de Consentimento para continuar',
     }),
+    aceite_consulta_cpf: z.boolean().refine((v) => v === true, {
+      message: 'É necessário autorizar a consulta do CPF para confirmar seu vínculo',
+    }),
   })
   .refine((d) => d.senha === d.confirmar_senha, {
     message: 'As senhas não coincidem',
@@ -29,33 +35,11 @@ const schema = z
 
 type RegisterForm = z.infer<typeof schema>
 
-const TERMO_LGPD = `A Rede ATPS é uma plataforma voltada à conexão profissional entre Analistas Técnicos de Políticas Sociais (ATPS) do Poder Executivo Federal. Ao criar sua conta, você concorda com o tratamento dos seus dados pessoais nos termos abaixo, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).
-
-1. Quais dados coletamos e por quê
-— Nome, e-mail pessoal e senha: necessários para criar e proteger sua conta.
-— CPF: utilizado uma única vez, no momento do cadastro, exclusivamente para consultar a base pública de servidores do Portal da Transparência do Governo Federal e confirmar seu vínculo como ATPS. Após essa consulta, o CPF é criptografado e o número original é descartado — nem mesmo os administradores da plataforma têm acesso ao seu CPF.
-— Dados profissionais complementares (e-mail institucional, celular, órgão de lotação, cargo, formação acadêmica, temas de atuação, foto): fornecidos por você, de forma opcional, para compor seu perfil profissional.
-
-2. Finalidade do tratamento
-Seus dados são usados exclusivamente para viabilizar o funcionamento da Rede ATPS: autenticação, exibição do seu perfil profissional a outros(as) analistas cadastrados(as) e busca por colegas com formação ou temas de atuação em comum.
-
-3. Compartilhamento
-Seus dados de contato (e-mail pessoal e celular) só são exibidos a outros usuários se você optar, explicitamente e a qualquer momento, por torná-los visíveis nas configurações do seu perfil. Os demais dados de perfil (nome, órgão, formação, temas de atuação) são visíveis a outros(as) analistas autenticados(as) na plataforma, pois essa é a finalidade da rede. Não compartilhamos seus dados com terceiros para fins comerciais ou publicitários.
-
-4. Base legal
-O tratamento se baseia no seu consentimento (art. 7º, I, LGPD), livremente concedido neste cadastro, e no legítimo interesse da associação profissional em manter um diretório verificado de seus membros (art. 7º, IX).
-
-5. Seus direitos
-Você pode, a qualquer momento: acessar e corrigir seus dados na página "Meu Perfil"; revogar a visibilidade do e-mail pessoal e do celular; e excluir permanentemente sua conta e todos os seus dados, de forma irreversível, na opção "Excluir minha conta" do seu perfil.
-
-6. Armazenamento e segurança
-Sua senha e seu CPF são armazenados de forma criptografada, nunca em texto puro. Os dados ficam em banco de dados protegido, acessível apenas pela equipe técnica responsável pela operação da plataforma.
-
-Ao marcar a caixa abaixo, você declara que leu e concorda com este Termo de Consentimento, incluindo a consulta do seu CPF ao Portal da Transparência para fins de verificação do vínculo funcional, nos termos aqui descritos.`
-
 export default function RegisterPage() {
   const auth = useAuthContext()
+  const { documentos, versoes, carregado, erro: erroDocumentos } = useDocumentosAtuais()
   const [cadastroPendente, setCadastroPendente] = useState(false)
+  const [motivoPendencia, setMotivoPendencia] = useState<string | null>(null)
   const [cadastroConfirmado, setCadastroConfirmado] = useState(false)
   const {
     register,
@@ -65,14 +49,15 @@ export default function RegisterPage() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterForm>({
     resolver: zodResolver(schema),
-    defaultValues: { aceite_termos: false },
+    defaultValues: { aceite_termos: false, aceite_consulta_cpf: false },
   })
 
   const onSubmit = async ({ confirmar_senha: _cs, ...data }: RegisterForm) => {
     void _cs
     try {
-      const user = await auth.register(data)
-      if (!user.ativo) {
+      const resultado = await auth.register({ ...data, versoes })
+      if (!resultado.ativo) {
+        setMotivoPendencia(resultado.motivo)
         setCadastroPendente(true)
       } else {
         setCadastroConfirmado(true)
@@ -125,10 +110,12 @@ export default function RegisterPage() {
               <strong>Seu cadastro foi criado, mas está inativo.</strong>
             </p>
             <p>
-              Não conseguimos confirmar automaticamente seu vínculo como ATPS
-              junto ao Portal da Transparência do Governo Federal. Por isso,
-              sua conta foi marcada como{' '}
-              <strong>pendente de verificação</strong> e precisará ser aprovada
+              {motivoPendencia ??
+                'Não foi possível concluir a verificação automática do seu vínculo como ATPS.'}
+            </p>
+            <p>
+              Por isso, sua conta foi marcada como{' '}
+              <strong>pendente de verificação</strong> e será analisada
               manualmente por um administrador.
             </p>
             <p>Você receberá acesso assim que sua conta for ativada.</p>
@@ -191,9 +178,9 @@ export default function RegisterPage() {
               )}
             />
             <p className={styles.notice} style={{ marginTop: 'var(--sp-2)' }}>
-              Usado apenas uma vez para confirmar seu vínculo como ATPS junto ao
-              Portal da Transparência. Em seguida é criptografado e o número
-              original é descartado — não é armazenado nem fica acessível a ninguém.
+              Usado para confirmar seu vínculo como ATPS no Portal da Transparência,
+              no cadastro e periodicamente. Fica guardado criptografado e não é
+              exibido a nenhum usuário.
             </p>
           </div>
 
@@ -214,22 +201,35 @@ export default function RegisterPage() {
             {...register('confirmar_senha')}
           />
 
+          {erroDocumentos && (
+            <p className={styles.apiError}>
+              Não foi possível carregar os termos. Recarregue a página para continuar.
+            </p>
+          )}
+
           <div>
-            <p className={styles.termosLabel}>Termo de Consentimento — Tratamento de Dados (LGPD)</p>
-            <div className={styles.termosBox} tabIndex={0}>
-              {TERMO_LGPD}
-            </div>
+            <DocumentoBox doc={documentos[TERMO_CONSENTIMENTO]} />
             <label className={styles.checkboxLabel}>
               <input type="checkbox" {...register('aceite_termos')} />
-              Li e concordo com o Termo de Consentimento acima, incluindo a consulta
-              do meu CPF ao Portal da Transparência.
+              Li e concordo com o Termo de Consentimento acima.
             </label>
             {errors.aceite_termos && (
               <p className={styles.error}>{errors.aceite_termos.message}</p>
             )}
           </div>
 
-          <Button type="submit" fullWidth loading={isSubmitting}>
+          <div>
+            <DocumentoBox doc={documentos[AUTORIZACAO_CONSULTA_CPF]} />
+            <label className={styles.checkboxLabel}>
+              <input type="checkbox" {...register('aceite_consulta_cpf')} />
+              Autorizo a consulta do meu CPF ao Portal da Transparência, nos termos acima.
+            </label>
+            {errors.aceite_consulta_cpf && (
+              <p className={styles.error}>{errors.aceite_consulta_cpf.message}</p>
+            )}
+          </div>
+
+          <Button type="submit" fullWidth loading={isSubmitting} disabled={!carregado}>
             Criar conta
           </Button>
         </form>

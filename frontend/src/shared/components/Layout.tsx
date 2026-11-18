@@ -9,8 +9,7 @@ export default function Layout() {
   const isAdmin = pathname.startsWith('/admin')
 
   function handleLogout() {
-    logout()
-    navigate('/login', { replace: true })
+    void logout().then(() => navigate('/login', { replace: true }))
   }
 
   return (

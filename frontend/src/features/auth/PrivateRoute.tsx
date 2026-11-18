@@ -1,9 +1,10 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@shared/hooks/useAuth'
 import { Spinner } from '@shared/components'
+import RegularizacaoPage from './RegularizacaoPage'
 
 export default function PrivateRoute() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
     return (
@@ -13,5 +14,10 @@ export default function PrivateRoute() {
     )
   }
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+
+  // Pendências (CPF, novos termos, vínculo suspenso) bloqueiam as páginas internas.
+  if (user && user.pendencias.length > 0) return <RegularizacaoPage />
+
+  return <Outlet />
 }

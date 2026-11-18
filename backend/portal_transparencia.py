@@ -1,5 +1,7 @@
+import enum
 import logging
 import unicodedata
+from dataclasses import dataclass
 
 import requests
 
@@ -11,50 +13,91 @@ API_URL = "https://api.portaldatransparencia.gov.br/api-de-dados/servidores"
 TIMEOUT_SEGUNDOS = 6
 CARGO_ATPS_PALAVRA_CHAVE = "POLITICAS SOCIAIS"
 
+# Fichas do registro em que o cargo indica vínculo válido com a carreira.
+# Aposentados da carreira são aceitos (decisão da ANDEPS de 28/10/2026).
+FICHAS_VALIDAS = ("fichasCargoEfetivo", "fichasAposentadoria")
+
+PARTICULAS_NOME = {"DE", "DA", "DO", "DAS", "DOS", "E"}
+
+
+class StatusVerificacao(str, enum.Enum):
+    confirmado = "confirmado"
+    nao_encontrado = "nao_encontrado"
+    nome_divergente = "nome_divergente"
+    inconclusivo = "inconclusivo"
+
+
+MOTIVOS = {
+    StatusVerificacao.nao_encontrado: (
+        "Não encontramos vínculo como ATPS para este CPF no Portal da Transparência."
+    ),
+    StatusVerificacao.nome_divergente: (
+        "O nome informado não confere com o nome registrado no Portal da Transparência para este CPF."
+    ),
+    StatusVerificacao.inconclusivo: (
+        "Não foi possível concluir a verificação automática do seu vínculo como ATPS."
+    ),
+}
+
+
+@dataclass
+class ResultadoVerificacao:
+    status: StatusVerificacao
+
+    @property
+    def confirmado(self) -> bool:
+        return self.status == StatusVerificacao.confirmado
+
+    @property
+    def motivo(self) -> str | None:
+        return MOTIVOS.get(self.status)
+
 
 def _normalizar(texto: str) -> str:
-    nfkd = unicodedata.normalize("NFKD", texto)
+    nfkd = unicodedata.normalize("NFKD", texto or "")
     sem_acento = "".join(c for c in nfkd if not unicodedata.combining(c))
-    return sem_acento.upper()
+    return " ".join(sem_acento.upper().split())
 
 
-def _registro_indica_atps(registro: dict) -> bool:
-    """Procura a palavra-chave do cargo em qualquer campo do registro retornado
-    pela API. Evita depender do nome exato do campo de cargo no DTO, que não é
-    garantido entre versões da API."""
-    valores: list[str] = []
-
-    def _coletar(valor):
-        if isinstance(valor, dict):
-            for v in valor.values():
-                _coletar(v)
-        elif isinstance(valor, list):
-            for v in valor:
-                _coletar(v)
-        elif isinstance(valor, str):
-            valores.append(valor)
-
-    _coletar(registro)
-    texto = _normalizar(" ".join(valores))
-    return CARGO_ATPS_PALAVRA_CHAVE in texto
+def _tokens_nome(nome: str) -> list[str]:
+    return [t for t in _normalizar(nome).split() if t not in PARTICULAS_NOME]
 
 
-def consultar_situacao_atps(cpf_limpo: str) -> bool | None:
+def nomes_conferem(informado: str, oficial: str) -> bool:
+    """Aceita nome abreviado: primeiro e último nomes iguais e todos os nomes
+    informados presentes no nome oficial."""
+    inf, ofi = _tokens_nome(informado), _tokens_nome(oficial)
+    if len(inf) < 2 or not ofi:
+        return False
+    return inf[0] == ofi[0] and inf[-1] == ofi[-1] and set(inf) <= set(ofi)
+
+
+def _registro_e_atps(registro: dict) -> bool:
+    for chave in FICHAS_VALIDAS:
+        for ficha in registro.get(chave) or []:
+            if isinstance(ficha, dict) and CARGO_ATPS_PALAVRA_CHAVE in _normalizar(str(ficha.get("cargo", ""))):
+                return True
+    return False
+
+
+def _nome_oficial(registro: dict) -> str:
+    servidor = registro.get("servidor") or {}
+    return str((servidor.get("pessoa") or {}).get("nome", ""))
+
+
+def consultar_situacao_atps(cpf_limpo: str, nome_informado: str | None) -> ResultadoVerificacao:
     """Consulta o Portal da Transparência para confirmar se o CPF pertence a um(a)
-    Analista Técnico(a) em Políticas Sociais (ATPS) do Poder Executivo Federal.
+    Analista Técnico(a) de Políticas Sociais (ATPS), ativo(a) ou aposentado(a), e se o
+    nome informado confere com o registro (`nome_informado=None` pula essa checagem —
+    usado na reverificação periódica, já que o nome pode mudar legitimamente).
 
-    Essa é a única forma de verificação automática do vínculo — não há mais uma
-    lista local (CSV) como alternativa. Qualquer retorno diferente de True deixa
-    o cadastro pendente de aprovação manual.
-
-    Retorna:
-        True  — CPF encontrado com cargo de ATPS.
-        False — API respondeu, mas não encontrou vínculo de ATPS para o CPF.
-        None  — consulta inconclusiva (API não configurada ou indisponível).
+    Nada do registro retornado é armazenado. Os logs nunca incluem o CPF nem a URL da
+    consulta (que o contém). Qualquer resultado diferente de `confirmado` deixa o
+    cadastro pendente de aprovação manual.
     """
     if not settings.portal_transparencia_token:
         logger.warning("PORTAL_TRANSPARENCIA_TOKEN não configurado — pulando verificação por CPF")
-        return None
+        return ResultadoVerificacao(StatusVerificacao.inconclusivo)
 
     try:
         resposta = requests.get(
@@ -63,20 +106,31 @@ def consultar_situacao_atps(cpf_limpo: str) -> bool | None:
             headers={"chave-api-dados": settings.portal_transparencia_token},
             timeout=TIMEOUT_SEGUNDOS,
         )
-        resposta.raise_for_status()
-    except requests.RequestException:
-        logger.exception("Falha ao consultar o Portal da Transparência")
-        return None
+    except requests.RequestException as exc:
+        # Não logar a exceção: a mensagem dela contém a URL com o CPF.
+        logger.error("Falha de conexão com o Portal da Transparência (%s)", type(exc).__name__)
+        return ResultadoVerificacao(StatusVerificacao.inconclusivo)
+
+    if resposta.status_code != 200:
+        logger.error("Portal da Transparência respondeu HTTP %s", resposta.status_code)
+        return ResultadoVerificacao(StatusVerificacao.inconclusivo)
 
     try:
         registros = resposta.json()
     except ValueError:
         logger.error("Resposta não-JSON do Portal da Transparência")
-        return None
+        return ResultadoVerificacao(StatusVerificacao.inconclusivo)
 
-    if isinstance(registros, dict):
-        registros = registros.get("items") or registros.get("data") or []
     if not isinstance(registros, list):
-        return None
+        return ResultadoVerificacao(StatusVerificacao.inconclusivo)
 
-    return any(_registro_indica_atps(r) for r in registros if isinstance(r, dict))
+    registros_atps = [r for r in registros if isinstance(r, dict) and _registro_e_atps(r)]
+    if not registros_atps:
+        return ResultadoVerificacao(StatusVerificacao.nao_encontrado)
+
+    if nome_informado is not None and not any(
+        nomes_conferem(nome_informado, _nome_oficial(r)) for r in registros_atps
+    ):
+        return ResultadoVerificacao(StatusVerificacao.nome_divergente)
+
+    return ResultadoVerificacao(StatusVerificacao.confirmado)

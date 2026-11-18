@@ -2,17 +2,20 @@ import csv
 import io
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import case, func, or_, select
+from datetime import datetime, timezone
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.orm import Session
 
 from auth import get_current_admin
 from database import get_db
 from email_utils import enviar_email_conta_ativada
-from models import Analista, Formacao, NivelFormacao, Role, TemaAtuacao
+from models import Analista, ConflitoCadastro, Formacao, NivelFormacao, Role, TemaAtuacao
+from routers.perfil import remover_foto
 from schemas import (
     AdminStats,
     AnalistaAdminOut,
     AnalistaAdminUpdate,
+    ConflitoCadastroOut,
     FormacaoStat,
     MinistrioStat,
     PaginatedAdminUsers,
@@ -22,11 +25,22 @@ from schemas import (
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+def _confirmar_vinculo_manual(analista: Analista) -> None:
+    """Admin atesta o vínculo com a carreira: aprova cadastro pendente ou anula uma
+    suspensão. A reverificação automática não suspende mais esta conta."""
+    analista.pendente_revisao = False
+    analista.motivo_pendencia = None
+    analista.vinculo_suspenso_em = None
+    analista.vinculo_manual = True
+    analista.cpf_verificado_em = datetime.now(timezone.utc)
+
+
 @router.get("/usuarios", response_model=PaginatedAdminUsers)
 def listar_usuarios(
     q: str | None = Query(None, description="Filtro por nome ou email"),
     ativo: bool | None = Query(None, description="Filtra por status da conta"),
     pendente_revisao: bool | None = Query(None, description="Filtra por cadastros pendentes de revisão"),
+    alerta_vinculo: bool = Query(False, description="Só contas com vínculo suspenso ou não confirmado"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -46,6 +60,12 @@ def listar_usuarios(
 
     if pendente_revisao is not None:
         query = query.filter(Analista.pendente_revisao == pendente_revisao)
+
+    if alerta_vinculo:
+        query = query.filter(or_(
+            Analista.vinculo_suspenso_em.isnot(None),
+            and_(Analista.ativo.is_(True), Analista.motivo_pendencia.isnot(None)),
+        ))
 
     total = query.count()
     analistas = (
@@ -94,8 +114,8 @@ def editar_usuario(
     for field, value in updates.items():
         setattr(analista, field, value)
 
-    if updates.get('ativo') is True:
-        analista.pendente_revisao = False
+    if updates.get('ativo') is True and analista.pendente_revisao:
+        _confirmar_vinculo_manual(analista)
 
     db.commit()
     db.refresh(analista)
@@ -147,6 +167,7 @@ def excluir_usuario(
     if analista is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analista não encontrado")
 
+    remover_foto(analista.foto_path)
     db.delete(analista)
     db.commit()
 
@@ -163,8 +184,9 @@ def reativar_usuario(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analista não encontrado")
 
     ativou_conta = not analista.ativo
+    if analista.pendente_revisao:
+        _confirmar_vinculo_manual(analista)
     analista.ativo = True
-    analista.pendente_revisao = False
     db.commit()
     db.refresh(analista)
 
@@ -279,3 +301,60 @@ def exportar_csv(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=analistas.csv"},
     )
+
+
+@router.get("/conflitos", response_model=list[ConflitoCadastroOut])
+def listar_conflitos(
+    resolvido: bool = Query(False),
+    db: Session = Depends(get_db),
+    _: Analista = Depends(get_current_admin),
+):
+    """Tentativas de cadastro com CPF que já pertence a uma conta existente."""
+    conflitos = (
+        db.query(ConflitoCadastro)
+        .filter(ConflitoCadastro.resolvido == resolvido)
+        .order_by(ConflitoCadastro.criado_em.desc())
+        .all()
+    )
+    return [
+        ConflitoCadastroOut(
+            id=c.id,
+            analista_id=c.analista_id,
+            analista_nome=c.analista.nome,
+            analista_email=c.analista.email_pessoal,
+            nome_informado=c.nome_informado,
+            email_informado=c.email_informado,
+            resolvido=c.resolvido,
+            criado_em=c.criado_em,
+        )
+        for c in conflitos
+    ]
+
+
+@router.post("/conflitos/{conflito_id}/resolver", status_code=status.HTTP_204_NO_CONTENT)
+def resolver_conflito(
+    conflito_id: int,
+    db: Session = Depends(get_db),
+    _: Analista = Depends(get_current_admin),
+):
+    conflito = db.get(ConflitoCadastro, conflito_id)
+    if conflito is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conflito não encontrado")
+    conflito.resolvido = True
+    db.commit()
+
+
+@router.post("/usuarios/{analista_id}/confirmar-vinculo", response_model=AnalistaAdminOut)
+def confirmar_vinculo(
+    analista_id: int,
+    db: Session = Depends(get_db),
+    _: Analista = Depends(get_current_admin),
+):
+    """Confirma manualmente o vínculo (ex.: contestação aceita) e limpa alertas."""
+    analista = db.get(Analista, analista_id)
+    if analista is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analista não encontrado")
+    _confirmar_vinculo_manual(analista)
+    db.commit()
+    db.refresh(analista)
+    return analista

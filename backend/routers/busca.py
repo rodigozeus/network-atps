@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, exists, func, case
 
-from auth import get_current_user
+from auth import get_usuario_regular
 from database import get_db
-from models import Analista, Formacao, TemaAtuacao
+from models import Analista, Formacao, TemaAtuacao, condicao_perfil_visivel
 from schemas import AnalistaPublico, BuscaResponse
 
 router = APIRouter(prefix="/busca", tags=["busca"])
@@ -27,11 +27,11 @@ def buscar(
     tema: str | None = Query(None, description="Filtra por tema de atuação"),
     formacao: str | None = Query(None, description="Filtra por curso ou instituição"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=30),
     db: Session = Depends(get_db),
-    _: Analista = Depends(get_current_user),
+    _: Analista = Depends(get_usuario_regular),
 ):
-    query = db.query(Analista).filter(Analista.ativo == True)
+    query = db.query(Analista).filter(condicao_perfil_visivel())
 
     if q:
         kw = f"%{q}%"

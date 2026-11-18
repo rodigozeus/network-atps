@@ -1,7 +1,7 @@
 import enum
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import (
-    Boolean, DateTime, Enum, ForeignKey, Integer, String, Text
+    Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, and_
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
@@ -37,6 +37,14 @@ class Analista(Base):
     nome: Mapped[str] = mapped_column(String(200), nullable=False)
     senha_hash: Mapped[str] = mapped_column(String(200), nullable=False)
     cpf_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True, index=True)
+    cpf_cifrado: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Última confirmação do vínculo no Portal da Transparência (ou por um administrador).
+    cpf_verificado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Vínculo confirmado manualmente por admin: a reverificação não suspende a conta.
+    vinculo_manual: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Reverificação não confirmou o vínculo: perfil oculto até confirmação ou exclusão.
+    vinculo_suspenso_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Legado: data do aceite antes do versionamento (ver tabela consentimentos).
     termos_aceitos_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     role: Mapped[Role] = mapped_column(Enum(Role), default=Role.analista, nullable=False)
 
@@ -47,6 +55,7 @@ class Analista(Base):
     celular: Mapped[str | None] = mapped_column(String(30), nullable=True)
     visibilidade_email_pessoal: Mapped[bool] = mapped_column(Boolean, default=False)
     visibilidade_celular: Mapped[bool] = mapped_column(Boolean, default=False)
+    perfil_oculto: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Segurança / autenticação
     reset_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
@@ -72,11 +81,83 @@ class Analista(Base):
 
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     pendente_revisao: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    motivo_pendencia: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    termo_versao_notificada: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
     atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
 
     formacoes: Mapped[list["Formacao"]] = relationship(back_populates="analista", cascade="all, delete-orphan")
     temas: Mapped[list["TemaAtuacao"]] = relationship(back_populates="analista", cascade="all, delete-orphan")
+    consentimentos: Mapped[list["Consentimento"]] = relationship(
+        back_populates="analista", cascade="all, delete-orphan", order_by="Consentimento.id",
+    )
+
+    def versao_aceita(self, tipo: str) -> int | None:
+        """Versão do documento aceita mais recentemente e não revogada depois."""
+        for c in reversed(self.consentimentos):
+            if c.tipo == tipo:
+                return c.documento_versao if c.acao == AcaoConsentimento.aceito else None
+        return None
+
+    @property
+    def pendencias(self) -> list[str]:
+        """O que impede o uso da Rede até ser resolvido:
+        cpf     — conta sem CPF guardado (anterior à criptografia do CPF);
+        termos  — documento obrigatório não aceito na versão atual;
+        vinculo — reverificação não confirmou o vínculo (perfil oculto)."""
+        from documentos_legais import OBRIGATORIOS, documento_atual
+        pendencias = []
+        if self.cpf_cifrado is None:
+            pendencias.append("cpf")
+        if any(self.versao_aceita(t) != documento_atual(t).versao for t in OBRIGATORIOS):
+            pendencias.append("termos")
+        if self.vinculo_suspenso_em is not None:
+            pendencias.append("vinculo")
+        return pendencias
+
+    @property
+    def perfil_visivel(self) -> bool:
+        """Aparece para outros usuários: conta ativa, não oculta pelo titular e
+        sem vínculo suspenso. Mesma regra de `condicao_perfil_visivel()`."""
+        return self.ativo and not self.perfil_oculto and self.vinculo_suspenso_em is None
+
+    @property
+    def vinculo_exclusao_em(self) -> datetime | None:
+        from documentos_legais import PRAZO_CONTESTACAO_DIAS
+        if self.vinculo_suspenso_em is None:
+            return None
+        return self.vinculo_suspenso_em + timedelta(days=PRAZO_CONTESTACAO_DIAS)
+
+
+def condicao_perfil_visivel():
+    return and_(
+        Analista.ativo.is_(True),
+        Analista.perfil_oculto.is_(False),
+        Analista.vinculo_suspenso_em.is_(None),
+    )
+
+
+class AcaoConsentimento(str, enum.Enum):
+    aceito = "aceito"
+    revogado = "revogado"
+
+
+class Consentimento(Base):
+    """Registro de cada aceite ou revogação (prova do consentimento — art. 8º, § 2º, LGPD).
+    Para documentos legais, guarda a versão e o hash do texto aceito."""
+    __tablename__ = "consentimentos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    analista_id: Mapped[int] = mapped_column(ForeignKey("analistas.id", ondelete="CASCADE"), nullable=False, index=True)
+    tipo: Mapped[str] = mapped_column(String(50), nullable=False)
+    acao: Mapped[AcaoConsentimento] = mapped_column(Enum(AcaoConsentimento), nullable=False)
+    documento_versao: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    documento_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+
+    analista: Mapped["Analista"] = relationship(back_populates="consentimentos")
 
 
 class Formacao(Base):
@@ -89,6 +170,21 @@ class Formacao(Base):
     instituicao: Mapped[str] = mapped_column(String(200), nullable=False)
 
     analista: Mapped["Analista"] = relationship(back_populates="formacoes")
+
+
+class ConflitoCadastro(Base):
+    """Tentativa de cadastro com um CPF que já pertence a uma conta existente.
+    Fica para revisão manual de um administrador."""
+    __tablename__ = "conflitos_cadastro"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    analista_id: Mapped[int] = mapped_column(ForeignKey("analistas.id", ondelete="CASCADE"), nullable=False, index=True)
+    nome_informado: Mapped[str] = mapped_column(String(200), nullable=False)
+    email_informado: Mapped[str] = mapped_column(String(200), nullable=False)
+    resolvido: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+
+    analista: Mapped["Analista"] = relationship()
 
 
 class TemaAtuacao(Base):

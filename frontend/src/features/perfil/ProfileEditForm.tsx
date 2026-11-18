@@ -6,6 +6,7 @@ import type { AnalistaOut } from '@shared/api/types'
 import { perfilApi } from '@shared/api/perfil'
 import { Button, Input } from '@shared/components'
 import { formatPhone } from '@shared/utils/phone'
+import { isLinkGovBr } from '@shared/utils/url'
 import styles from './perfil.module.css'
 
 const str = z.string().optional()
@@ -44,7 +45,10 @@ const schema = z.object({
   visibilidade_email_pessoal: z.boolean(),
   visibilidade_celular: z.boolean(),
   cargo_fce: str,
-  portal_url: str,
+  portal_url: z
+    .string()
+    .optional()
+    .refine((v) => !v || isLinkGovBr(v), { message: 'Use um link https:// de site .gov.br (ex.: SouGov)' }),
   turma: str,
 })
 
@@ -330,7 +334,12 @@ const ProfileEditForm = forwardRef<HTMLFormElement, Props>(
             <p className={styles.formCardTitle}>Complementar</p>
             <div className={styles.fieldGrid}>
               <Input label="Cargo/Função" placeholder="ex.: Chefe de Divisão" {...register('cargo_fce')} />
-              <Input label="Link Currículo SouGov.br" type="url" {...register('portal_url')} />
+              <Input
+                label="Link Currículo SouGov.br"
+                type="url"
+                error={errors.portal_url?.message}
+                {...register('portal_url')}
+              />
               <div>
                 <label className={styles.selectLabel}>Turma</label>
                 <div className={styles.selectWrapper}>

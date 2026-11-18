@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AnalistaAdminOut } from '../api/admin'
-import { desativarUsuario, downloadCSV, excluirUsuario, getUsuarios, reativarUsuario } from '../api/admin'
+import { confirmarVinculo, desativarUsuario, downloadCSV, excluirUsuario, getUsuarios, reativarUsuario } from '../api/admin'
 import EditarUsuarioModal from './EditarUsuarioModal'
 import styles from '../admin.module.css'
 import { useAuth } from '@shared/hooks/useAuth'
 
 const PAGE_SIZE = 20
 
-type FiltroAtivo = 'todos' | 'ativos' | 'inativos' | 'pendentes'
+type FiltroAtivo = 'todos' | 'ativos' | 'inativos' | 'pendentes' | 'vinculo'
 
 export default function UsuariosPage() {
   const { user } = useAuth()
@@ -26,10 +26,13 @@ export default function UsuariosPage() {
   const fetch = useCallback(async (currentPage: number, query: string, filtro: FiltroAtivo) => {
     setLoading(true)
     try {
+      const base = { q: query || undefined, page: currentPage, page_size: PAGE_SIZE }
       const params =
         filtro === 'pendentes'
-          ? { q: query || undefined, pendente_revisao: true, page: currentPage, page_size: PAGE_SIZE }
-          : { q: query || undefined, ativo: filtro === 'todos' ? undefined : filtro === 'ativos', page: currentPage, page_size: PAGE_SIZE }
+          ? { ...base, pendente_revisao: true }
+          : filtro === 'vinculo'
+            ? { ...base, alerta_vinculo: true }
+            : { ...base, ativo: filtro === 'todos' ? undefined : filtro === 'ativos' }
       const data = await getUsuarios(params)
       if (!autoSwitchDone.current && filtro === 'pendentes' && data.total === 0) {
         autoSwitchDone.current = true
@@ -90,9 +93,41 @@ export default function UsuariosPage() {
     setEditando(null)
   }
 
+  async function handleConfirmarVinculo(analista: AnalistaAdminOut) {
+    if (!window.confirm(`Confirmar manualmente o vínculo de "${analista.nome}" com a carreira? A reverificação automática não suspenderá mais esta conta.`)) return
+    try {
+      const updated = await confirmarVinculo(analista.id)
+      setItems((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
+    } catch {
+      // silencioso — mantém o item como está
+    }
+  }
+
+  function temAlertaVinculo(a: AnalistaAdminOut) {
+    return a.vinculo_suspenso_em !== null || (a.ativo && a.motivo_pendencia !== null)
+  }
+
   function statusBadge(a: AnalistaAdminOut) {
+    if (a.vinculo_suspenso_em) {
+      const exclusao = a.vinculo_exclusao_em ? new Date(a.vinculo_exclusao_em).toLocaleDateString('pt-BR') : ''
+      return (
+        <span className={styles.badgeInativo} title={`${a.motivo_pendencia ?? ''} Exclusão automática em ${exclusao}.`}>
+          Vínculo suspenso
+        </span>
+      )
+    }
+    if (a.ativo && a.motivo_pendencia) {
+      return <span className={styles.badgePendente} title={a.motivo_pendencia}>Alerta de vínculo</span>
+    }
     if (a.pendente_revisao) {
-      return <span className={styles.badgePendente} title="Vínculo como ATPS não confirmado automaticamente no Portal da Transparência">Ag. revisão</span>
+      return (
+        <span
+          className={styles.badgePendente}
+          title={a.motivo_pendencia ?? 'Vínculo como ATPS não confirmado automaticamente no Portal da Transparência'}
+        >
+          Ag. revisão
+        </span>
+      )
     }
     return (
       <span className={a.ativo ? styles.badgeAtivo : styles.badgeInativo}>
@@ -120,6 +155,7 @@ export default function UsuariosPage() {
             <option value="ativos">Ativos</option>
             <option value="inativos">Inativos</option>
             <option value="pendentes">Ag. revisão</option>
+            <option value="vinculo">Alertas de vínculo</option>
             <option value="todos">Todos</option>
           </select>
           <button
@@ -178,6 +214,14 @@ export default function UsuariosPage() {
                           style={{ fontSize: 'var(--font-xs)', padding: '4px 10px', borderRadius: 'var(--r)', border: 'none', background: a.ativo ? '#fee2e2' : '#dcfce7', color: a.ativo ? '#b91c1c' : '#15803d', cursor: 'pointer' }}
                         >
                           {a.ativo ? 'Desativar' : a.pendente_revisao ? 'Aprovar' : 'Reativar'}
+                        </button>
+                      )}
+                      {temAlertaVinculo(a) && (
+                        <button
+                          onClick={() => void handleConfirmarVinculo(a)}
+                          style={{ fontSize: 'var(--font-xs)', padding: '4px 10px', borderRadius: 'var(--r)', border: 'none', background: '#dcfce7', color: '#15803d', cursor: 'pointer' }}
+                        >
+                          Confirmar vínculo
                         </button>
                       )}
                       {isAdmin && a.id !== user?.id && (

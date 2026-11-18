@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import type { AnalistaOut, AnalistaPublico, Formacao, Tema } from '@shared/api/types'
 import { Badge, Tag } from '@shared/components'
+import { isLinkGovBr } from '@shared/utils/url'
 import styles from './perfil.module.css'
 
 type Profile = AnalistaOut | AnalistaPublico
@@ -114,7 +115,7 @@ export default function ProfileCard({ profile }: { profile: Profile }) {
                 </a>
               </ContactRow>
             )}
-            {profile.portal_url && (
+            {profile.portal_url && isLinkGovBr(profile.portal_url) && (
               <ContactRow icon="link">
                 <a href={profile.portal_url} target="_blank" rel="noopener noreferrer">
                   {profile.portal_url}

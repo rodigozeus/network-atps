@@ -1,5 +1,8 @@
 import { api } from './client'
-import type { AnalistaOut, AnalistaPublico, AnalistaUpdate, Formacao, Tema, NivelFormacao } from './types'
+import type {
+  AnalistaOut, AnalistaPublico, AnalistaUpdate, Consentimento, DocumentoLegal, Formacao,
+  NivelFormacao, RegularizarIn, Tema,
+} from './types'
 
 export interface FormacaoInput {
   nivel: NivelFormacao
@@ -30,4 +33,11 @@ export const perfilApi = {
   getAnalista: (id: number | string) =>
     api.get<AnalistaPublico>(`/analistas/${id}`).then((r) => r.data),
   deleteMe: (senha: string) => api.delete('/perfil/me', { data: { senha } }),
+  regularizar: (data: RegularizarIn) =>
+    api.post<AnalistaOut>('/perfil/regularizar', data).then((r) => r.data),
+  getPrivacidade: () => api.get<Consentimento[]>('/perfil/privacidade').then((r) => r.data),
+}
+
+export const documentosApi = {
+  getAtuais: () => api.get<DocumentoLegal[]>('/documentos').then((r) => r.data),
 }

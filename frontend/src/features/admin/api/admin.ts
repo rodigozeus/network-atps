@@ -23,6 +23,12 @@ export interface AnalistaAdminOut {
   role: Role
   ativo: boolean
   pendente_revisao: boolean
+  motivo_pendencia: string | null
+  perfil_oculto: boolean
+  cpf_verificado_em: string | null
+  vinculo_manual: boolean
+  vinculo_suspenso_em: string | null
+  vinculo_exclusao_em: string | null
   criado_em: string
   atualizado_em: string
   formacoes: { id: number; nivel: string; curso: string; instituicao: string }[]
@@ -71,6 +77,7 @@ export interface ListUsuariosParams {
   q?: string
   ativo?: boolean
   pendente_revisao?: boolean
+  alerta_vinculo?: boolean
   page?: number
   page_size?: number
 }
@@ -98,27 +105,45 @@ export async function reativarUsuario(id: number): Promise<AnalistaAdminOut> {
   return data
 }
 
+export async function confirmarVinculo(id: number): Promise<AnalistaAdminOut> {
+  const { data } = await api.post<AnalistaAdminOut>(`/admin/usuarios/${id}/confirmar-vinculo`)
+  return data
+}
+
 export async function getStats(): Promise<AdminStats> {
   const { data } = await api.get<AdminStats>('/admin/stats')
   return data
 }
 
 export function downloadCSV(): void {
-  const token = localStorage.getItem('access_token')
-  const base = import.meta.env.VITE_API_BASE_URL ?? '/api'
-  const url = `${base}/admin/export`
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', 'analistas.csv')
-  // Não é possível passar header no <a>, então fazemos via fetch + blob
-  fetch(url, { headers: { Authorization: `Bearer ${token ?? ''}` } })
-    .then((res) => res.blob())
-    .then((blob) => {
-      const objectUrl = URL.createObjectURL(blob)
-      link.href = objectUrl
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(objectUrl)
-    })
+  api.get<Blob>('/admin/export', { responseType: 'blob' }).then(({ data }) => {
+    const objectUrl = URL.createObjectURL(data)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.setAttribute('download', 'analistas.csv')
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(objectUrl)
+  })
+}
+
+export interface ConflitoCadastro {
+  id: number
+  analista_id: number
+  analista_nome: string
+  analista_email: string
+  nome_informado: string
+  email_informado: string
+  resolvido: boolean
+  criado_em: string
+}
+
+export async function getConflitos(): Promise<ConflitoCadastro[]> {
+  const { data } = await api.get<ConflitoCadastro[]>('/admin/conflitos')
+  return data
+}
+
+export async function resolverConflito(id: number): Promise<void> {
+  await api.post(`/admin/conflitos/${id}/resolver`)
 }

@@ -2,7 +2,11 @@ import hashlib
 import hmac
 import re
 
+from cryptography.fernet import Fernet
+
 from database import settings
+
+_fernet = Fernet(settings.cpf_encryption_key.encode())
 
 
 def limpar_cpf(cpf: str) -> str:
@@ -26,8 +30,18 @@ def cpf_valido(cpf: str) -> bool:
 
 
 def hash_cpf(cpf: str) -> str:
-    """Hash determinístico (HMAC-SHA256) do CPF, usado apenas para impedir
-    cadastros duplicados. O CPF original nunca é armazenado."""
+    """Hash determinístico (HMAC-SHA256) do CPF, usado para impedir cadastros
+    duplicados sem precisar decifrar os CPFs guardados."""
     numeros = limpar_cpf(cpf)
     chave = settings.cpf_hash_secret.encode()
     return hmac.new(chave, numeros.encode(), hashlib.sha256).hexdigest()
+
+
+def cifrar_cpf(cpf: str) -> str:
+    """Criptografia reversível (Fernet: AES-128-CBC + HMAC), usada só para a
+    reverificação periódica do vínculo no Portal da Transparência."""
+    return _fernet.encrypt(limpar_cpf(cpf).encode()).decode()
+
+
+def decifrar_cpf(cpf_cifrado: str) -> str:
+    return _fernet.decrypt(cpf_cifrado.encode()).decode()

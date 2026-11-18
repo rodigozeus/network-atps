@@ -2,47 +2,49 @@ import axios from 'axios'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
+// A sessão fica em cookies HttpOnly definidos pelo backend — o JavaScript não tem
+// acesso aos tokens. withCredentials garante o envio dos cookies.
+// Remove tokens deixados pela versão anterior, que guardava a sessão no localStorage.
+try {
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+} catch {
+  // armazenamento indisponível — nada a limpar
+}
+
 export const api = axios.create({
   baseURL: BASE_URL,
+  withCredentials: true,
 })
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    _retry?: boolean
+    /** Não redireciona para /login se a sessão não existir (ex.: checagem inicial). */
+    _skipAuthRedirect?: boolean
   }
-  return config
-})
+}
 
-// On 401: try refresh once, then clear session and redirect to /login
+// On 401: try refresh once, then redirect to /login.
+// Endpoints de /auth/ respondem 401 por credenciais inválidas — não entram aqui.
 api.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
-    if (!axios.isAxiosError(error)) return Promise.reject(error)
+    if (!axios.isAxiosError(error) || !error.config) return Promise.reject(error)
 
-    const original = error.config as (typeof error.config) & { _retry?: boolean }
-    if (error.response?.status === 401 && !original._retry) {
+    const original = error.config
+    const isAuthEndpoint = original.url?.startsWith('/auth/')
+    if (error.response?.status === 401 && !original._retry && !isAuthEndpoint) {
       original._retry = true
-      const refreshToken = localStorage.getItem('refresh_token')
-
-      if (refreshToken) {
-        try {
-          const { data } = await axios.post(`${BASE_URL}/auth/refresh`, {
-            refresh_token: refreshToken,
-          })
-          localStorage.setItem('access_token', data.access_token as string)
-          if (original.headers) {
-            original.headers.Authorization = `Bearer ${data.access_token as string}`
-          }
-          return api(original)
-        } catch {
-          // refresh failed — fall through to clear session
-        }
+      try {
+        await axios.post(`${BASE_URL}/auth/refresh`, null, { withCredentials: true })
+        return api(original)
+      } catch {
+        // refresh failed — fall through
       }
-
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('refresh_token')
-      window.location.href = '/login'
+      if (!original._skipAuthRedirect) {
+        window.location.href = '/login'
+      }
     }
 
     return Promise.reject(error)

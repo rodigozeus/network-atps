@@ -18,7 +18,15 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
 
     cpf_hash_secret: str
+    # Chave Fernet para guardar o CPF criptografado (reverificação periódica do vínculo).
+    cpf_encryption_key: str
     portal_transparencia_token: str | None = None
+
+    # Cookies de sessão (HttpOnly). Secure é aceito em http://localhost pelos navegadores.
+    cookie_secure: bool = True
+
+    # Documentação automática (/docs, /redoc, /openapi.json) — desligada em produção.
+    enable_docs: bool = False
 
     class Config:
         env_file = ".env"

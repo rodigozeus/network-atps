@@ -17,8 +17,9 @@ A Rede ATPS é uma plataforma web onde cada analista cria e mantém seu perfil p
 - **Autenticação** — registro e login por e-mail pessoal (privado por padrão, compartilhado só com consentimento explícito); JWT com refresh token; rotas protegidas; após login redireciona direto para a busca
 - **Redefinição de senha por e-mail** — fluxo "esqueci minha senha" com token de uso único (válido por 1h, hash `sha256` no banco); envio por SMTP configurável, com fallback para log no console em dev quando o SMTP não está configurado
 - **Bloqueio por tentativas de login** — 5 tentativas incorretas bloqueiam a conta por 15 minutos
-- **Validação de cadastro por CPF (Portal da Transparência)** — no registro, o CPF é consultado uma única vez na API de Dados do Portal da Transparência para confirmar vínculo ativo como ATPS; confirmado → conta ativada na hora; não confirmado (ou API indisponível/não configurada) → conta fica `pendente_revisao` até um admin aprovar manualmente. O CPF nunca é armazenado — só um hash (HMAC-SHA256) para impedir cadastro duplicado
-- **Termo de Consentimento LGPD no cadastro** — aceite obrigatório, explicando uso do CPF, finalidade dos dados e direitos do titular
+- **Validação de cadastro por CPF (Portal da Transparência)** — no registro, o CPF é consultado na API de Dados do Portal da Transparência: o campo de cargo precisa indicar ATPS (ativo ou aposentado) e o nome informado precisa conferir com o do Portal; confirmado → conta ativada na hora; não confirmado (ou API indisponível) → conta fica `pendente_revisao`, com o motivo informado ao usuário, até um admin aprovar manualmente. CPF já cadastrado → a conta não é criada, o titular é alertado por e-mail e a tentativa vai para "Conflitos de CPF" no admin
+- **Reverificação periódica do vínculo** — o serviço `atps-tarefas` (`backend/tarefas.py`) reconsulta o CPF a cada 180 dias; se o vínculo não for confirmado, o perfil é ocultado, o usuário é avisado por e-mail e a conta é excluída após 30 dias sem contestação. Contas aprovadas manualmente por admin só geram alerta
+- **Consentimento versionado** — Termo de Consentimento e Autorização de consulta do CPF ficam em `backend/documentos_legais.py`, com versão e hash do texto; cada aceite/revogação (inclusive exibição de perfil, e-mail e celular) é registrado em `consentimentos` com data, IP e navegador. Nova versão → reaceite obrigatório no próximo acesso + aviso por e-mail. Seção "Privacidade" no perfil mostra as autorizações e permite ocultar o perfil sem excluir a conta
 - **Perfil completo** — ministério → secretaria → departamento → CG → coordenação (com siglas), contatos, controle de visibilidade (celular e e-mail pessoal), cargo FCE, portal URL, turma (2012, 2016, CPNU 2024), foto de perfil
 - **Formação acadêmica** — múltiplos registros por nível (graduação, especialização, mestrado, doutorado)
 - **Temas de atuação** — lista dinâmica com flag de exercício atual (habilita busca por histórico)
@@ -100,7 +101,7 @@ network-atps/
 │   │   └── admin.py        # Usuários, stats, exportação CSV
 │   ├── auth.py              # Hash de senha, tokens JWT, dependências de autenticação
 │   ├── email_utils.py       # Envio de e-mail de redefinição de senha (SMTP)
-│   ├── cpf_utils.py         # Validação e hash (HMAC-SHA256) do CPF
+│   ├── cpf_utils.py         # Validação, hash (HMAC-SHA256) e criptografia (Fernet) do CPF
 │   ├── portal_transparencia.py  # Consulta à API de Dados para confirmar vínculo ATPS
 │   ├── models.py
 │   ├── schemas.py
@@ -147,8 +148,10 @@ analistas
   role: analista | andeps | admin
   ativo: bool (soft delete — desativação sem perda de dados)
   pendente_revisao: bool (vínculo ATPS não confirmado pelo Portal da Transparência)
-  cpf_hash (hash HMAC-SHA256 — o CPF em si nunca é armazenado)
-  termos_aceitos_em (data/hora do aceite do Termo de Consentimento LGPD no cadastro)
+  cpf_hash (hash HMAC-SHA256 — impede cadastro duplicado)
+  cpf_cifrado (CPF criptografado com Fernet — usado só na reverificação do vínculo)
+  cpf_verificado_em, vinculo_manual, vinculo_suspenso_em (reverificação periódica)
+  termos_aceitos_em (legado — aceites agora ficam na tabela consentimentos)
   email_pessoal (obrigatório — identificador de acesso, privado por padrão)
   email_institucional (opcional)
   visibilidade_email_pessoal
@@ -203,11 +206,11 @@ O tratamento dos dados pessoais dos analistas cadastrados tem como base legal o 
 
 ### Termo de Consentimento no cadastro
 
-O registro exige aceite explícito (checkbox obrigatório) de um Termo de Consentimento que explica, em linguagem clara: quais dados são coletados e por quê, o uso do CPF para verificação de vínculo, finalidade do tratamento, compartilhamento, base legal e os direitos do titular. A data/hora do aceite fica registrada em `termos_aceitos_em`.
+O registro exige dois aceites separados: o Termo de Consentimento e a Autorização de consulta do CPF. Os textos ficam versionados em `backend/documentos_legais.py` (nunca editar uma versão publicada — publicar uma nova) e são servidos por `GET /documentos`. Cada aceite é gravado em `consentimentos` com a versão e o hash SHA-256 do texto. Ao publicar uma nova versão, todos os usuários passam por reaceite no próximo acesso.
 
-### CPF — uso único, nunca armazenado
+### CPF — criptografado, usado só para verificar o vínculo
 
-O CPF informado no cadastro é usado **uma única vez**, no momento do registro, exclusivamente para consultar a API de Dados do Portal da Transparência e confirmar o vínculo ativo como ATPS. Em seguida ele é descartado — só um hash HMAC-SHA256 (`cpf_hash`) é persistido, apenas para impedir cadastro duplicado. Nem administradores têm acesso ao CPF em texto claro.
+O CPF é consultado no Portal da Transparência no cadastro e periodicamente (a cada 180 dias). Ele fica guardado criptografado (`cpf_cifrado`, Fernet, chave em `CPF_ENCRYPTION_KEY`) e como hash HMAC-SHA256 (`cpf_hash`) para impedir cadastro duplicado. Não é exibido a nenhum usuário, nem no painel admin, e nunca é gravado em logs. Contas criadas antes da criptografia informam o CPF na atualização cadastral do próximo login.
 
 ### Exclusão de conta (direito ao apagamento)
 
@@ -221,7 +224,7 @@ Qualquer usuário pode excluir permanentemente sua conta na própria página de 
 - Autenticação stateless com JWT (access 7d + refresh 30d)
 - Redefinição de senha por token de uso único (hash `sha256`, validade de 1h, invalidado após o uso)
 - Bloqueio de login após 5 tentativas incorretas (15 minutos)
-- Validação de identidade no cadastro por CPF, consultado ao Portal da Transparência (CPFs não confirmados exigem aprovação manual de um admin) — CPF nunca é armazenado, só um hash HMAC-SHA256
+- Validação de identidade no cadastro por CPF, consultado ao Portal da Transparência (CPFs não confirmados exigem aprovação manual de um admin) — CPF guardado criptografado (Fernet) e como hash HMAC-SHA256
 - HTTPS automático via Cloudflare
 - Dados sensíveis (celular, e-mail pessoal) só exibidos após consentimento explícito e apenas para usuários autenticados
 - Variáveis de ambiente via `.env` (nunca vão ao repositório)
