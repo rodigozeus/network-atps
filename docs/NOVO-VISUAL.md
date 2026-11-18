@@ -173,6 +173,13 @@ Tudo isto **já existe na API**. Só não aparecia ou não era editável na inte
 
 ## 3. O que o back-end precisa ganhar
 
+> **Status (18/11/2026): implementado.** Tudo desta seção está no back-end, com estas diferenças em relação ao código sugerido:
+>
+> - Migração única `e4f5a6b7c8d9` (favoritos, links e `pos_doutorado`), depois de `d3e4f5a6b7c8`. O id `c2d3e4f5a6b7` sugerido abaixo já estava em uso.
+> - Os endpoints novos usam `get_usuario_regular` (quem tem pendência cadastral recebe 403) e `condicao_perfil_visivel()` em vez de `Analista.ativo`, para não expor perfis ocultos ou com vínculo suspenso em `/lotacoes`, `/temas` e `/favoritos/ids`.
+> - `linkedin_url` só aceita `https://` de `linkedin.com`, e `lattes_url` só aceita links de `lattes.cnpq.br` (`http://` é convertido para `https://`). A mesma regra vale no formulário e na exibição do perfil.
+> - Foto: o limite continua 5 MB (o texto da edição foi ajustado).
+
 Resumo:
 
 | # | Recurso | Endpoint | Muda o banco? |

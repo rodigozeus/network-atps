@@ -29,6 +29,32 @@ def validar_portal_url(v: str | None) -> str | None:
     return v
 
 
+def _validar_link(v: str | None, esquemas: set[str], dominio: str, mensagem: str) -> str | None:
+    if v is None or v.strip() == "":
+        return None
+    v = v.strip()
+    url = urlparse(v)
+    host = (url.hostname or "").lower()
+    if url.scheme not in esquemas or not (host == dominio or host.endswith(f".{dominio}")):
+        raise ValueError(mensagem)
+    return v
+
+
+def validar_linkedin_url(v: str | None) -> str | None:
+    """Só aceita links https de linkedin.com."""
+    return _validar_link(v, {"https"}, "linkedin.com",
+                         "O link do LinkedIn deve começar com https://www.linkedin.com/")
+
+
+def validar_lattes_url(v: str | None) -> str | None:
+    """Só aceita links de lattes.cnpq.br; http:// é convertido para https://."""
+    v = _validar_link(v, {"http", "https"}, "lattes.cnpq.br",
+                      "O link do Currículo Lattes deve ser de lattes.cnpq.br")
+    if v and v.lower().startswith("http://"):
+        v = "https://" + v[len("http://"):]
+    return v
+
+
 # --- Formação ---
 
 class FormacaoBase(BaseModel):
@@ -130,12 +156,24 @@ class AnalistaUpdate(BaseModel):
     coordenacao: str | None = None
     cargo_fce: str | None = None
     portal_url: str | None = None
+    linkedin_url: str | None = None
+    lattes_url: str | None = None
     turma: Turma | None = None
 
     @field_validator("portal_url")
     @classmethod
     def _valida_portal_url(cls, v: str | None) -> str | None:
         return validar_portal_url(v)
+
+    @field_validator("linkedin_url")
+    @classmethod
+    def _valida_linkedin_url(cls, v: str | None) -> str | None:
+        return validar_linkedin_url(v)
+
+    @field_validator("lattes_url")
+    @classmethod
+    def _valida_lattes_url(cls, v: str | None) -> str | None:
+        return validar_lattes_url(v)
 
 class AnalistaPerfil(BaseModel):
     email_institucional: str | None = None
@@ -152,6 +190,8 @@ class AnalistaPerfil(BaseModel):
     coordenacao: str | None = None
     cargo_fce: str | None = None
     portal_url: str | None = None
+    linkedin_url: str | None = None
+    lattes_url: str | None = None
     turma: Turma | None = None
 
 class AnalistaOut(AnalistaBase, AnalistaPerfil):
@@ -189,6 +229,8 @@ class AnalistaPublico(BaseModel):
     coordenacao: str | None = None
     cargo_fce: str | None = None
     portal_url: str | None = None
+    linkedin_url: str | None = None
+    lattes_url: str | None = None
     turma: Turma | None = None
     foto_path: str | None = None
     formacoes: list[FormacaoOut] = []
@@ -197,6 +239,17 @@ class AnalistaPublico(BaseModel):
 
 
 # --- Busca ---
+
+class LotacaoOut(BaseModel):
+    nome: str
+    sigla: str | None
+    total: int
+
+
+class TemaCatalogoOut(BaseModel):
+    tema: str
+    total: int
+
 
 class BuscaResponse(BaseModel):
     items: list[AnalistaPublico]
@@ -225,6 +278,8 @@ class AnalistaAdminOut(BaseModel):
     coordenacao: str | None = None
     cargo_fce: str | None = None
     portal_url: str | None = None
+    linkedin_url: str | None = None
+    lattes_url: str | None = None
     turma: Turma | None = None
     foto_path: str | None = None
     role: Role
@@ -259,6 +314,8 @@ class AnalistaAdminUpdate(BaseModel):
     coordenacao: str | None = None
     cargo_fce: str | None = None
     portal_url: str | None = None
+    linkedin_url: str | None = None
+    lattes_url: str | None = None
     turma: Turma | None = None
     role: Role | None = None
     ativo: bool | None = None
@@ -267,6 +324,16 @@ class AnalistaAdminUpdate(BaseModel):
     @classmethod
     def _valida_portal_url(cls, v: str | None) -> str | None:
         return validar_portal_url(v)
+
+    @field_validator("linkedin_url")
+    @classmethod
+    def _valida_linkedin_url(cls, v: str | None) -> str | None:
+        return validar_linkedin_url(v)
+
+    @field_validator("lattes_url")
+    @classmethod
+    def _valida_lattes_url(cls, v: str | None) -> str | None:
+        return validar_lattes_url(v)
 
 
 class PaginatedAdminUsers(BaseModel):

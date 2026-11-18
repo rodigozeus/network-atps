@@ -4,7 +4,7 @@ from sqlalchemy import or_, exists, func, case
 
 from auth import get_usuario_regular
 from database import get_db
-from models import Analista, Formacao, TemaAtuacao, condicao_perfil_visivel
+from models import Analista, Favorito, Formacao, NivelFormacao, TemaAtuacao, condicao_perfil_visivel
 from schemas import AnalistaPublico, BuscaResponse
 
 router = APIRouter(prefix="/busca", tags=["busca"])
@@ -26,10 +26,12 @@ def buscar(
     secretaria: str | None = Query(None, description="Filtra por secretaria (sigla ou nome)"),
     tema: str | None = Query(None, description="Filtra por tema de atuação"),
     formacao: str | None = Query(None, description="Filtra por curso ou instituição"),
+    nivel_formacao: NivelFormacao | None = Query(None, description="Tem formação neste nível"),
+    favoritos: bool = Query(False, description="Só analistas favoritados por quem está logado"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=30),
     db: Session = Depends(get_db),
-    _: Analista = Depends(get_usuario_regular),
+    eu: Analista = Depends(get_usuario_regular),
 ):
     query = db.query(Analista).filter(condicao_perfil_visivel())
 
@@ -82,6 +84,22 @@ def buscar(
             )
         )
 
+    if nivel_formacao:
+        query = query.filter(
+            exists().where(
+                Formacao.analista_id == Analista.id,
+                Formacao.nivel == nivel_formacao,
+            )
+        )
+
+    if favoritos:
+        query = query.filter(
+            exists().where(
+                Favorito.analista_id == eu.id,
+                Favorito.favorito_id == Analista.id,
+            )
+        )
+
     tem_foto = case((Analista.foto_path.is_(None), 1), else_=0)
 
     campos_preenchidos = (
@@ -95,6 +113,8 @@ def buscar(
         + case((Analista.coordenacao.isnot(None), 1), else_=0)
         + case((Analista.cargo_fce.isnot(None), 1), else_=0)
         + case((Analista.portal_url.isnot(None), 1), else_=0)
+        + case((Analista.linkedin_url.isnot(None), 1), else_=0)
+        + case((Analista.lattes_url.isnot(None), 1), else_=0)
         + case((Analista.foto_path.isnot(None), 1), else_=0)
         + case((exists().where(Formacao.analista_id == Analista.id), 1), else_=0)
         + case((exists().where(TemaAtuacao.analista_id == Analista.id), 1), else_=0)

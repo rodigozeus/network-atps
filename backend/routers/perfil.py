@@ -2,19 +2,24 @@ import io
 import os
 import uuid
 from datetime import datetime, timezone
+from typing import Literal
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile, File, status
 from fastapi.responses import FileResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
+from sqlalchemy import func, null, select
 from sqlalchemy.orm import Session
 from database import get_db
-from models import AcaoConsentimento, Analista, ConflitoCadastro, Formacao, TemaAtuacao
+from models import (
+    AcaoConsentimento, Analista, ConflitoCadastro, Formacao, TemaAtuacao, condicao_perfil_visivel,
+)
 from schemas import (
     AnalistaOut, AnalistaUpdate, AnalistaPublico,
     ConsentimentoOut,
     ExcluirContaIn,
     FormacaoBase, FormacaoOut,
+    LotacaoOut,
     RegularizarIn,
-    TemaBase, TemaOut,
+    TemaBase, TemaCatalogoOut, TemaOut,
 )
 from auth import get_current_user, get_usuario_regular, verify_password
 from consentimentos import (
@@ -322,6 +327,18 @@ def upload_foto(
     return analista
 
 
+@router.delete("/perfil/foto", response_model=AnalistaOut)
+def remover_minha_foto(
+    analista: Analista = Depends(get_usuario_regular),
+    db: Session = Depends(get_db),
+):
+    remover_foto(analista.foto_path)
+    analista.foto_path = None
+    db.commit()
+    db.refresh(analista)
+    return analista
+
+
 @router.get("/uploads/fotos/{nome_arquivo}")
 def servir_foto(nome_arquivo: str, _: Analista = Depends(get_usuario_regular)):
     """Fotos só são servidas a usuários logados (antes ficavam em diretório público)."""
@@ -333,3 +350,61 @@ def servir_foto(nome_arquivo: str, _: Analista = Depends(get_usuario_regular)):
         caminho,
         headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=3600"},
     )
+
+
+# --- Listas para filtros e edição ---
+
+# Níveis da lotação, de cima para baixo: (coluna do nome, coluna da sigla)
+NIVEIS_LOTACAO = {
+    "ministerio": (Analista.ministerio, Analista.ministerio_sigla),
+    "secretaria": (Analista.secretaria, Analista.secretaria_sigla),
+    "departamento": (Analista.departamento, Analista.departamento_sigla),
+    "coordenacao_geral": (Analista.coordenacao_geral, None),
+    "coordenacao": (Analista.coordenacao, None),
+}
+
+
+@router.get("/lotacoes", response_model=list[LotacaoOut])
+def listar_lotacoes(
+    nivel: Literal["ministerio", "secretaria", "departamento", "coordenacao_geral", "coordenacao"],
+    ministerio: str | None = None,
+    secretaria: str | None = None,
+    departamento: str | None = None,
+    coordenacao_geral: str | None = None,
+    db: Session = Depends(get_db),
+    _: Analista = Depends(get_usuario_regular),
+):
+    """Lotações já cadastradas nos perfis visíveis, para as listas encadeadas da edição
+    e o filtro da busca. Cada nível é filtrado pelos nomes completos dos níveis acima."""
+    col_nome, col_sigla = NIVEIS_LOTACAO[nivel]
+    # Sigla mais alta em ordem alfabética quando o mesmo nome tem siglas diferentes
+    sigla = func.max(col_sigla) if col_sigla is not None else null()
+    stmt = (
+        select(col_nome, sigla, func.count())
+        .where(condicao_perfil_visivel(), col_nome.isnot(None), col_nome != "")
+        .group_by(col_nome)
+        .order_by(col_nome)
+    )
+    filtros = {
+        "ministerio": ministerio, "secretaria": secretaria,
+        "departamento": departamento, "coordenacao_geral": coordenacao_geral,
+    }
+    ordem = list(NIVEIS_LOTACAO)
+    for acima in ordem[: ordem.index(nivel)]:
+        if filtros[acima]:
+            stmt = stmt.where(NIVEIS_LOTACAO[acima][0] == filtros[acima])
+    return [LotacaoOut(nome=n, sigla=s, total=t) for n, s, t in db.execute(stmt)]
+
+
+@router.get("/temas", response_model=list[TemaCatalogoOut])
+def catalogo_temas(db: Session = Depends(get_db), _: Analista = Depends(get_usuario_regular)):
+    """Todos os temas de atuação dos perfis visíveis, do mais citado ao menos citado."""
+    total = func.count(func.distinct(TemaAtuacao.analista_id))
+    stmt = (
+        select(TemaAtuacao.tema, total)
+        .join(Analista, Analista.id == TemaAtuacao.analista_id)
+        .where(condicao_perfil_visivel())
+        .group_by(TemaAtuacao.tema)
+        .order_by(total.desc(), TemaAtuacao.tema)
+    )
+    return [TemaCatalogoOut(tema=t, total=n) for t, n in db.execute(stmt)]

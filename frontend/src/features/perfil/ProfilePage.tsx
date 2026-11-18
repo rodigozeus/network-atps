@@ -184,7 +184,7 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
     setErroFoto('')
     if (!f) return
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) { setErroFoto('Escolha uma imagem JPG, PNG ou WEBP.'); return }
-    if (f.size > 10 * 1024 * 1024) { setErroFoto('A imagem passa de 10 MB. Escolha uma menor.'); return }
+    if (f.size > 5 * 1024 * 1024) { setErroFoto('A imagem passa de 5 MB. Escolha uma menor.'); return }
     setFoto(f)
     setFotoRemovida(false)
     setFotoPreview(URL.createObjectURL(f))
@@ -292,7 +292,7 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
               </button>
             )}
           </div>
-          <p className={styles.ajuda}>JPG, PNG ou WEBP, até 10 MB. A foto é enviada quando você salva.</p>
+          <p className={styles.ajuda}>JPG, PNG ou WEBP, até 5 MB. A foto é enviada quando você salva.</p>
           {erroFoto && <p className={styles.erro} role="alert">{erroFoto}</p>}
         </div>
       </section>

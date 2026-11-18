@@ -218,6 +218,7 @@ def get_stats(
         (Formacao.nivel == NivelFormacao.especializacao, 2),
         (Formacao.nivel == NivelFormacao.mestrado, 3),
         (Formacao.nivel == NivelFormacao.doutorado, 4),
+        (Formacao.nivel == NivelFormacao.pos_doutorado, 5),
         else_=0,
     )
     highest_subq = (
@@ -230,6 +231,7 @@ def get_stats(
         (highest_subq.c.max_priority == 2, "Especialização"),
         (highest_subq.c.max_priority == 3, "Mestrado"),
         (highest_subq.c.max_priority == 4, "Doutorado"),
+        (highest_subq.c.max_priority == 5, "Pós-doutorado"),
     )
     por_formacao_rows = (
         db.query(priority_to_label.label("nivel"), func.count().label("total"))
@@ -272,7 +274,7 @@ def exportar_csv(
         "telefone_institucional", "celular",
         "ministerio", "ministerio_sigla", "secretaria", "secretaria_sigla",
         "departamento", "departamento_sigla", "coordenacao_geral", "coordenacao",
-        "cargo_fce", "portal_url", "role", "ativo",
+        "cargo_fce", "portal_url", "linkedin_url", "lattes_url", "role", "ativo",
         "criado_em", "atualizado_em", "formacoes", "temas",
     ])
 
@@ -289,7 +291,7 @@ def exportar_csv(
             a.secretaria or "", a.secretaria_sigla or "",
             a.departamento or "", a.departamento_sigla or "",
             a.coordenacao_geral or "", a.coordenacao or "",
-            a.cargo_fce or "", a.portal_url or "",
+            a.cargo_fce or "", a.portal_url or "", a.linkedin_url or "", a.lattes_url or "",
             a.role.value, a.ativo,
             a.criado_em.isoformat(), a.atualizado_em.isoformat(),
             formacoes_str, temas_str,

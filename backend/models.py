@@ -12,6 +12,7 @@ class NivelFormacao(str, enum.Enum):
     especializacao = "especializacao"
     mestrado = "mestrado"
     doutorado = "doutorado"
+    pos_doutorado = "pos_doutorado"
 
 
 class Role(str, enum.Enum):
@@ -76,6 +77,8 @@ class Analista(Base):
     # Complementar
     cargo_fce: Mapped[str | None] = mapped_column(String(100), nullable=True)
     portal_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    linkedin_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lattes_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     turma: Mapped[Turma | None] = mapped_column(Enum(Turma), nullable=True)
     foto_path: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
@@ -185,6 +188,20 @@ class ConflitoCadastro(Base):
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
 
     analista: Mapped["Analista"] = relationship()
+
+
+class Favorito(Base):
+    """Quem (analista_id) favoritou quem (favorito_id). Visível só para quem favoritou.
+    ON DELETE CASCADE nos dois sentidos: excluir a conta apaga os favoritos feitos e recebidos."""
+    __tablename__ = "favoritos"
+
+    analista_id: Mapped[int] = mapped_column(
+        ForeignKey("analistas.id", ondelete="CASCADE"), primary_key=True
+    )
+    favorito_id: Mapped[int] = mapped_column(
+        ForeignKey("analistas.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
 
 
 class TemaAtuacao(Base):

@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import get_db, settings
-from routers import auth, perfil, busca, admin, documentos
+from routers import auth, perfil, busca, admin, documentos, favoritos
 
 _docs = settings.enable_docs
 app = FastAPI(
@@ -29,6 +29,7 @@ app.include_router(perfil.router)
 app.include_router(busca.router)
 app.include_router(admin.router)
 app.include_router(documentos.router)
+app.include_router(favoritos.router)
 
 # Fotos são servidas por rota autenticada em routers/perfil.py (não há mais diretório público).
 os.makedirs("uploads/fotos", exist_ok=True)
