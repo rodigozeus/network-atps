@@ -15,6 +15,29 @@ jobs:
       - name: Write .env
         run: echo "${{ secrets.ENV_PROD }}" > .env
 
+      # A chave que cifra os CPFs não pode faltar nem mudar: sem ela a API não sobe, e com
+      # outra chave os CPFs já cifrados ficam ilegíveis. Cópia guardada fora da pasta do
+      # projeto (o checkout limpa a pasta a cada deploy).
+      - name: Garantir CPF_ENCRYPTION_KEY
+        run: |
+          BACKUP="$HOME/backup-chaves/atps-cpf-encryption-key.env"
+          NO_SECRET=$(grep '^CPF_ENCRYPTION_KEY=' .env || true)
+          GUARDADA=$(grep '^CPF_ENCRYPTION_KEY=' "$BACKUP" 2>/dev/null || true)
+          if [ -z "$NO_SECRET" ] && [ -n "$GUARDADA" ]; then
+            [ -n "$(tail -c1 .env)" ] && echo >> .env
+            echo "$GUARDADA" >> .env
+            echo "::warning::ENV_PROD sem CPF_ENCRYPTION_KEY; usada a chave guardada no servidor. Atualize o secret."
+          elif [ -z "$NO_SECRET" ]; then
+            echo "::error::CPF_ENCRYPTION_KEY ausente no ENV_PROD e no servidor ($BACKUP)."
+            exit 1
+          elif [ -n "$GUARDADA" ] && [ "$NO_SECRET" != "$GUARDADA" ]; then
+            echo "::error::CPF_ENCRYPTION_KEY do ENV_PROD difere da guardada no servidor. Deploy interrompido para não perder os CPFs cifrados."
+            exit 1
+          elif [ -z "$GUARDADA" ]; then
+            mkdir -p "$(dirname "$BACKUP")"
+            (umask 077; echo "$NO_SECRET" > "$BACKUP")
+          fi
+
       - name: Build and deploy
         run: docker compose -f docker-compose.prod.yml up -d --build
 
