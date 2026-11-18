@@ -9,7 +9,7 @@
   --color-text: #1a1a2e;
   --color-text-secondary: #6c757d;
   --color-text-muted: #adb5bd;
-  --color-background: #f4f5f7;
+  --color-background: #eef0f3;
   --color-surface: #ffffff;
   --color-border: #e2e5ea;
 
@@ -20,7 +20,7 @@
   --color-info: #0d8fd4;
 
   /* Typography */
-  --font: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font: 'Manrope Variable', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-xs: 0.75rem;
   --font-sm: 0.875rem;
   --font-base: 1rem;
@@ -58,7 +58,26 @@
 
   /* Motion */
   --t: 150ms ease;
+
+  /* Novo visual: cartões arredondados, chips e gradiente de assinatura */
+  --card: #ffffff;
+  --ink: #121417;
+  --muted: #5b6370;
+  --btn: #f0f1f3;
+  --btn-hover: #e4e6ea;
+  --line: #eceef1;
+  --campo-borda: #dde1e7;
+  --edu-bg: #ebe6ff; --edu-ink: #3d2a9e; --edu-fill: #6a3fe0;
+  --topic-bg: #fdeedd; --topic-ink: #8a4410; --topic-fill: #e8771a;
+  --perigo: #b42318;
+  --gradiente-marca: linear-gradient(135deg, #ff9a2e 0%, #f45a12 45%, #e2290f 75%, #f07a1e 100%);
+  --barra-h: 72px;
+  --conteudo: 1320px;
+  --r-card: 36px;
+  --sombra-card: 0 1px 2px rgba(16, 24, 40, .05), 0 24px 48px -16px rgba(16, 24, 40, .18);
 }
+
+[hidden] { display: none !important; }
 
 *, *::before, *::after {
   box-sizing: border-box;

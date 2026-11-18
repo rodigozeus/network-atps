@@ -16,8 +16,8 @@ interface AuthState {
   login: (email: string, senha: string) => Promise<void>
   register: (data: AnalistaCreate) => Promise<RegistroOut>
   logout: () => Promise<void>
-  /** Substitui o usuário em memória (ex.: após a atualização cadastral) */
-  updateUser: (user: AnalistaOut) => void
+  /** Substitui o usuário em memória (após editar o perfil ou a atualização cadastral) */
+  atualizarUsuario: (user: AnalistaOut) => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, isLoading, login, register, logout, updateUser: setUser }}
+      value={{ user, isAuthenticated: !!user, isLoading, login, register, logout, atualizarUsuario: setUser }}
     >
       {children}
     </AuthContext.Provider>

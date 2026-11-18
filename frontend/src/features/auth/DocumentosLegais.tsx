@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { documentosApi } from '@shared/api/perfil'
 import type { DocumentoLegal } from '@shared/api/types'
 import styles from './auth.module.css'
@@ -22,15 +22,26 @@ export function useDocumentosAtuais() {
   return { documentos, versoes, carregado: Object.keys(documentos).length > 0, erro }
 }
 
+/** Texto em blocos: linha "1. Título" vira subtítulo; o resto, parágrafos */
+function TextoDocumento({ texto }: { texto: string }) {
+  return (
+    <>
+      {texto.split('\n').filter((l) => l.trim()).map((linha, i) =>
+        /^\d+\. /.test(linha) ? <h3 key={i}>{linha}</h3> : <p key={i}>{linha}</p>)}
+    </>
+  )
+}
+
 export function DocumentoBox({ doc }: { doc: DocumentoLegal | undefined }) {
+  const tituloId = useId()
   if (!doc) return null
   return (
     <>
-      <p className={styles.termosLabel}>
-        {doc.titulo} <span style={{ fontWeight: 400 }}>(versão {doc.versao})</span>
-      </p>
-      <div className={styles.termosBox} tabIndex={0}>
-        {doc.texto}
+      <h2 className={styles.termosLabel} id={tituloId}>
+        {doc.titulo} <span className={styles.termosVersao}>(versão {doc.versao})</span>
+      </h2>
+      <div className={styles.termosBox} tabIndex={0} role="region" aria-labelledby={tituloId}>
+        <TextoDocumento texto={doc.texto} />
       </div>
     </>
   )

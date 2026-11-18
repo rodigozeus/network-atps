@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { IconEyeOff } from '@tabler/icons-react'
 import type { AnalistaOut, Consentimento } from '@shared/api/types'
 import { perfilApi } from '@shared/api/perfil'
-import { Button } from '@shared/components'
 import styles from './perfil.module.css'
 
 const ROTULOS: Record<string, string> = {
@@ -25,11 +25,13 @@ interface Props {
   onChange: (updated: AnalistaOut) => void
 }
 
+/** Aba "Privacidade" da edição do perfil: visibilidade do perfil e autorizações dadas. */
 export default function PrivacidadeCard({ profile, onChange }: Props) {
   const [consentimentos, setConsentimentos] = useState<Consentimento[]>([])
   const [mostrarHistorico, setMostrarHistorico] = useState(false)
-  const [confirmarOcultar, setConfirmarOcultar] = useState(false)
   const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
+  const dialogo = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
     perfilApi.getPrivacidade().then(setConsentimentos).catch(() => {})
@@ -37,11 +39,14 @@ export default function PrivacidadeCard({ profile, onChange }: Props) {
 
   const alterarVisibilidade = async (oculto: boolean) => {
     setSalvando(true)
+    setErro('')
     try {
       onChange(await perfilApi.updateMe({ perfil_oculto: oculto }))
+      dialogo.current?.close()
+    } catch {
+      setErro('Não foi possível alterar a visibilidade agora. Tente de novo.')
     } finally {
       setSalvando(false)
-      setConfirmarOcultar(false)
     }
   }
 
@@ -51,81 +56,79 @@ export default function PrivacidadeCard({ profile, onChange }: Props) {
   }))
 
   return (
-    <div className={styles.formCard} style={{ marginTop: 'var(--sp-6)' }}>
-      <p className={styles.formCardTitle}>Privacidade</p>
-
-      <div className={styles.visibilityRow}>
-        <input
-          id="vis-perfil"
-          type="checkbox"
-          className={styles.toggle}
-          checked={!profile.perfil_oculto}
-          disabled={salvando}
-          onChange={(e) => (e.target.checked ? void alterarVisibilidade(false) : setConfirmarOcultar(true))}
-        />
-        <label htmlFor="vis-perfil" className={styles.toggleLabel}>
+    <>
+      <section className={styles.secao}>
+        <h2>Visibilidade do perfil<small>Vale para a busca e para quem tentar abrir o seu perfil.</small></h2>
+        <label className={styles.chave}>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={!profile.perfil_oculto}
+            disabled={salvando}
+            onChange={(e) => (e.target.checked ? void alterarVisibilidade(false) : dialogo.current?.showModal())}
+          />
+          <span className={styles.trilho} />
           {profile.perfil_oculto
-            ? 'Seu perfil está oculto — ninguém o encontra na busca'
-            : 'Perfil visível para os demais ATPS logados na Rede'}
+            ? 'Seu perfil está oculto: ninguém o encontra na busca'
+            : 'Perfil visível para as demais pessoas ATPS conectadas à Rede'}
         </label>
-      </div>
+        {erro && <p className={styles.erro} role="alert">{erro}</p>}
+        <p className={styles.ajuda}>
+          A exibição do e-mail pessoal e do celular é escolhida na aba “Dados do perfil”.
+          Hoje: e-mail pessoal {profile.visibilidade_email_pessoal ? 'visível' : 'oculto'};
+          celular {profile.visibilidade_celular ? 'visível' : 'oculto'}.
+        </p>
+      </section>
 
-      <ul style={{ margin: 'var(--sp-4) 0 0', paddingLeft: 'var(--sp-5)', fontSize: 'var(--font-sm)', color: 'var(--color-text-secondary)' }}>
-        {documentos.map(({ tipo, aceite }) => (
-          <li key={tipo}>
-            {ROTULOS[tipo]}:{' '}
-            {aceite ? `versão ${aceite.documento_versao}, aceita em ${data(aceite.criado_em)}` : 'aceite anterior ao registro de versões'}
-          </li>
-        ))}
-        <li>E-mail pessoal: {profile.visibilidade_email_pessoal ? 'visível' : 'oculto'} para os demais usuários</li>
-        <li>Celular: {profile.visibilidade_celular ? 'visível' : 'oculto'} para os demais usuários</li>
-      </ul>
-
-      <p style={{ marginTop: 'var(--sp-3)', fontSize: 'var(--font-xs)', color: 'var(--color-text-muted)' }}>
-        A exibição do e-mail pessoal e do celular pode ser alterada em "Editar Perfil". O Termo de
-        Consentimento e a autorização de consulta do CPF são necessários para participar da Rede —
-        para revogá-los, exclua sua conta.
-      </p>
-
-      <button
-        type="button"
-        onClick={() => setMostrarHistorico((v) => !v)}
-        style={{ background: 'none', border: 'none', padding: 0, marginTop: 'var(--sp-3)', color: 'var(--color-primary)', cursor: 'pointer', fontSize: 'var(--font-sm)' }}
-      >
-        {mostrarHistorico ? 'Ocultar histórico de autorizações' : 'Ver histórico de autorizações'}
-      </button>
-
-      {mostrarHistorico && (
-        <ul style={{ margin: 'var(--sp-3) 0 0', paddingLeft: 'var(--sp-5)', fontSize: 'var(--font-xs)', color: 'var(--color-text-secondary)' }}>
-          {consentimentos.length === 0 && <li>Nenhum registro.</li>}
-          {[...consentimentos].reverse().map((c, i) => (
-            <li key={i}>
-              {data(c.criado_em)} — {ROTULOS[c.tipo] ?? c.tipo}
-              {c.documento_versao ? ` (versão ${c.documento_versao})` : ''}: {c.acao === 'aceito' ? 'autorizado' : 'revogado'}
+      <section className={styles.secao}>
+        <h2>Autorizações<small>Necessárias para participar da Rede. Para revogá-las, exclua sua conta no seu perfil.</small></h2>
+        <ul className={styles.autorizacoes}>
+          {documentos.map(({ tipo, aceite }) => (
+            <li key={tipo}>
+              <strong>{ROTULOS[tipo]}</strong>
+              <span>
+                {aceite
+                  ? `Versão ${aceite.documento_versao}, aceita em ${data(aceite.criado_em)}`
+                  : 'Aceite anterior ao registro de versões'}
+              </span>
             </li>
           ))}
         </ul>
-      )}
 
-      {confirmarOcultar && (
-        <div className={styles.modalOverlay} role="dialog" aria-modal="true">
-          <div className={styles.modal}>
-            <p className={styles.modalTitle}>Ocultar seu perfil?</p>
-            <p className={styles.modalText}>
-              Seu perfil deixará de aparecer na busca e não poderá ser aberto pelos demais usuários.
-              Sua conta continua ativa e você pode voltar a exibi-lo a qualquer momento.
-            </p>
-            <div className={styles.modalActions}>
-              <Button type="button" variant="outline" size="sm" onClick={() => setConfirmarOcultar(false)}>
-                Cancelar
-              </Button>
-              <Button type="button" size="sm" loading={salvando} onClick={() => void alterarVisibilidade(true)}>
-                Ocultar perfil
-              </Button>
-            </div>
-          </div>
+        <button type="button" className={[styles.botao, styles.leve, styles.historicoBtn].join(' ')}
+          aria-expanded={mostrarHistorico} onClick={() => setMostrarHistorico((v) => !v)}>
+          {mostrarHistorico ? 'Ocultar histórico de autorizações' : 'Ver histórico de autorizações'}
+        </button>
+
+        {mostrarHistorico && (
+          <ul className={styles.historico}>
+            {consentimentos.length === 0 && <li>Nenhum registro.</li>}
+            {[...consentimentos].reverse().map((c, i) => (
+              <li key={i}>
+                {data(c.criado_em)}: {ROTULOS[c.tipo] ?? c.tipo}
+                {c.documento_versao ? ` (versão ${c.documento_versao})` : ''}, {c.acao === 'aceito' ? 'autorizado' : 'revogado'}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <dialog ref={dialogo} className={styles.confirmar} aria-labelledby="titulo-ocultar">
+        <span className={styles.icoAlerta}><IconEyeOff size={24} aria-hidden /></span>
+        <h2 id="titulo-ocultar">Ocultar seu perfil?</h2>
+        <p>
+          Seu perfil deixa de aparecer na busca e não pode ser aberto pelas demais pessoas.
+          A conta continua ativa e você pode voltar a exibi-lo quando quiser.
+        </p>
+        {erro && <p className={styles.erro} role="alert">{erro}</p>}
+        <div className={styles.confirmarAcoes}>
+          <button type="button" className={styles.acao} onClick={() => dialogo.current?.close()} autoFocus>Cancelar</button>
+          <button type="button" className={[styles.acao, styles.perigoCheio].join(' ')} disabled={salvando}
+            onClick={() => void alterarVisibilidade(true)}>
+            <IconEyeOff size={19} aria-hidden />{salvando ? 'Ocultando…' : 'Ocultar perfil'}
+          </button>
         </div>
-      )}
-    </div>
+      </dialog>
+    </>
   )
 }

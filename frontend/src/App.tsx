@@ -36,27 +36,30 @@ export default function App() {
           <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
           <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
 
+          {/* Páginas internas: quem tem pendência cadastral vê a regularização em tela cheia */}
+          <Route element={<PrivateRoute />}>
+            <Route element={<Layout />}>
+              <Route index element={<Navigate to="/busca" replace />} />
+              <Route path="/busca" element={<SearchPage />} />
+              <Route path="/analistas/:id" element={<PublicProfilePage />} />
+              <Route path="/perfil" element={<ProfilePage />} />
+
+              <Route element={<AdminRoute />}>
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin" element={<Navigate to="/admin/usuarios" replace />} />
+                  <Route path="/admin/usuarios" element={<UsuariosPage />} />
+                  <Route path="/admin/stats" element={<StatsPage />} />
+                  <Route path="/admin/conflitos" element={<ConflitosPage />} />
+                </Route>
+              </Route>
+            </Route>
+          </Route>
+
           <Route element={<Layout />}>
-            <Route index element={<Navigate to="/busca" replace />} />
             <Route
               path="*"
               element={<PlaceholderPage title="Página não encontrada" desc="404" />}
             />
-
-            <Route element={<PrivateRoute />}>
-              <Route path="/busca" element={<SearchPage />} />
-              <Route path="/analistas/:id" element={<PublicProfilePage />} />
-              <Route path="/perfil" element={<ProfilePage />} />
-            </Route>
-
-            <Route element={<AdminRoute />}>
-              <Route element={<AdminLayout />}>
-                <Route path="/admin" element={<Navigate to="/admin/usuarios" replace />} />
-                <Route path="/admin/usuarios" element={<UsuariosPage />} />
-                <Route path="/admin/stats" element={<StatsPage />} />
-                <Route path="/admin/conflitos" element={<ConflitosPage />} />
-              </Route>
-            </Route>
           </Route>
         </Routes>
       </AuthProvider>

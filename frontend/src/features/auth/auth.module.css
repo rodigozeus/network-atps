@@ -1,157 +1,327 @@
+/* Telas de acesso: fundo laranja de assinatura e um cartão central */
 .page {
-  min-height: calc(100vh - var(--header-h));
+  position: relative;
+  min-height: 100vh;
   display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 80% 15%, rgba(255, 214, 120, 0.45) 0, rgba(255, 214, 120, 0) 40%),
+    radial-gradient(circle at 10% 95%, rgba(175, 34, 34, 0.5) 0, rgba(175, 34, 34, 0) 50%),
+    var(--gradiente-marca) fixed;
+}
+
+/* pontinhos brancos do gradiente de assinatura */
+.page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.2;
+  background-image:
+    radial-gradient(circle, #fff 1px, transparent 1.4px),
+    radial-gradient(circle, #fff 0.8px, transparent 1.2px);
+  background-size: 140px 140px, 90px 90px;
+  background-position: 0 0, 45px 60px;
+}
+
+.main {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--sp-8) var(--sp-4);
-  background: var(--color-background);
+  padding: 48px 16px;
+}
+
+.logo {
+  display: block;
+  width: 210px;
+  margin-bottom: 28px;
+  color: #fff;
+}
+
+.logo svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .card {
-  background: var(--color-surface);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-lg);
-  padding: var(--sp-10) var(--sp-8);
   width: 100%;
-  max-width: 440px;
+  max-width: 480px;
+  padding: 40px;
+  border-radius: 32px;
+  background: var(--card);
+  box-shadow: 0 30px 60px -24px rgba(90, 20, 0, 0.55);
 }
 
-.header {
+.largo {
+  max-width: 560px;
+}
+
+.titulo {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
   text-align: center;
-  margin-bottom: var(--sp-8);
-}
-
-.brand {
-  font-size: var(--font-xl);
-  font-weight: 700;
-  color: var(--color-primary);
-  margin-bottom: var(--sp-1);
 }
 
 .subtitle {
-  font-size: var(--font-sm);
-  color: var(--color-text-secondary);
+  margin: 6px 0 28px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
 }
 
 .form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-5);
+  display: grid;
+  gap: 18px;
+}
+
+.form > button[type='submit'] {
+  margin-top: 6px;
+}
+
+.footer {
+  margin-top: 22px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.footer a,
+.linkPequeno {
+  color: #d9480f;
+  font-weight: 700;
+}
+
+.linkPequeno {
+  display: block;
+  margin-top: 8px;
+  text-align: right;
+  font-size: 13px;
 }
 
 .apiError {
-  background: #fff5f5;
-  border: 1px solid #ffcccc;
-  border-radius: var(--r);
-  padding: var(--sp-3) var(--sp-4);
-  color: var(--color-danger);
-  font-size: var(--font-sm);
-  text-align: center;
-}
-
-.notice {
-  background: #f0f7ff;
-  border: 1px solid #c3dafe;
-  border-radius: var(--r);
-  padding: var(--sp-3) var(--sp-4);
-  color: #1e40af;
-  font-size: var(--font-xs);
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #fdecea;
+  color: #8f1d14;
+  font-size: 14px;
   line-height: 1.5;
 }
 
-.pendingNotice {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  border-radius: var(--r);
-  padding: var(--sp-4) var(--sp-5);
-  color: #92400e;
-  font-size: var(--font-sm);
-  line-height: 1.6;
+.ok {
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-4);
+  gap: 10px;
+  margin: 0 0 22px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #e9f8ef;
+  color: #1d5a45;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
-.pendingNotice p {
-  margin: 0;
-}
-
-.confirmedNotice {
-  background: #d1e7dd;
-  border: 1px solid #a3cfbb;
-  border-radius: var(--r);
-  padding: var(--sp-4) var(--sp-5);
-  color: #0a4228;
-  font-size: var(--font-sm);
-  line-height: 1.6;
+/* Caixa explicativa sobre como um dado é usado */
+.info {
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-4);
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #eef3ff;
+  color: #213a8f;
+  font-size: 13.5px;
+  line-height: 1.5;
 }
 
-.confirmedNotice p {
-  margin: 0;
+.info svg,
+.apiError svg,
+.ok svg {
+  flex-shrink: 0;
+  margin-top: 1px;
 }
+
+.info strong {
+  font-weight: 800;
+}
+
+/* Força da senha (orientação; o mínimo exigido é 8 caracteres) */
+.forca {
+  display: flex;
+  gap: 4px;
+  margin-top: -10px;
+}
+
+.forca span {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--r-full);
+  background: #e2e5ea;
+  transition: background 0.2s;
+}
+
+.forca[data-n='1'] span:nth-child(-n + 1) { background: #e5484d; }
+.forca[data-n='2'] span:nth-child(-n + 2) { background: #f5a524; }
+.forca[data-n='3'] span:nth-child(-n + 3) { background: #46a758; }
+.forca[data-n='4'] span { background: #1d8a4a; }
 
 .termosLabel {
-  font-size: var(--font-sm);
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.termosVersao {
   font-weight: 500;
-  color: var(--color-text);
-  margin-bottom: var(--sp-2);
+  color: var(--muted);
 }
 
 .termosBox {
-  max-height: 180px;
+  height: 240px;
   overflow-y: auto;
-  white-space: pre-wrap;
-  background: var(--color-background);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--r);
-  padding: var(--sp-3) var(--sp-4);
-  font-size: var(--font-xs);
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1.5px solid #e2e5ea;
+  background: #f8f9fb;
+  font-size: 13.5px;
   line-height: 1.6;
-  color: var(--color-text-secondary);
+  color: #3d4450;
+}
+
+.termosBox:focus-visible {
+  outline: 3px solid #f6b08f;
+  outline-offset: 2px;
+}
+
+.termosBox p {
+  margin: 0 0 10px;
+}
+
+.termosBox h3 {
+  margin: 16px 0 4px;
+  font-size: 13.5px;
+  color: var(--ink);
 }
 
 .checkboxLabel {
   display: flex;
+  gap: 10px;
   align-items: flex-start;
-  gap: var(--sp-2);
-  margin-top: var(--sp-3);
-  font-size: var(--font-xs);
-  color: var(--color-text-secondary);
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.5;
   cursor: pointer;
-  user-select: none;
 }
 
 .checkboxLabel input {
-  margin-top: 2px;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
   flex-shrink: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
 }
 
 .error {
-  color: var(--color-danger);
-  font-size: var(--font-xs);
-  margin-top: var(--sp-2);
-}
-
-.footer {
-  margin-top: var(--sp-6);
-  text-align: center;
-  font-size: var(--font-sm);
-  color: var(--color-text-secondary);
-}
-
-.footer a {
-  color: var(--color-primary);
+  margin-top: 6px;
+  font-size: 13px;
   font-weight: 600;
+  color: var(--perigo);
 }
 
-@media (max-width: 480px) {
+/* Resultado do cadastro */
+.resultado {
+  text-align: center;
+}
+
+.resultadoIco {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff4e5;
+  color: #b25e09;
+}
+
+.resultado p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.resultado strong {
+  color: var(--ink);
+}
+
+@media (max-width: 560px) {
   .card {
-    padding: var(--sp-6) var(--sp-5);
-    border-radius: var(--r);
+    padding: 28px 20px;
+    border-radius: 26px;
   }
+
+  .main {
+    padding: 32px 12px;
+  }
+
+  .logo {
+    width: 180px;
+    margin-bottom: 22px;
+  }
+}
+
+/* Regularização cadastral */
+.alerta {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 22px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #fff4e5;
+  color: #7a3e00;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.alerta svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.alerta p {
+  margin: 0 0 8px;
+}
+.alerta p:last-child {
+  margin: 0;
+}
+.linkBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: #d9480f;
+  cursor: pointer;
+}
+.linkBtn:hover {
+  text-decoration: underline;
+}
+.linkBtn:focus-visible {
+  outline: 3px solid #f6b08f;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.linkDiscreto {
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: underline;
+}
+.exclusao {
+  margin-top: 18px;
 }

@@ -36,6 +36,8 @@ export const perfilApi = {
   regularizar: (data: RegularizarIn) =>
     api.post<AnalistaOut>('/perfil/regularizar', data).then((r) => r.data),
   getPrivacidade: () => api.get<Consentimento[]>('/perfil/privacidade').then((r) => r.data),
+  /** Remove a foto de perfil */
+  deleteFoto: () => api.delete<AnalistaOut>('/perfil/foto').then((r) => r.data),
 }
 
 export const documentosApi = {
