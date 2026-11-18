@@ -14,7 +14,7 @@ export default function Rodape({ transparente = false }: { transparente?: boolea
         <div className={styles.creditos}>
           <p>
             Criado com carinho por{' '}
-            <a href="https://github.com/rodigozeus" target="_blank" rel="noopener noreferrer">rodigozeus</a>
+            <a href="https://damaceno.org/" target="_blank" rel="noopener noreferrer">Rodrigo Damaceno</a>
           </p>
           <span className={styles.sep} aria-hidden>·</span>
           <p>
