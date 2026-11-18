@@ -1,0 +1,1203 @@
+[
+ {
+  "id": 1,
+  "nome": "Cecília Bizerra Sousa",
+  "email_pessoal": "cecilia.sousa@email.com",
+  "email_institucional": "cecilia.sousa@cc.gov.br",
+  "telefone_institucional": "(61) 2020-1000",
+  "celular": "(61) 98100-0000",
+  "visibilidade_email_pessoal": true,
+  "visibilidade_celular": true,
+  "ministerio": "Casa Civil da Presidência da República",
+  "ministerio_sigla": "CC",
+  "secretaria": "Secretaria de Articulação e Monitoramento",
+  "secretaria_sigla": "SAM",
+  "departamento": "Secretaria Adjunta Social II",
+  "departamento_sigla": "SAdj-II",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Gerente de Projeto",
+  "portal_url": null,
+  "turma": "turma_2012",
+  "foto_path": "uploads/fotos/1763099171_2969.jpg",
+  "role": "admin",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 1,
+    "nivel": "doutorado",
+    "curso": "Comunicação e Sociabilidade Contemporânea",
+    "instituicao": "Universidade Federal de Minas Gerais (UFMG)"
+   },
+   {
+    "id": 2,
+    "nivel": "mestrado",
+    "curso": "Políticas de Comunicação e Cultura",
+    "instituicao": "Universidade de Brasília (UnB)"
+   },
+   {
+    "id": 3,
+    "nivel": "especializacao",
+    "curso": "Gestão de Processos da Comunicação Corporativa",
+    "instituicao": "Universidade Federal do Piauí (UFPI)"
+   },
+   {
+    "id": 4,
+    "nivel": "graduacao",
+    "curso": "Comunicação Social – Jornalismo",
+    "instituicao": "Universidade Federal do Piauí (UFPI)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 1,
+    "tema": "Políticas para mulheres",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 2,
+    "tema": "Igualdade racial",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 3,
+    "tema": "Articulação política",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 4,
+    "tema": "Monitoramento de políticas públicas",
+    "em_exercicio_atual": true
+   }
+  ]
+ },
+ {
+  "id": 2,
+  "nome": "Rafael Monteiro Lins",
+  "email_pessoal": "rafael.lins@email.com",
+  "email_institucional": "rafael.lins@mds.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98113-7911",
+  "visibilidade_email_pessoal": false,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome",
+  "ministerio_sigla": "MDS",
+  "secretaria": "Secretaria Nacional de Assistência Social",
+  "secretaria_sigla": "SNAS",
+  "departamento": "Departamento de Gestão do SUAS",
+  "departamento_sigla": "DGSUAS",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Coordenador-Geral",
+  "portal_url": null,
+  "turma": "turma_2016",
+  "foto_path": "uploads/fotos/1763099236_4405.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 5,
+    "nivel": "mestrado",
+    "curso": "Serviço Social",
+    "instituicao": "Universidade Federal de Pernambuco (UFPE)"
+   },
+   {
+    "id": 6,
+    "nivel": "graduacao",
+    "curso": "Serviço Social",
+    "instituicao": "Universidade Federal de Pernambuco (UFPE)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 5,
+    "tema": "Assistência social",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 6,
+    "tema": "SUAS",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 7,
+    "tema": "Vigilância socioassistencial",
+    "em_exercicio_atual": false
+   }
+  ]
+ },
+ {
+  "id": 3,
+  "nome": "Juliana Prates Okoye",
+  "email_pessoal": "juliana.okoye@email.com",
+  "email_institucional": "juliana.okoye@mir.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98127-5822",
+  "visibilidade_email_pessoal": true,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério da Igualdade Racial",
+  "ministerio_sigla": "MIR",
+  "secretaria": "Secretaria de Políticas de Ações Afirmativas",
+  "secretaria_sigla": "SEPPIR",
+  "departamento": "Diretoria de Políticas de Ações Afirmativas",
+  "departamento_sigla": "DPAA",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Analista Técnica",
+  "portal_url": null,
+  "turma": "turma_2024_cpnu",
+  "foto_path": "uploads/fotos/1763099172_9182.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 7,
+    "nivel": "mestrado",
+    "curso": "Estudos Étnicos e Africanos",
+    "instituicao": "Universidade Federal da Bahia (UFBA)"
+   },
+   {
+    "id": 8,
+    "nivel": "graduacao",
+    "curso": "Ciências Sociais",
+    "instituicao": "Universidade Federal da Bahia (UFBA)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 8,
+    "tema": "Igualdade racial",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 9,
+    "tema": "Ações afirmativas",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 10,
+    "tema": "Juventude negra",
+    "em_exercicio_atual": true
+   }
+  ]
+ },
+ {
+  "id": 4,
+  "nome": "Marcos Tavares Ribeiro",
+  "email_pessoal": "marcos.ribeiro@email.com",
+  "email_institucional": "marcos.ribeiro@ms.gov.br",
+  "telefone_institucional": "(61) 2020-1111",
+  "celular": "(61) 98141-3733",
+  "visibilidade_email_pessoal": false,
+  "visibilidade_celular": false,
+  "ministerio": "Ministério da Saúde",
+  "ministerio_sigla": "MS",
+  "secretaria": "Secretaria de Atenção Primária à Saúde",
+  "secretaria_sigla": "SAPS",
+  "departamento": "Departamento de Estratégias e Políticas de Saúde Comunitária",
+  "departamento_sigla": "DESF",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Assessor Técnico",
+  "portal_url": null,
+  "turma": null,
+  "foto_path": "uploads/fotos/1763099237_8262.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 9,
+    "nivel": "doutorado",
+    "curso": "Saúde Pública",
+    "instituicao": "Fundação Oswaldo Cruz (Fiocruz)"
+   },
+   {
+    "id": 10,
+    "nivel": "mestrado",
+    "curso": "Saúde Coletiva",
+    "instituicao": "Universidade de Brasília (UnB)"
+   },
+   {
+    "id": 11,
+    "nivel": "graduacao",
+    "curso": "Enfermagem",
+    "instituicao": "Universidade Federal de Goiás (UFG)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 11,
+    "tema": "Atenção primária",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 12,
+    "tema": "Saúde da família",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 13,
+    "tema": "Avaliação de programas",
+    "em_exercicio_atual": false
+   }
+  ]
+ },
+ {
+  "id": 5,
+  "nome": "Ana Luíza Ferraz",
+  "email_pessoal": "ana.ferraz@email.com",
+  "email_institucional": "ana.ferraz@mm.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98155-1644",
+  "visibilidade_email_pessoal": true,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério das Mulheres",
+  "ministerio_sigla": "MMulheres",
+  "secretaria": "Secretaria Nacional de Enfrentamento à Violência contra Mulheres",
+  "secretaria_sigla": "SENEV",
+  "departamento": "Diretoria de Enfrentamento à Violência",
+  "departamento_sigla": "DEV",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Diretora de Programa",
+  "portal_url": null,
+  "turma": "turma_2012",
+  "foto_path": "uploads/fotos/1763099172_9909.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 12,
+    "nivel": "mestrado",
+    "curso": "Direito",
+    "instituicao": "Universidade de São Paulo (USP)"
+   },
+   {
+    "id": 13,
+    "nivel": "graduacao",
+    "curso": "Direito",
+    "instituicao": "Pontifícia Universidade Católica de São Paulo (PUC-SP)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 14,
+    "tema": "Violência de gênero",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 15,
+    "tema": "Rede de proteção",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 16,
+    "tema": "Casa da Mulher Brasileira",
+    "em_exercicio_atual": true
+   }
+  ]
+ },
+ {
+  "id": 6,
+  "nome": "Thiago Nascimento",
+  "email_pessoal": "thiago.nascimento@email.com",
+  "email_institucional": "thiago.nascimento@mec.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98168-9555",
+  "visibilidade_email_pessoal": false,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério da Educação",
+  "ministerio_sigla": "MEC",
+  "secretaria": "Secretaria de Educação Continuada, Alfabetização, Diversidade e Inclusão",
+  "secretaria_sigla": "SECADI",
+  "departamento": "Diretoria de Políticas de EJA",
+  "departamento_sigla": "DPEJA",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Coordenador",
+  "portal_url": null,
+  "turma": "turma_2016",
+  "foto_path": "uploads/fotos/1763099237_3953.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 14,
+    "nivel": "mestrado",
+    "curso": "Educação",
+    "instituicao": "Universidade Federal do Rio de Janeiro (UFRJ)"
+   },
+   {
+    "id": 15,
+    "nivel": "graduacao",
+    "curso": "Pedagogia",
+    "instituicao": "Universidade Federal Fluminense (UFF)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 17,
+    "tema": "Educação de jovens",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 18,
+    "tema": "Alfabetização",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 19,
+    "tema": "Educação do campo",
+    "em_exercicio_atual": false
+   }
+  ]
+ },
+ {
+  "id": 7,
+  "nome": "Beatriz Kawamura",
+  "email_pessoal": "beatriz.kawamura@email.com",
+  "email_institucional": "beatriz.kawamura@mdhc.gov.br",
+  "telefone_institucional": "(61) 2020-1222",
+  "celular": "(61) 98182-7466",
+  "visibilidade_email_pessoal": true,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério dos Direitos Humanos e da Cidadania",
+  "ministerio_sigla": "MDHC",
+  "secretaria": "Secretaria Nacional dos Direitos da Pessoa com Deficiência",
+  "secretaria_sigla": "SNDPD",
+  "departamento": "Diretoria de Promoção da Acessibilidade",
+  "departamento_sigla": "DPAC",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Analista Técnica",
+  "portal_url": null,
+  "turma": "turma_2024_cpnu",
+  "foto_path": "uploads/fotos/1763099172_3441.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 16,
+    "nivel": "especializacao",
+    "curso": "Políticas Públicas",
+    "instituicao": "Universidade de Brasília (UnB)"
+   },
+   {
+    "id": 17,
+    "nivel": "graduacao",
+    "curso": "Arquitetura e Urbanismo",
+    "instituicao": "Universidade Federal de Santa Catarina (UFSC)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 20,
+    "tema": "Acessibilidade",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 21,
+    "tema": "Pessoa com deficiência",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 22,
+    "tema": "Desenho universal",
+    "em_exercicio_atual": true
+   }
+  ]
+ },
+ {
+  "id": 8,
+  "nome": "Pedro Henrique Saldanha",
+  "email_pessoal": "pedro.saldanha@email.com",
+  "email_institucional": "pedro.saldanha@mte.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98196-5377",
+  "visibilidade_email_pessoal": false,
+  "visibilidade_celular": false,
+  "ministerio": "Ministério do Trabalho e Emprego",
+  "ministerio_sigla": "MTE",
+  "secretaria": "Secretaria de Políticas Públicas de Emprego",
+  "secretaria_sigla": "SPPE",
+  "departamento": "Departamento de Qualificação Profissional",
+  "departamento_sigla": "DQP",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Gerente de Projeto",
+  "portal_url": null,
+  "turma": null,
+  "foto_path": "uploads/fotos/1763099237_4902.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 18,
+    "nivel": "mestrado",
+    "curso": "Economia do Trabalho",
+    "instituicao": "Universidade Estadual de Campinas (Unicamp)"
+   },
+   {
+    "id": 19,
+    "nivel": "graduacao",
+    "curso": "Economia",
+    "instituicao": "Universidade Federal de Minas Gerais (UFMG)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 23,
+    "tema": "Qualificação profissional",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 24,
+    "tema": "Mercado de trabalho",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 25,
+    "tema": "Economia solidária",
+    "em_exercicio_atual": false
+   }
+  ]
+ },
+ {
+  "id": 9,
+  "nome": "Larissa Quintela Mota",
+  "email_pessoal": "larissa.mota@email.com",
+  "email_institucional": "larissa.mota@mds.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98210-3288",
+  "visibilidade_email_pessoal": true,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome",
+  "ministerio_sigla": "MDS",
+  "secretaria": "Secretaria de Avaliação, Gestão da Informação e Cadastro Único",
+  "secretaria_sigla": "SAGICAD",
+  "departamento": "Departamento de Monitoramento e Avaliação",
+  "departamento_sigla": "DMA",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Coordenadora-Geral",
+  "portal_url": null,
+  "turma": "turma_2012",
+  "foto_path": "uploads/fotos/1763099171_2969.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 20,
+    "nivel": "doutorado",
+    "curso": "Sociologia",
+    "instituicao": "Universidade de Brasília (UnB)"
+   },
+   {
+    "id": 21,
+    "nivel": "mestrado",
+    "curso": "Sociologia",
+    "instituicao": "Universidade de Brasília (UnB)"
+   },
+   {
+    "id": 22,
+    "nivel": "graduacao",
+    "curso": "Ciências Sociais",
+    "instituicao": "Universidade Federal do Ceará (UFC)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 26,
+    "tema": "Cadastro Único",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 27,
+    "tema": "Avaliação de políticas",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 28,
+    "tema": "Pobreza",
+    "em_exercicio_atual": true
+   }
+  ]
+ },
+ {
+  "id": 10,
+  "nome": "Gustavo Arantes",
+  "email_pessoal": "gustavo.arantes@email.com",
+  "email_institucional": "gustavo.arantes@cc.gov.br",
+  "telefone_institucional": "(61) 2020-1333",
+  "celular": "(61) 98224-1199",
+  "visibilidade_email_pessoal": false,
+  "visibilidade_celular": true,
+  "ministerio": "Casa Civil da Presidência da República",
+  "ministerio_sigla": "CC",
+  "secretaria": "Secretaria de Articulação e Monitoramento",
+  "secretaria_sigla": "SAM",
+  "departamento": "Secretaria Adjunta Social I",
+  "departamento_sigla": "SAdj-I",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Assessor Técnico",
+  "portal_url": null,
+  "turma": "turma_2016",
+  "foto_path": "uploads/fotos/1763099236_4405.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 23,
+    "nivel": "mestrado",
+    "curso": "Administração Pública",
+    "instituicao": "Fundação Getulio Vargas (FGV)"
+   },
+   {
+    "id": 24,
+    "nivel": "graduacao",
+    "curso": "Ciência Política",
+    "instituicao": "Universidade de Brasília (UnB)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 29,
+    "tema": "Monitoramento",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 30,
+    "tema": "Articulação federativa",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 31,
+    "tema": "Programas prioritários",
+    "em_exercicio_atual": false
+   }
+  ]
+ },
+ {
+  "id": 11,
+  "nome": "Fernanda Xavier Dias",
+  "email_pessoal": "fernanda.dias@email.com",
+  "email_institucional": "fernanda.dias@ms.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98237-9110",
+  "visibilidade_email_pessoal": true,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério da Saúde",
+  "ministerio_sigla": "MS",
+  "secretaria": "Secretaria de Atenção Especializada à Saúde",
+  "secretaria_sigla": "SAES",
+  "departamento": "Departamento de Saúde Mental, Álcool e Outras Drogas",
+  "departamento_sigla": "DESMAD",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Analista Técnica",
+  "portal_url": null,
+  "turma": "turma_2024_cpnu",
+  "foto_path": "uploads/fotos/1763099172_9182.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 25,
+    "nivel": "mestrado",
+    "curso": "Psicologia Social",
+    "instituicao": "Universidade Federal do Rio Grande do Sul (UFRGS)"
+   },
+   {
+    "id": 26,
+    "nivel": "graduacao",
+    "curso": "Psicologia",
+    "instituicao": "Universidade Federal do Rio Grande do Sul (UFRGS)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 32,
+    "tema": "Saúde mental",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 33,
+    "tema": "Redução de danos",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 34,
+    "tema": "RAPS",
+    "em_exercicio_atual": true
+   }
+  ]
+ },
+ {
+  "id": 12,
+  "nome": "Rodrigo Cunha Bastos",
+  "email_pessoal": "rodrigo.bastos@email.com",
+  "email_institucional": "rodrigo.bastos@mir.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98251-7021",
+  "visibilidade_email_pessoal": false,
+  "visibilidade_celular": false,
+  "ministerio": "Ministério da Igualdade Racial",
+  "ministerio_sigla": "MIR",
+  "secretaria": "Secretaria de Políticas para Quilombolas e Povos Tradicionais",
+  "secretaria_sigla": "SQPT",
+  "departamento": "Diretoria de Políticas para Quilombolas",
+  "departamento_sigla": "DPQ",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Coordenador",
+  "portal_url": null,
+  "turma": null,
+  "foto_path": "uploads/fotos/1763099237_8262.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 27,
+    "nivel": "mestrado",
+    "curso": "Antropologia",
+    "instituicao": "Universidade Federal do Maranhão (UFMA)"
+   },
+   {
+    "id": 28,
+    "nivel": "graduacao",
+    "curso": "História",
+    "instituicao": "Universidade Federal do Maranhão (UFMA)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 35,
+    "tema": "Comunidades quilombolas",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 36,
+    "tema": "Povos tradicionais",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 37,
+    "tema": "Território",
+    "em_exercicio_atual": false
+   }
+  ]
+ },
+ {
+  "id": 13,
+  "nome": "Camila Duarte Sena",
+  "email_pessoal": "camila.sena@email.com",
+  "email_institucional": "camila.sena@mm.gov.br",
+  "telefone_institucional": "(61) 2020-1444",
+  "celular": "(61) 98265-4932",
+  "visibilidade_email_pessoal": true,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério das Mulheres",
+  "ministerio_sigla": "MMulheres",
+  "secretaria": "Secretaria Nacional de Autonomia Econômica",
+  "secretaria_sigla": "SENAEP",
+  "departamento": "Diretoria de Autonomia Econômica",
+  "departamento_sigla": "DAE",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Gerente de Projeto",
+  "portal_url": null,
+  "turma": "turma_2012",
+  "foto_path": "uploads/fotos/1763099172_9909.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 29,
+    "nivel": "mestrado",
+    "curso": "Economia",
+    "instituicao": "Universidade Federal da Paraíba (UFPB)"
+   },
+   {
+    "id": 30,
+    "nivel": "graduacao",
+    "curso": "Economia",
+    "instituicao": "Universidade Federal da Paraíba (UFPB)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 38,
+    "tema": "Autonomia econômica",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 39,
+    "tema": "Cuidado",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 40,
+    "tema": "Trabalho doméstico",
+    "em_exercicio_atual": true
+   }
+  ]
+ },
+ {
+  "id": 14,
+  "nome": "Lucas Ferreira Amaral",
+  "email_pessoal": "lucas.amaral@email.com",
+  "email_institucional": "lucas.amaral@mds.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98279-2843",
+  "visibilidade_email_pessoal": false,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome",
+  "ministerio_sigla": "MDS",
+  "secretaria": "Secretaria Nacional de Renda de Cidadania",
+  "secretaria_sigla": "SENARC",
+  "departamento": "Departamento do Bolsa Família",
+  "departamento_sigla": "DBF",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Analista Técnico",
+  "portal_url": null,
+  "turma": "turma_2016",
+  "foto_path": "uploads/fotos/1763099237_3953.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 31,
+    "nivel": "mestrado",
+    "curso": "Políticas Públicas",
+    "instituicao": "Insper Instituto de Ensino e Pesquisa (Insper)"
+   },
+   {
+    "id": 32,
+    "nivel": "graduacao",
+    "curso": "Estatística",
+    "instituicao": "Universidade de São Paulo (USP)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 41,
+    "tema": "Bolsa Família",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 42,
+    "tema": "Transferência de renda",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 43,
+    "tema": "Dados",
+    "em_exercicio_atual": false
+   }
+  ]
+ },
+ {
+  "id": 15,
+  "nome": "Patrícia Moura Leal",
+  "email_pessoal": "patricia.leal@email.com",
+  "email_institucional": "patricia.leal@mec.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98293-0754",
+  "visibilidade_email_pessoal": true,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério da Educação",
+  "ministerio_sigla": "MEC",
+  "secretaria": "Secretaria de Educação Básica",
+  "secretaria_sigla": "SEB",
+  "departamento": "Diretoria de Políticas e Diretrizes da Educação Integral",
+  "departamento_sigla": "DPDI",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Diretora de Programa",
+  "portal_url": null,
+  "turma": "turma_2024_cpnu",
+  "foto_path": "uploads/fotos/1763099172_3441.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 33,
+    "nivel": "doutorado",
+    "curso": "Educação",
+    "instituicao": "Universidade Federal de Minas Gerais (UFMG)"
+   },
+   {
+    "id": 34,
+    "nivel": "mestrado",
+    "curso": "Educação",
+    "instituicao": "Universidade Federal de Minas Gerais (UFMG)"
+   },
+   {
+    "id": 35,
+    "nivel": "graduacao",
+    "curso": "Letras",
+    "instituicao": "Universidade Federal de Juiz de Fora (UFJF)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 44,
+    "tema": "Educação integral",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 45,
+    "tema": "Educação básica",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 46,
+    "tema": "Formação docente",
+    "em_exercicio_atual": true
+   }
+  ]
+ },
+ {
+  "id": 16,
+  "nome": "Diego Albuquerque",
+  "email_pessoal": "diego.albuquerque@email.com",
+  "email_institucional": "diego.albuquerque@mdhc.gov.br",
+  "telefone_institucional": "(61) 2020-1555",
+  "celular": "(61) 98306-8665",
+  "visibilidade_email_pessoal": false,
+  "visibilidade_celular": false,
+  "ministerio": "Ministério dos Direitos Humanos e da Cidadania",
+  "ministerio_sigla": "MDHC",
+  "secretaria": "Secretaria Nacional dos Direitos da Criança e do Adolescente",
+  "secretaria_sigla": "SNDCA",
+  "departamento": "Diretoria de Proteção dos Direitos da Criança",
+  "departamento_sigla": "DPDCA",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Coordenador",
+  "portal_url": null,
+  "turma": null,
+  "foto_path": "uploads/fotos/1763099237_4902.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 36,
+    "nivel": "mestrado",
+    "curso": "Direito",
+    "instituicao": "Universidade Federal do Pará (UFPA)"
+   },
+   {
+    "id": 37,
+    "nivel": "graduacao",
+    "curso": "Direito",
+    "instituicao": "Universidade Federal do Pará (UFPA)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 47,
+    "tema": "Infância",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 48,
+    "tema": "Adolescência",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 49,
+    "tema": "Conselhos tutelares",
+    "em_exercicio_atual": false
+   }
+  ]
+ },
+ {
+  "id": 17,
+  "nome": "Isabela Rocha Teles",
+  "email_pessoal": "isabela.teles@email.com",
+  "email_institucional": "isabela.teles@mte.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98320-6576",
+  "visibilidade_email_pessoal": true,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério do Trabalho e Emprego",
+  "ministerio_sigla": "MTE",
+  "secretaria": "Secretaria de Inspeção do Trabalho",
+  "secretaria_sigla": "SIT",
+  "departamento": "Divisão de Fiscalização para Erradicação do Trabalho Escravo",
+  "departamento_sigla": "DETRAE",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Assessora Técnica",
+  "portal_url": null,
+  "turma": "turma_2012",
+  "foto_path": "uploads/fotos/1763099171_2969.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 38,
+    "nivel": "especializacao",
+    "curso": "Direitos Humanos",
+    "instituicao": "Universidade de Brasília (UnB)"
+   },
+   {
+    "id": 39,
+    "nivel": "graduacao",
+    "curso": "Relações Internacionais",
+    "instituicao": "Universidade Federal de Goiás (UFG)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 50,
+    "tema": "Trabalho escravo",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 51,
+    "tema": "Trabalho infantil",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 52,
+    "tema": "Direitos humanos",
+    "em_exercicio_atual": true
+   }
+  ]
+ },
+ {
+  "id": 18,
+  "nome": "Vinícius Oliveira Paz",
+  "email_pessoal": "vinicius.paz@email.com",
+  "email_institucional": "vinicius.paz@cc.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98334-4487",
+  "visibilidade_email_pessoal": false,
+  "visibilidade_celular": true,
+  "ministerio": "Casa Civil da Presidência da República",
+  "ministerio_sigla": "CC",
+  "secretaria": "Subchefia para Assuntos Jurídicos",
+  "secretaria_sigla": "SAJ",
+  "departamento": "Subchefia de Análise Governamental",
+  "departamento_sigla": "SAG",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Analista Técnico",
+  "portal_url": null,
+  "turma": "turma_2016",
+  "foto_path": "uploads/fotos/1763099236_4405.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 40,
+    "nivel": "mestrado",
+    "curso": "Direito",
+    "instituicao": "Universidade de Brasília (UnB)"
+   },
+   {
+    "id": 41,
+    "nivel": "graduacao",
+    "curso": "Direito",
+    "instituicao": "UFRN"
+   }
+  ],
+  "temas": [
+   {
+    "id": 53,
+    "tema": "Análise normativa",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 54,
+    "tema": "Governança",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 55,
+    "tema": "Atos normativos",
+    "em_exercicio_atual": false
+   }
+  ]
+ },
+ {
+  "id": 19,
+  "nome": "Helena Brandão Viana",
+  "email_pessoal": "helena.viana@email.com",
+  "email_institucional": "helena.viana@ms.gov.br",
+  "telefone_institucional": "(61) 2020-1666",
+  "celular": "(61) 98348-2398",
+  "visibilidade_email_pessoal": true,
+  "visibilidade_celular": true,
+  "ministerio": "Ministério da Saúde",
+  "ministerio_sigla": "MS",
+  "secretaria": "Secretaria de Saúde Indígena",
+  "secretaria_sigla": "SESAI",
+  "departamento": "Departamento de Atenção Primária à Saúde Indígena",
+  "departamento_sigla": "DAPSI",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Coordenadora-Geral",
+  "portal_url": null,
+  "turma": "turma_2024_cpnu",
+  "foto_path": "uploads/fotos/1763099172_9182.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 42,
+    "nivel": "doutorado",
+    "curso": "Saúde Coletiva",
+    "instituicao": "Universidade Federal do Amazonas (UFAM)"
+   },
+   {
+    "id": 43,
+    "nivel": "mestrado",
+    "curso": "Saúde Coletiva",
+    "instituicao": "Universidade Federal do Amazonas (UFAM)"
+   },
+   {
+    "id": 44,
+    "nivel": "graduacao",
+    "curso": "Medicina",
+    "instituicao": "Universidade Federal do Amazonas (UFAM)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 56,
+    "tema": "Saúde indígena",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 57,
+    "tema": "Atenção primária",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 58,
+    "tema": "Amazônia",
+    "em_exercicio_atual": true
+   }
+  ]
+ },
+ {
+  "id": 20,
+  "nome": "Otávio Mendes Rangel",
+  "email_pessoal": "otavio.rangel@email.com",
+  "email_institucional": "otavio.rangel@mir.gov.br",
+  "telefone_institucional": null,
+  "celular": "(61) 98362-0309",
+  "visibilidade_email_pessoal": false,
+  "visibilidade_celular": false,
+  "ministerio": "Ministério da Igualdade Racial",
+  "ministerio_sigla": "MIR",
+  "secretaria": "Secretaria de Gestão do Sistema Nacional de Promoção da Igualdade Racial",
+  "secretaria_sigla": "SGEPP",
+  "departamento": "Diretoria do SINAPIR",
+  "departamento_sigla": "DSIN",
+  "coordenacao_geral": null,
+  "coordenacao": null,
+  "cargo_fce": "Analista Técnico",
+  "portal_url": null,
+  "turma": null,
+  "foto_path": "uploads/fotos/1763099237_8262.jpg",
+  "role": "analista",
+  "ativo": true,
+  "pendente_revisao": false,
+  "criado_em": "2026-09-01T12:00:00Z",
+  "atualizado_em": "2026-10-01T12:00:00Z",
+  "formacoes": [
+   {
+    "id": 45,
+    "nivel": "mestrado",
+    "curso": "Políticas Públicas",
+    "instituicao": "Universidade do Estado do Rio de Janeiro (UERJ)"
+   },
+   {
+    "id": 46,
+    "nivel": "graduacao",
+    "curso": "Geografia",
+    "instituicao": "Universidade do Estado do Rio de Janeiro (UERJ)"
+   }
+  ],
+  "temas": [
+   {
+    "id": 59,
+    "tema": "SINAPIR",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 60,
+    "tema": "Igualdade racial",
+    "em_exercicio_atual": true
+   },
+   {
+    "id": 61,
+    "tema": "Federalismo",
+    "em_exercicio_atual": false
+   }
+  ]
+ }
+]

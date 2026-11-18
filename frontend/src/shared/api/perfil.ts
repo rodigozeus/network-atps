@@ -30,4 +30,6 @@ export const perfilApi = {
   getAnalista: (id: number | string) =>
     api.get<AnalistaPublico>(`/analistas/${id}`).then((r) => r.data),
   deleteMe: (senha: string) => api.delete('/perfil/me', { data: { senha } }),
+  /** Novo no back-end: remove a foto de perfil (ver docs/NOVO-VISUAL.md) */
+  deleteFoto: () => api.delete<AnalistaOut>('/perfil/foto').then((r) => r.data),
 }

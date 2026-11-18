@@ -1,12 +1,12 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-1);
+  gap: 8px;
 }
 
 .label {
-  font-size: var(--font-sm);
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--color-text);
 }
 
@@ -18,12 +18,14 @@
 
 .input {
   width: 100%;
-  padding: 10px 14px;
-  font-size: var(--font-sm);
-  color: var(--color-text);
+  height: 50px;
+  padding: 0 14px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
   background-color: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--r);
+  border: 1.5px solid var(--campo-borda);
+  border-radius: 14px;
   outline: none;
   transition: border-color var(--t), box-shadow var(--t);
 }
@@ -34,7 +36,11 @@
 
 .input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(241, 94, 35, 0.15);
+  box-shadow: 0 0 0 4px rgba(241, 94, 35, 0.14);
+}
+
+.inputRow:has(.eyeBtn) .input {
+  padding-right: 52px;
 }
 
 .inputError {
@@ -48,26 +54,31 @@
 
 .eyeBtn {
   position: absolute;
-  right: 10px;
-  background: none;
+  right: 6px;
+  width: 40px;
+  height: 40px;
   border: none;
-  padding: var(--sp-1);
-  color: var(--color-text-muted);
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
   display: flex;
   align-items: center;
-  transition: color var(--t);
+  justify-content: center;
+  transition: color var(--t), background var(--t);
 }
 
 .eyeBtn:hover {
-  color: var(--color-text-secondary);
+  background: var(--btn);
+  color: var(--ink);
 }
 
 .error {
-  font-size: var(--font-xs);
-  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--perigo);
 }
 
 .hint {
-  font-size: var(--font-xs);
-  color: var(--color-text-muted);
+  font-size: 13px;
+  color: var(--muted);
 }

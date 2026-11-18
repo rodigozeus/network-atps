@@ -1,5 +1,5 @@
 export type Role = 'analista' | 'andeps' | 'admin'
-export type NivelFormacao = 'graduacao' | 'especializacao' | 'mestrado' | 'doutorado'
+export type NivelFormacao = 'graduacao' | 'especializacao' | 'mestrado' | 'doutorado' | 'pos_doutorado'
 export type Turma = 'turma_2012' | 'turma_2016' | 'turma_2024_cpnu'
 
 export interface Formacao {
@@ -34,6 +34,8 @@ export interface AnalistaOut {
   coordenacao: string | null
   cargo_fce: string | null
   portal_url: string | null
+  linkedin_url: string | null
+  lattes_url: string | null
   turma: Turma | null
   foto_path: string | null
   role: Role
@@ -62,6 +64,8 @@ export interface AnalistaPublico {
   coordenacao: string | null
   cargo_fce: string | null
   portal_url: string | null
+  linkedin_url: string | null
+  lattes_url: string | null
   turma: Turma | null
   foto_path: string | null
   formacoes: Formacao[]
@@ -113,6 +117,8 @@ export interface AnalistaUpdate {
   coordenacao?: string
   cargo_fce?: string
   portal_url?: string
+  linkedin_url?: string
+  lattes_url?: string
   turma?: Turma
 }
 
@@ -122,8 +128,28 @@ export interface BuscaParams {
   secretaria?: string
   tema?: string
   formacao?: string
+  /** Novo no back-end: filtra pelo nível da formação (ver docs/NOVO-VISUAL.md) */
+  nivel_formacao?: NivelFormacao
+  /** Novo no back-end: só analistas favoritados por quem está logado */
+  favoritos?: boolean
   page?: number
   page_size?: number
+}
+
+/** Níveis da lotação, do ministério até a coordenação */
+export type NivelLotacao = 'ministerio' | 'secretaria' | 'departamento' | 'coordenacao_geral' | 'coordenacao'
+
+/** Item de GET /lotacoes (novo no back-end): uma lotação já cadastrada na rede */
+export interface Lotacao {
+  nome: string
+  sigla: string | null
+  total: number
+}
+
+/** Item de GET /temas (novo no back-end): tema de atuação e quantas pessoas o citam */
+export interface TemaCatalogo {
+  tema: string
+  total: number
 }
 
 export interface ApiError {

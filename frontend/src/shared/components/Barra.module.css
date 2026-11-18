@@ -1,0 +1,262 @@
+.barra {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 500;
+  height: var(--barra-h);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.solida {
+  background: linear-gradient(90deg, #f7741c 0%, #f04e12 55%, #e2290f 100%);
+  box-shadow: 0 8px 24px -12px rgba(120, 20, 0, 0.45);
+}
+
+.inner {
+  max-width: calc(var(--conteudo) + 32px);
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.esquerda {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.logo {
+  display: block;
+  height: 26px;
+  color: #fff;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.logo svg {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+.solida .logo {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* Logo da Andeps ao lado da marca, só na barra sólida (mesma entrada da logo) */
+.divisor,
+.andeps {
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+}
+
+.divisor {
+  width: 1px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.solida .divisor,
+.solida .andeps {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.voltar,
+.entrar,
+.usuarioBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.15s;
+}
+
+.voltar,
+.entrar {
+  padding: 0 16px 0 12px;
+  flex-shrink: 0;
+}
+
+.entrar {
+  padding: 0 20px;
+}
+
+.voltar:hover,
+.entrar:hover,
+.usuarioBtn:hover,
+.aberto .usuarioBtn {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  text-decoration: none;
+}
+
+.voltar:focus-visible,
+.entrar:focus-visible,
+.usuarioBtn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ---------- Conta ---------- */
+.usuario {
+  position: relative;
+}
+
+.usuarioBtn {
+  border: 0;
+  padding: 4px 14px 4px 4px;
+}
+
+.usuarioFoto {
+  border: 2px solid #fff;
+}
+
+.seta {
+  transition: transform 0.2s;
+}
+
+.aberto .seta {
+  transform: rotate(180deg);
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 270px;
+  padding: 8px;
+  border-radius: 20px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 24px 48px -16px rgba(16, 24, 40, 0.35);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+}
+
+.aberto .menu {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.menuTopo {
+  padding: 10px 12px 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.menuTopo strong {
+  display: block;
+  font-size: 14px;
+}
+
+.menuTopo span {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu a,
+.menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.menu a:hover,
+.menu a:focus-visible,
+.menu button:hover,
+.menu button:focus-visible {
+  background: var(--btn);
+  color: var(--ink);
+  outline: none;
+  text-decoration: none;
+}
+
+.menu svg {
+  color: var(--muted);
+}
+
+.menu hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 6px 0;
+}
+
+.menu .sair,
+.menu .sair svg {
+  color: #c0261b;
+}
+
+@media (max-width: 760px) {
+  .voltar {
+    width: 46px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .voltar span {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .andeps {
+    --h: 16px !important;
+  }
+
+  .logo {
+    height: 22px;
+  }
+
+  .esquerda {
+    gap: 10px;
+  }
+
+  .usuarioNome {
+    display: none;
+  }
+
+  .usuarioBtn {
+    padding-right: 10px;
+  }
+}

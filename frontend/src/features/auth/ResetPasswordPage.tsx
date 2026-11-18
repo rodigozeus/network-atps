@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { authApi } from '@shared/api/auth'
 import { Button, Input } from '@shared/components'
+import TelaAcesso from './TelaAcesso'
 import styles from './auth.module.css'
 
 const schema = z
@@ -45,49 +46,32 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className={styles.page}>
-        <div className={styles.card}>
-          <div className={styles.header}>
-            <p className={styles.brand}>Rede ATPS</p>
-            <p className={styles.subtitle}>Link inválido</p>
-          </div>
+      <TelaAcesso titulo="Link inválido">
           <p className={styles.apiError}>
             Este link de redefinição de senha é inválido. Solicite um novo.
           </p>
           <div className={styles.footer}>
             <Link to="/esqueci-senha">Solicitar redefinição de senha</Link>
           </div>
-        </div>
-      </div>
+        </TelaAcesso>
     )
   }
 
   if (concluido) {
     return (
-      <div className={styles.page}>
-        <div className={styles.card}>
-          <div className={styles.header}>
-            <p className={styles.brand}>Rede ATPS</p>
-            <p className={styles.subtitle}>Senha redefinida</p>
-          </div>
-          <p className={styles.notice}>
+      <TelaAcesso titulo="Senha redefinida">
+          <p className={styles.ok}>
             Sua senha foi redefinida com sucesso. Você será redirecionado para o login.
           </p>
           <div className={styles.footer}>
             <Link to="/login">Ir para o login</Link>
           </div>
-        </div>
-      </div>
+        </TelaAcesso>
     )
   }
 
   return (
-    <div className={styles.page}>
-      <div className={styles.card}>
-        <div className={styles.header}>
-          <p className={styles.brand}>Rede ATPS</p>
-          <p className={styles.subtitle}>Escolha uma nova senha</p>
-        </div>
+    <TelaAcesso titulo="Escolha uma nova senha">
 
         <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
           {errors.root && <p className={styles.apiError}>{errors.root.message}</p>}
@@ -109,7 +93,7 @@ export default function ResetPasswordPage() {
             {...register('confirmar_senha')}
           />
 
-          <Button type="submit" fullWidth loading={isSubmitting}>
+          <Button type="submit" size="lg" fullWidth loading={isSubmitting}>
             Redefinir senha
           </Button>
         </form>
@@ -117,7 +101,6 @@ export default function ResetPasswordPage() {
         <div className={styles.footer}>
           <Link to="/login">Voltar para o login</Link>
         </div>
-      </div>
-    </div>
+      </TelaAcesso>
   )
 }

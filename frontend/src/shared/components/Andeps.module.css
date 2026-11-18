@@ -1,0 +1,35 @@
+.andeps {
+  --h: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--h) * 0.32);
+  color: #fff;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.by {
+  font-size: calc(var(--h) * 0.6);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  opacity: 0.9;
+}
+
+.andeps:hover,
+.andeps:focus-visible {
+  color: #fff;
+  text-decoration: none;
+  opacity: 0.85;
+}
+
+.andeps:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.andeps img {
+  display: block;
+  height: var(--h);
+  width: auto;
+}

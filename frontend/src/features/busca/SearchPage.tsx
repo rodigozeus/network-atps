@@ -1,266 +1,263 @@
-import { useState, useEffect, useRef, useCallback, type FormEvent, type KeyboardEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  IconAdjustmentsHorizontal, IconChevronDown, IconLayoutGrid, IconList, IconSearch, IconStar, IconStarFilled,
+} from '@tabler/icons-react'
 import { buscaApi } from '@shared/api/busca'
-import type { AnalistaPublico } from '@shared/api/types'
-import { Spinner, Button, Input } from '@shared/components'
-import BuscaResultCard from './BuscaResultCard'
+import { favoritosApi } from '@shared/api/favoritos'
+import { lotacoesApi } from '@shared/api/lotacoes'
+import { temasApi } from '@shared/api/temas'
+import type { AnalistaPublico, BuscaParams, NivelFormacao } from '@shared/api/types'
+import { Spinner } from '@shared/components'
+import { useFavoritos } from '@shared/hooks/useFavoritos'
+import { NIVEIS, ORDEM_NIVEIS } from '@shared/utils/analista'
+import RedeHero from './RedeHero'
+import AnalistaCard from './AnalistaCard'
+import AnalistaLinha from './AnalistaLinha'
 import styles from './busca.module.css'
 
 const PAGE_SIZE = 20
+const BUSCA_MIN = 260 // abaixo disso, os filtros vão para o painel do botão "Filtros"
+type Vista = 'cards' | 'linhas'
+
+const lerVista = (): Vista => {
+  try {
+    return localStorage.getItem('vista') === 'linhas' ? 'linhas' : 'cards'
+  } catch {
+    return 'cards'
+  }
+}
 
 export default function SearchPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
+  const { favoritos } = useFavoritos()
 
-  const [formQ, setFormQ] = useState(searchParams.get('q') ?? '')
-  const [formMin, setFormMin] = useState(searchParams.get('ministerio') ?? '')
-  const [formSec, setFormSec] = useState(searchParams.get('secretaria') ?? '')
-  const [formTema, setFormTema] = useState(searchParams.get('tema') ?? '')
-  const [formForm, setFormForm] = useState(searchParams.get('formacao') ?? '')
+  // filtros vivem no endereço, para poder compartilhar e voltar
+  const filtros = useMemo(() => ({
+    q: params.get('q') ?? '',
+    ministerio: params.get('ministerio') ?? '',
+    tema: params.get('tema') ?? '',
+    nivel: (params.get('nivel_formacao') ?? '') as NivelFormacao | '',
+    soFavoritos: params.get('favoritos') === '1',
+  }), [params])
 
-  const [items, setItems] = useState<AnalistaPublico[]>([])
-  const [total, setTotal] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
-  const [page, setPage] = useState(1)
-  const [loading, setLoading] = useState(false)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const sentinelRef = useRef<HTMLDivElement>(null)
+  const [texto, setTexto] = useState(filtros.q)
+  const [itens, setItens] = useState<AnalistaPublico[]>([])
+  const [pagina, setPagina] = useState(1)
+  const [paginas, setPaginas] = useState(1)
+  const [carregando, setCarregando] = useState(true)
+  const [carregandoMais, setCarregandoMais] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const [rede, setRede] = useState<AnalistaPublico[]>([])
+  const [ministerios, setMinisterios] = useState<string[]>([])
+  const [temas, setTemas] = useState<string[]>([])
+  const [vista, setVista] = useState<Vista>(lerVista)
+  const [trocouVista, setTrocouVista] = useState(0)
+  const [compacto, setCompacto] = useState(false)
+  const [painelAberto, setPainelAberto] = useState(false)
 
-  // Sync form inputs when URL changes (browser back/forward or shared URL)
+  const mudarFiltro = useCallback((chave: string, valor: string) => {
+    setParams((p) => {
+      const n = new URLSearchParams(p)
+      if (valor) n.set(chave, valor)
+      else n.delete(chave)
+      return n
+    }, { replace: true })
+  }, [setParams])
+
+  // busca por texto: espera a pessoa parar de digitar
   useEffect(() => {
-    setFormQ(searchParams.get('q') ?? '')
-    setFormMin(searchParams.get('ministerio') ?? '')
-    setFormSec(searchParams.get('secretaria') ?? '')
-    setFormTema(searchParams.get('tema') ?? '')
-    setFormForm(searchParams.get('formacao') ?? '')
-  }, [searchParams])
+    if (texto === filtros.q) return
+    const t = window.setTimeout(() => mudarFiltro('q', texto.trim()), 350)
+    return () => window.clearTimeout(t)
+  }, [texto, filtros.q, mudarFiltro])
 
-  // Reset and fetch page 1 whenever filters change
+  const paramsApi = useCallback((page: number): BuscaParams => ({
+    q: filtros.q || undefined,
+    ministerio: filtros.ministerio || undefined,
+    tema: filtros.tema || undefined,
+    nivel_formacao: filtros.nivel || undefined,
+    favoritos: filtros.soFavoritos || undefined,
+    page,
+    page_size: PAGE_SIZE,
+  }), [filtros])
+
+  // primeira página sempre que os filtros mudam
   useEffect(() => {
-    setLoading(true)
-    setError(null)
-    setItems([])
-    setPage(1)
-    buscaApi
-      .buscar({
-        q: searchParams.get('q') ?? undefined,
-        ministerio: searchParams.get('ministerio') ?? undefined,
-        secretaria: searchParams.get('secretaria') ?? undefined,
-        tema: searchParams.get('tema') ?? undefined,
-        formacao: searchParams.get('formacao') ?? undefined,
-        page: 1,
-        page_size: PAGE_SIZE,
+    let vivo = true
+    setCarregando(true)
+    setErro(null)
+    buscaApi.buscar(paramsApi(1))
+      .then((r) => {
+        if (!vivo) return
+        setItens(r.items)
+        setPagina(r.page)
+        setPaginas(r.pages)
       })
-      .then((data) => {
-        setItems(data.items)
-        setTotal(data.total)
-        setHasMore(data.page < data.pages)
-      })
-      .catch(() => setError('Erro ao buscar analistas. Tente novamente.'))
-      .finally(() => setLoading(false))
-  }, [searchParams])
+      .catch(() => vivo && setErro('Não foi possível carregar as pessoas. Tente de novo.'))
+      .finally(() => vivo && setCarregando(false))
+    return () => { vivo = false }
+  }, [paramsApi])
 
-  const handleLoadMore = useCallback(() => {
-    const nextPage = page + 1
-    setLoadingMore(true)
-    buscaApi
-      .buscar({
-        q: searchParams.get('q') ?? undefined,
-        ministerio: searchParams.get('ministerio') ?? undefined,
-        secretaria: searchParams.get('secretaria') ?? undefined,
-        tema: searchParams.get('tema') ?? undefined,
-        formacao: searchParams.get('formacao') ?? undefined,
-        page: nextPage,
-        page_size: PAGE_SIZE,
+  const carregarMais = useCallback(() => {
+    if (carregandoMais || pagina >= paginas) return
+    setCarregandoMais(true)
+    buscaApi.buscar(paramsApi(pagina + 1))
+      .then((r) => {
+        setItens((atual) => [...atual, ...r.items.filter((x) => !atual.some((y) => y.id === x.id))])
+        setPagina(r.page)
+        setPaginas(r.pages)
       })
-      .then((data) => {
-        setPage(nextPage)
-        setItems((prev) => {
-          const seenIds = new Set(prev.map((i) => i.id))
-          return [...prev, ...data.items.filter((i) => !seenIds.has(i.id))]
-        })
-        setHasMore(data.page < data.pages)
-      })
-      .catch(() => setError('Erro ao carregar mais analistas.'))
-      .finally(() => setLoadingMore(false))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, loadingMore, hasMore, searchParams])
+      .catch(() => setErro('Não foi possível carregar mais pessoas.'))
+      .finally(() => setCarregandoMais(false))
+  }, [carregandoMais, pagina, paginas, paramsApi])
 
-  // Carrega mais quando o sentinel entra na viewport
+  // rolagem infinita: carrega a próxima página quando o fim da lista aparece
+  const sentinela = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const el = sentinelRef.current
+    const el = sentinela.current
     if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) handleLoadMore() },
-      { rootMargin: '200px' },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [handleLoadMore])
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) carregarMais() }, { rootMargin: '400px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [carregarMais])
 
-  function buildParams(): Record<string, string> {
-    const p: Record<string, string> = {}
-    if (formQ) p.q = formQ
-    if (formMin) p.ministerio = formMin
-    if (formSec) p.secretaria = formSec
-    if (formTema) p.tema = formTema
-    if (formForm) p.formacao = formForm
-    return p
+  // rede do topo e opções dos filtros: uma vez ao abrir
+  useEffect(() => {
+    buscaApi.buscar({ page: 1, page_size: 20 }).then((r) => {
+      setRede(r.items)
+      // sem GET /lotacoes no back-end, os ministérios do filtro saem das pessoas carregadas
+      setMinisterios((atual) => atual.length ? atual
+        : [...new Set(r.items.map((a) => a.ministerio).filter((m): m is string => !!m))].sort((a, b) => a.localeCompare(b, 'pt')))
+    }).catch(() => {})
+    lotacoesApi.listar('ministerio').then((l) => {
+      if (l.length) setMinisterios(l.map((x) => x.nome).sort((a, b) => a.localeCompare(b, 'pt')))
+    }).catch(() => {})
+    temasApi.listar().then((t) => setTemas(t.map((x) => x.tema).sort((a, b) => a.localeCompare(b, 'pt')))).catch(() => {})
+  }, [])
+
+  // Favoritos ainda sem endpoint: filtra entre as pessoas já carregadas
+  const visiveis = filtros.soFavoritos && favoritosApi.emModoLocal() ? itens.filter((a) => favoritos.has(a.id)) : itens
+
+  // Modo compacto: mede se a busca ficaria estreita demais com todos os filtros na linha
+  const toolbar = useRef<HTMLDivElement>(null)
+  const busca = useRef<HTMLLabelElement>(null)
+  useLayoutEffect(() => {
+    const tb = toolbar.current
+    if (!tb?.parentElement) return
+    const medir = () => {
+      tb.dataset.medindo = 'true'
+      const cabe = (busca.current?.getBoundingClientRect().width ?? 0) >= BUSCA_MIN
+      delete tb.dataset.medindo
+      setCompacto(!cabe)
+    }
+    const ro = new ResizeObserver(medir)
+    ro.observe(tb.parentElement)
+    medir()
+    return () => ro.disconnect()
+  }, [])
+
+  const ativos = [filtros.ministerio, filtros.tema, filtros.nivel].filter(Boolean).length + (filtros.soFavoritos ? 1 : 0)
+
+  const trocarVista = () => {
+    const nova: Vista = vista === 'cards' ? 'linhas' : 'cards'
+    setVista(nova)
+    setTrocouVista((n) => n + 1)
+    try { localStorage.setItem('vista', nova) } catch { /* só não lembra a preferência */ }
   }
 
-  function applyFilters() {
-    setSearchParams(buildParams(), { replace: true })
+  // clique num perfil da rede: vai até o card dele, ou abre o perfil se ele não estiver na lista
+  const escolher = (id: number) => {
+    const alvo = document.getElementById(`analista-${id}`)
+    if (!alvo) {
+      navigate(`/analistas/${id}`)
+      return
+    }
+    alvo.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' })
+    alvo.classList.remove(styles.flash)
+    void alvo.offsetWidth
+    alvo.classList.add(styles.flash)
   }
-
-  function handleSearchSubmit(e: FormEvent) {
-    e.preventDefault()
-    applyFilters()
-  }
-
-  function handleFilterBlur() {
-    applyFilters()
-  }
-
-  function handleFilterKeyDown(e: KeyboardEvent) {
-    if (e.key === 'Enter') applyFilters()
-  }
-
-  function handleClearFilters() {
-    setFormQ('')
-    setFormMin('')
-    setFormSec('')
-    setFormTema('')
-    setFormForm('')
-    setSearchParams({}, { replace: true })
-  }
-
-  const hasActiveFilters =
-    !!(searchParams.get('q') ||
-      searchParams.get('ministerio') ||
-      searchParams.get('secretaria') ||
-      searchParams.get('tema') ||
-      searchParams.get('formacao'))
-  const activeFilterCount = [formMin, formSec, formTema, formForm].filter(Boolean).length
 
   return (
-    <div className={styles.page}>
-      <form className={styles.searchBar} onSubmit={handleSearchSubmit}>
-        <div className={styles.searchInput}>
-          <Input
-            value={formQ}
-            onChange={(e) => setFormQ(e.target.value)}
-            placeholder="Buscar por nome, ministério, secretaria ou tema..."
-          />
+    <>
+      <RedeHero analistas={rede} onEscolher={escolher} />
+
+      <section className={styles.lista} data-barra-limite>
+        <div className={styles.listaHead}>
+          <div ref={toolbar} className={[styles.toolbar, compacto ? styles.compacto : '', painelAberto ? styles.abertos : ''].join(' ')}>
+            <label className={styles.search} ref={busca}>
+              <IconSearch size={20} aria-hidden />
+              <input type="search" value={texto} onChange={(e) => setTexto(e.target.value)}
+                placeholder="Buscar por nome, ministério, secretaria ou tema" aria-label="Buscar pessoas" />
+            </label>
+            <button type="button" className={[styles.filtro, styles.btnFiltros].join(' ')} aria-expanded={painelAberto}
+              aria-controls="painel-filtros" onClick={() => setPainelAberto((v) => !v)}>
+              <IconAdjustmentsHorizontal size={18} aria-hidden />
+              <span className={styles.rotulo}>Filtros</span>
+              {ativos > 0 && <span className={styles.badge}>{ativos}</span>}
+            </button>
+            <div className={styles.painelFiltros} id="painel-filtros">
+              <label className={styles.select}>
+                <select value={filtros.ministerio} onChange={(e) => mudarFiltro('ministerio', e.target.value)}
+                  aria-label="Filtrar por órgão" className={filtros.ministerio ? styles.ativo : ''}>
+                  <option value="">Todos os órgãos</option>
+                  {ministerios.map((m) => <option key={m} value={m}>{m}</option>)}
+                  {filtros.ministerio && !ministerios.includes(filtros.ministerio) && <option value={filtros.ministerio}>{filtros.ministerio}</option>}
+                </select>
+                <IconChevronDown size={18} aria-hidden />
+              </label>
+              <label className={styles.select}>
+                <select value={filtros.tema} onChange={(e) => mudarFiltro('tema', e.target.value)}
+                  aria-label="Filtrar por tema" className={filtros.tema ? styles.ativo : ''}>
+                  <option value="">Todos os temas</option>
+                  {temas.map((t) => <option key={t} value={t}>{t}</option>)}
+                  {filtros.tema && !temas.includes(filtros.tema) && <option value={filtros.tema}>{filtros.tema}</option>}
+                </select>
+                <IconChevronDown size={18} aria-hidden />
+              </label>
+              <label className={styles.select}>
+                <select value={filtros.nivel} onChange={(e) => mudarFiltro('nivel_formacao', e.target.value)}
+                  aria-label="Filtrar por formação" className={filtros.nivel ? styles.ativo : ''}>
+                  <option value="">Toda formação</option>
+                  {ORDEM_NIVEIS.map((n) => <option key={n} value={n}>{NIVEIS[n]}</option>)}
+                </select>
+                <IconChevronDown size={18} aria-hidden />
+              </label>
+              <button type="button" className={styles.filtro} aria-pressed={filtros.soFavoritos}
+                onClick={() => mudarFiltro('favoritos', filtros.soFavoritos ? '' : '1')}>
+                {filtros.soFavoritos ? <IconStarFilled size={18} aria-hidden /> : <IconStar size={18} aria-hidden />}
+                Favoritos
+              </button>
+            </div>
+            <button type="button" className={styles.vistaBtn} onClick={trocarVista} data-trocou={trocouVista % 2}
+              aria-label={vista === 'cards' ? 'Ver em lista' : 'Ver em cards'} title={vista === 'cards' ? 'Ver em lista' : 'Ver em cards'}>
+              {vista === 'cards' ? <IconList size={21} aria-hidden /> : <IconLayoutGrid size={21} aria-hidden />}
+            </button>
+          </div>
         </div>
-        <Button type="submit" variant="primary">
-          Buscar
-        </Button>
-        {hasActiveFilters && (
-          <Button type="button" variant="outline" onClick={handleClearFilters}>
-            Limpar
-          </Button>
+
+        {carregando ? (
+          <div className={styles.carregando}><Spinner size="lg" /></div>
+        ) : erro && !visiveis.length ? (
+          <p className={styles.empty}>{erro}</p>
+        ) : !visiveis.length ? (
+          <p className={styles.empty}>Nenhuma pessoa encontrada para essa busca.</p>
+        ) : vista === 'cards' ? (
+          <div className={styles.grid}>{visiveis.map((a) => <AnalistaCard key={a.id} a={a} />)}</div>
+        ) : (
+          <div className={styles.linhas}>{visiveis.map((a) => <AnalistaLinha key={a.id} a={a} />)}</div>
         )}
-        <button
-          type="button"
-          className={[styles.filterToggle, filtersOpen ? styles.filterToggleActive : ''].filter(Boolean).join(' ')}
-          onClick={() => setFiltersOpen((o) => !o)}
-        >
-          {filtersOpen ? 'Fechar filtros' : `Filtros${activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}`}
-        </button>
-      </form>
 
-      <div className={styles.layout}>
-        <aside className={[styles.sidebar, filtersOpen ? styles.sidebarOpen : ''].filter(Boolean).join(' ')}>
-          <p className={styles.sidebarTitle}>Filtros</p>
-
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Ministério</label>
-            <input
-              className={styles.filterInput}
-              value={formMin}
-              onChange={(e) => setFormMin(e.target.value)}
-              onBlur={handleFilterBlur}
-              onKeyDown={handleFilterKeyDown}
-              placeholder="Ex.: MEC, Fazenda…"
-            />
+        <div ref={sentinela} />
+        {carregandoMais && <div className={styles.carregando}><Spinner /></div>}
+        {!carregando && pagina < paginas && !carregandoMais && (
+          <div className={styles.maisWrap}>
+            <button type="button" className={styles.filtro} onClick={carregarMais}>Carregar mais pessoas</button>
           </div>
-
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Secretaria</label>
-            <input
-              className={styles.filterInput}
-              value={formSec}
-              onChange={(e) => setFormSec(e.target.value)}
-              onBlur={handleFilterBlur}
-              onKeyDown={handleFilterKeyDown}
-              placeholder="Ex.: SAF, STN…"
-            />
-          </div>
-
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Tema de Atuação</label>
-            <input
-              className={styles.filterInput}
-              value={formTema}
-              onChange={(e) => setFormTema(e.target.value)}
-              onBlur={handleFilterBlur}
-              onKeyDown={handleFilterKeyDown}
-              placeholder="Ex.: orçamento, gestão…"
-            />
-          </div>
-
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Formação</label>
-            <input
-              className={styles.filterInput}
-              value={formForm}
-              onChange={(e) => setFormForm(e.target.value)}
-              onBlur={handleFilterBlur}
-              onKeyDown={handleFilterKeyDown}
-              placeholder="Ex.: Direito, UnB…"
-            />
-          </div>
-        </aside>
-
-        <div className={styles.results}>
-          {loading ? (
-            <div className={styles.center}>
-              <Spinner size="lg" />
-            </div>
-          ) : error ? (
-            <div className={styles.center}>
-              <p className={styles.errorText}>{error}</p>
-            </div>
-          ) : items.length === 0 ? (
-            <div className={styles.emptyState}>
-              <p className={styles.emptyTitle}>Nenhum analista encontrado</p>
-              <p className={styles.emptySub}>Tente ajustar os filtros ou o termo de busca.</p>
-            </div>
-          ) : (
-            <>
-              <div className={styles.resultsHeader}>
-                <span className={styles.resultsCount}>
-                  {total}{' '}
-                  {total === 1 ? 'analista encontrado' : 'analistas encontrados'}
-                </span>
-              </div>
-
-              <div className={styles.grid}>
-                {items.map((a) => (
-                  <BuscaResultCard key={a.id} analista={a} />
-                ))}
-              </div>
-
-              {hasMore && (
-                <div ref={sentinelRef} className={styles.loadMore}>
-                  {loadingMore && <Spinner size="sm" />}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+        )}
+      </section>
+    </>
   )
 }

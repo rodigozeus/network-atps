@@ -4,10 +4,9 @@
   justify-content: center;
   gap: var(--sp-2);
   font-family: var(--font);
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-weight: 700;
   border: 2px solid transparent;
-  border-radius: var(--r);
+  border-radius: var(--r-full);
   cursor: pointer;
   transition: background-color var(--t), border-color var(--t), color var(--t), box-shadow var(--t);
   white-space: nowrap;
@@ -23,16 +22,17 @@
 /* Sizes */
 .sm {
   font-size: var(--font-xs);
-  padding: 6px 12px;
-  border-radius: var(--r-sm);
+  padding: 7px 14px;
 }
 .md {
   font-size: var(--font-sm);
-  padding: 10px 20px;
+  min-height: 48px;
+  padding: 0 22px;
 }
 .lg {
-  font-size: var(--font-base);
-  padding: 13px 28px;
+  font-size: 15px;
+  min-height: 52px;
+  padding: 0 28px;
 }
 
 /* Variants */

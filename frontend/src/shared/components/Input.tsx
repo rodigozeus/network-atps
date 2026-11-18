@@ -28,6 +28,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             type={resolvedType}
             className={[styles.input, error ? styles.inputError : ''].filter(Boolean).join(' ')}
+            aria-invalid={error ? true : undefined}
             {...props}
           />
           {isPassword && (
@@ -35,7 +36,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               type="button"
               className={styles.eyeBtn}
               onClick={() => setShowPassword((v) => !v)}
-              tabIndex={-1}
+              aria-pressed={showPassword}
               aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
             >
               {showPassword ? (

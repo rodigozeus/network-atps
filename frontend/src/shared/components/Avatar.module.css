@@ -1,0 +1,23 @@
+.avatar {
+  width: var(--tam);
+  height: var(--tam);
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--a1), var(--a2));
+  color: var(--a3);
+  font-weight: 700;
+  font-size: calc(var(--tam) * 0.32);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 22%;
+}

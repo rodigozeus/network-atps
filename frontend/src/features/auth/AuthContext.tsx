@@ -16,6 +16,8 @@ interface AuthState {
   login: (email: string, senha: string) => Promise<void>
   register: (data: AnalistaCreate) => Promise<AnalistaOut>
   logout: () => void
+  /** Atualiza os dados de quem está logado depois de editar o perfil */
+  atualizarUsuario: (user: AnalistaOut) => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -66,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, isLoading, login, register, logout }}
+      value={{ user, isAuthenticated: !!user, isLoading, login, register, logout, atualizarUsuario: setUser }}
     >
       {children}
     </AuthContext.Provider>
