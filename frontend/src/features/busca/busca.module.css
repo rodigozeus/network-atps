@@ -235,7 +235,9 @@
 .card {
   width: 100%;
   max-width: 420px;
-  height: 600px;
+  /* altura mínima, não fixa: nome em duas linhas não empurra os temas para cima dos botões.
+     Na grade, os cards de uma mesma linha esticam até o mais alto. */
+  min-height: 600px;
   display: flex;
   flex-direction: column;
   background: var(--card);
@@ -556,7 +558,7 @@
 
 .actions {
   margin-top: auto;
-  padding: 0 0 8px;
+  padding: 20px 0 8px;
   display: flex;
   justify-content: center;
   gap: 20px;
