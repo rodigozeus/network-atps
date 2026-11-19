@@ -108,6 +108,12 @@ def pontuacao_busca(q: str, tema: Tema) -> float:
             notas.append(n)
         if notas and min(notas) >= 0.75:
             melhor = max(melhor, 0.55 + 0.25 * sum(notas) / len(notas))
+    # frase mais longa ou mais específica que o tema ("avaliação de impacto do programa X"):
+    # mostra o parecido no fim da lista, para a pessoa preferir o tema que já existe
+    if melhor == 0 and len(kq) >= 6:
+        s = max([similaridade(q, tema.nome), *(similaridade(q, a) for a in tema.lista_apelidos)])
+        if s >= PARECIDO:
+            melhor = 0.4 * s
     return melhor
 
 

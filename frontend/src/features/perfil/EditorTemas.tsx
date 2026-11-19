@@ -38,7 +38,8 @@ export default function EditorTemas({ tipo, temas, onChange }: {
   const opcoes = sugestoes.filter((s) => !jaTenho.has(s.id))
   const cheio = meus.length >= MAX_POR_TIPO
   // última opção: criar o que foi digitado (com atrito depois)
-  const exato = opcoes.some((s) => s.nome.toLowerCase() === termo.toLowerCase())
+  const igual = (a: string | null) => !!a && a.toLocaleLowerCase('pt') === termo.toLocaleLowerCase('pt')
+  const exato = sugestoes.some((s) => igual(s.nome) || igual(s.apelido))
   const mostraCriar = termo.length >= 2 && !exato
   const total = opcoes.length + (mostraCriar ? 1 : 0)
 
@@ -127,7 +128,7 @@ export default function EditorTemas({ tipo, temas, onChange }: {
                 {novo.parecidos.filter((p) => !jaTenho.has(p.id)).map((p) => (
                   <button key={p.id} type="button" className={styles.temaOpcao} disabled={salvando}
                     onClick={() => void incluir({ tema_id: p.id })}>
-                    <span>{p.nome}</span><small>{pessoas(p.total)}{p.tipo !== tipo ? ` · ${p.tipo === 'area' ? 'área de política' : 'ferramenta ou método'}` : ''}</small>
+                    <span>{p.nome}</span><small>{[p.total ? pessoas(p.total) : '', p.tipo !== tipo ? (p.tipo === 'area' ? 'área de política' : 'ferramenta ou método') : ''].filter(Boolean).join(' · ') || 'já existe na lista'}</small>
                   </button>
                 ))}
               </div>
@@ -170,7 +171,7 @@ export default function EditorTemas({ tipo, temas, onChange }: {
                   <li key={s.id} id={`${lista}-${i}`} role="option" aria-selected={i === ativo}
                     onMouseEnter={() => setAtivo(i)} onMouseDown={(e) => { e.preventDefault(); escolherOpcao(i) }}>
                     <span>{s.nome}{s.apelido && <em> ({s.apelido})</em>}</span>
-                    <small>{s.total ? pessoas(s.total) : 'novo'}</small>
+                    {s.total > 0 && <small>{pessoas(s.total)}</small>}
                   </li>
                 ))}
                 {mostraCriar && (
