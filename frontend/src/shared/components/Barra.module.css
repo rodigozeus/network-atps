@@ -260,3 +260,20 @@
     padding-right: 10px;
   }
 }
+
+/* Topo colorido rolado: sem barra, botões com fundo escuro translúcido */
+.flutuando .voltar,
+.flutuando .entrar,
+.flutuando .usuarioBtn {
+  background: rgba(16, 20, 28, 0.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.35);
+}
+
+.flutuando .voltar:hover,
+.flutuando .entrar:hover,
+.flutuando .usuarioBtn:hover,
+.flutuando .aberto .usuarioBtn {
+  background: rgba(16, 20, 28, 0.7);
+}

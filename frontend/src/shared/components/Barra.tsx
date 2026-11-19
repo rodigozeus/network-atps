@@ -20,9 +20,11 @@ export default function Barra({ voltar }: { voltar: Voltar | null }) {
   const { isAuthenticated, isLoading } = useAuth()
   const { pathname } = useLocation()
   const [rolou, setRolou] = useState(true)
-  // No perfil e nas páginas de unidade, sempre laranja; na busca, transparente sobre o topo até rolar
-  const sempreSolida = pathname.startsWith('/analistas/') || pathname.startsWith('/unidades')
-  const solida = sempreSolida || rolou
+  // Páginas com topo colorido (busca, perfil, unidades): nunca a barra laranja; ao rolar, só os
+  // botões ganham um fundo escuro translúcido para continuar legíveis. Nas demais, barra laranja.
+  const comTopo = pathname === '/busca' || pathname.startsWith('/analistas/') || pathname.startsWith('/unidades')
+  const solida = !comTopo && rolou
+  const flutuando = comTopo && rolou
 
   useEffect(() => {
     const atualizar = () => {
@@ -43,7 +45,7 @@ export default function Barra({ voltar }: { voltar: Voltar | null }) {
   }, [pathname])
 
   return (
-    <header className={[styles.barra, solida ? styles.solida : ''].join(' ')}>
+    <header className={[styles.barra, solida ? styles.solida : '', flutuando ? styles.flutuando : ''].join(' ')}>
       <div className={styles.inner}>
         <div className={styles.esquerda}>
           {voltar && (
