@@ -6,9 +6,16 @@
   transition: background 0.3s, box-shadow 0.3s;
 }
 
-.solida {
+/* Fundo laranja numa camada própria, com opacidade que acompanha a rolagem (--progresso) */
+.barra::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background: linear-gradient(90deg, #f7741c 0%, #f04e12 55%, #e2290f 100%);
   box-shadow: 0 8px 24px -12px rgba(120, 20, 0, 0.45);
+  opacity: var(--progresso, 1);
+  pointer-events: none;
 }
 
 .inner {
@@ -259,21 +266,4 @@
   .usuarioBtn {
     padding-right: 10px;
   }
-}
-
-/* Topo colorido rolado: sem barra, botões com fundo escuro translúcido */
-.flutuando .voltar,
-.flutuando .entrar,
-.flutuando .usuarioBtn {
-  background: rgba(16, 20, 28, 0.55);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.35);
-}
-
-.flutuando .voltar:hover,
-.flutuando .entrar:hover,
-.flutuando .usuarioBtn:hover,
-.flutuando .aberto .usuarioBtn {
-  background: rgba(16, 20, 28, 0.7);
 }

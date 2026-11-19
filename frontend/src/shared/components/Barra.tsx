@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { useAuth } from '@shared/hooks/useAuth'
@@ -16,20 +16,22 @@ export interface Voltar {
  * Barra fixa do topo. Sobre um topo colorido (busca, perfil) começa transparente e fica laranja,
  * com a logo, quando o conteúdo marcado com data-barra-limite chega nela.
  */
+// px de rolagem em que a barra vai do transparente ao laranja
+const FAIXA_TRANSICAO = 200
+
 export default function Barra({ voltar }: { voltar: Voltar | null }) {
   const { isAuthenticated, isLoading } = useAuth()
   const { pathname } = useLocation()
-  const [rolou, setRolou] = useState(true)
-  // Páginas com topo colorido (busca, perfil, unidades): nunca a barra laranja; ao rolar, só os
-  // botões ganham um fundo escuro translúcido para continuar legíveis. Nas demais, barra laranja.
-  const comTopo = pathname === '/busca' || pathname.startsWith('/analistas/') || pathname.startsWith('/unidades')
-  const solida = !comTopo && rolou
-  const flutuando = comTopo && rolou
+  // 0 = transparente sobre o topo colorido, 1 = barra laranja completa. Cresce aos poucos com a
+  // rolagem para a cor não trocar de uma vez (no perfil o topo tem a cor do órgão, não laranja).
+  const [progresso, setProgresso] = useState(1)
+  const solida = progresso >= 0.98
 
   useEffect(() => {
     const atualizar = () => {
       const limite = document.querySelector('[data-barra-limite]')
-      setRolou(!limite || limite.getBoundingClientRect().top <= 72)
+      const topo = limite ? limite.getBoundingClientRect().top : 0
+      setProgresso(limite ? Math.min(1, Math.max(0, (72 + FAIXA_TRANSICAO - topo) / FAIXA_TRANSICAO)) : 1)
     }
     atualizar()
     window.addEventListener('scroll', atualizar, { passive: true })
@@ -45,7 +47,8 @@ export default function Barra({ voltar }: { voltar: Voltar | null }) {
   }, [pathname])
 
   return (
-    <header className={[styles.barra, solida ? styles.solida : '', flutuando ? styles.flutuando : ''].join(' ')}>
+    <header className={[styles.barra, solida ? styles.solida : ''].join(' ')}
+      style={{ '--progresso': progresso } as CSSProperties}>
       <div className={styles.inner}>
         <div className={styles.esquerda}>
           {voltar && (
