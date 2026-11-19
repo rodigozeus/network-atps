@@ -961,7 +961,6 @@
 /* a caixinha da novidade passa da capa: a imagem leva o arredondamento e a capa deixa de cortar */
 .cover:has(.novidade) {
   overflow: visible;
-  z-index: 2;
 }
 
 .cover:has(.novidade) .coverArt {
