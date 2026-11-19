@@ -136,7 +136,7 @@ export default function EditorTemas({ tipo, temas, onChange }: {
           ) : (
             <p>Confira a grafia. Prefira nomes curtos e gerais: “Avaliação de impacto”, e não “Avaliação de impacto do programa X”.</p>
           )}
-          <p className={styles.temaNovoNota}>Temas novos passam pela revisão da ANDEPS e podem ser ajustados ou unidos a outros.</p>
+          <p className={styles.temaNovoNota}>Temas novos passam pela revisão da Equipe de administração da Rede ATPS e podem ser ajustados ou unidos a outros.</p>
           <div className={styles.temaNovoAcoes}>
             <button type="button" className={[styles.botao, styles.secundario].join(' ')} onClick={() => { setNovo(null); campo.current?.focus() }}>
               Voltar
