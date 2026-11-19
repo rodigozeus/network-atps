@@ -84,7 +84,7 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
       const margem = Math.max(0.06 * W, (W - Math.min(W - 32, 1320)) / 2 + 45)
       // em cima fica a barra do site; embaixo, a marca da ANDEPS
       const reg = mobile
-        ? { x0: 0.08 * W, x1: 0.92 * W, y0: 0.34 * H, y1: 0.8 * H }
+        ? { x0: 0.08 * W, x1: 0.92 * W, y0: 0.42 * H, y1: 0.82 * H }
         : { x0: margem, x1: W - margem, y0: 0.27 * H, y1: 0.8 * H }
       // Área livre em volta do símbolo central (elipse)
       const sb = simbolo!.getBoundingClientRect()

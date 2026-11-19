@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { useAuth } from '@shared/hooks/useAuth'
 import { LogoHorizontal } from './Logo'
@@ -12,32 +11,11 @@ export interface Voltar {
   rotulo: string
 }
 
-/**
- * Barra fixa do topo. Sobre um topo colorido (busca, perfil) começa transparente e fica laranja,
- * com a logo, quando o conteúdo marcado com data-barra-limite chega nela.
- */
+/** Barra fixa do topo, sempre laranja e com a logo. */
 export default function Barra({ voltar }: { voltar: Voltar | null }) {
   const { isAuthenticated, isLoading } = useAuth()
-  const { pathname } = useLocation()
-  const [solida, setSolida] = useState(true)
-
-  useEffect(() => {
-    const atualizar = () => {
-      const limite = document.querySelector('[data-barra-limite]')
-      setSolida(!limite || limite.getBoundingClientRect().top <= 72)
-    }
-    atualizar()
-    window.addEventListener('scroll', atualizar, { passive: true })
-    window.addEventListener('resize', atualizar)
-    // o limite pode aparecer depois que os dados carregam
-    const obs = new MutationObserver(atualizar)
-    obs.observe(document.body, { childList: true, subtree: true })
-    return () => {
-      window.removeEventListener('scroll', atualizar)
-      window.removeEventListener('resize', atualizar)
-      obs.disconnect()
-    }
-  }, [pathname])
+  // sempre sólida (laranja, com a logo); antes ficava transparente sobre os topos coloridos
+  const solida = true
 
   return (
     <header className={[styles.barra, solida ? styles.solida : ''].join(' ')}>
