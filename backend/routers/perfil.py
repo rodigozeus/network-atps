@@ -42,15 +42,38 @@ UPLOAD_DIR = "uploads/fotos"
 FORMATOS_ACEITOS = {"JPEG", "PNG", "WEBP"}
 TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024
 DIMENSAO_MAXIMA_PX = 800
+# Miniatura para avatares pequenos (cards, listas, topo da busca): 120 px em tela 2x
+MINIATURA_PX = 240
 EXTENSOES_SERVIDAS = {".jpg", ".jpeg", ".png", ".webp"}
 
 # Protege contra "bombas de descompressão" (imagens pequenas em bytes e enormes em pixels).
 Image.MAX_IMAGE_PIXELS = 40_000_000
 
 
+def caminho_miniatura(foto_path: str) -> str:
+    return f"{os.path.splitext(foto_path)[0]}_p.jpg"
+
+
+def salvar_foto(img: Image.Image) -> str:
+    """Grava a foto (até 800 px) e a miniatura (240 px) em JPEG progressivo, sem metadados.
+    Devolve o caminho da foto; a miniatura fica ao lado, com sufixo _p."""
+    img = ImageOps.exif_transpose(img).convert("RGB")
+    img.thumbnail((DIMENSAO_MAXIMA_PX, DIMENSAO_MAXIMA_PX))
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    caminho = f"{UPLOAD_DIR}/{uuid.uuid4()}.jpg"
+    img.save(caminho, "JPEG", quality=82, optimize=True, progressive=True)
+    mini = img.copy()
+    mini.thumbnail((MINIATURA_PX, MINIATURA_PX))
+    mini.save(caminho_miniatura(caminho), "JPEG", quality=80, optimize=True, progressive=True)
+    return caminho
+
+
 def remover_foto(foto_path: str | None) -> None:
-    if foto_path and os.path.exists(foto_path):
-        os.remove(foto_path)
+    if not foto_path:
+        return
+    for caminho in (foto_path, caminho_miniatura(foto_path)):
+        if os.path.exists(caminho):
+            os.remove(caminho)
 
 
 # --- Perfil próprio ---
@@ -435,11 +458,7 @@ def upload_foto(
         with Image.open(io.BytesIO(conteudo)) as img:
             if img.format not in FORMATOS_ACEITOS:
                 raise formato_invalido
-            img = ImageOps.exif_transpose(img).convert("RGB")
-            img.thumbnail((DIMENSAO_MAXIMA_PX, DIMENSAO_MAXIMA_PX))
-            os.makedirs(UPLOAD_DIR, exist_ok=True)
-            filepath = f"{UPLOAD_DIR}/{uuid.uuid4()}.jpg"
-            img.save(filepath, "JPEG", quality=85)
+            filepath = salvar_foto(img)
     except (UnidentifiedImageError, Image.DecompressionBombError, OSError):
         raise formato_invalido
 

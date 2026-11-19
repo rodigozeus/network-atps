@@ -20,7 +20,7 @@
 /* ---------- Perfil: topo com o gradiente do órgão ---------- */
 .hero {
   position: relative;
-  height: 790px;
+  height: 520px;
   background: linear-gradient(135deg, #ffcf9f 0%, #f6a3a8 50%, #b9b2f2 100%);
 }
 
@@ -36,7 +36,7 @@
   position: relative;
   z-index: 3;
   max-width: calc(var(--conteudo) + 32px);
-  margin: -500px auto 0;
+  margin: -360px auto 0;
   padding: 0 16px 80px;
 }
 
