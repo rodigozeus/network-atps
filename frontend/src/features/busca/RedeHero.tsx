@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useRef } from 'react'
-import type { AnalistaPublico } from '@shared/api/types'
-import { Andeps, Avatar, LogoEmpilhado } from '@shared/components'
+import type { AnalistaPublico, MinhaRede, NoRede } from '@shared/api/types'
+import { Andeps, Avatar, LogoEmpilhado, LogoHorizontal } from '@shared/components'
+import { nomeCurto } from '@shared/utils/analista'
 import styles from './RedeHero.module.css'
 
 interface RedeHeroProps {
+  /** Você no centro e as pessoas mais próximas; sem ela, a rede da busca e o símbolo no centro */
+  rede: MinhaRede | null
   analistas: AnalistaPublico[]
   onEscolher: (id: number) => void
 }
@@ -14,6 +17,9 @@ interface No {
   a: AnalistaPublico
   el: HTMLButtonElement
   base: number
+  prox: number
+  motivo: string | null
+  ligadoAoCentro: boolean
   hx: number; hy: number; x: number; y: number; vx: number; vy: number
   z: number; zEf: number; zFase: number; zVel: number
   f1: number; f2: number; p1: number; p2: number; p3: number
@@ -39,16 +45,25 @@ function rng(seed: number) {
  * Topo da busca: rede de perfis interligados que se move devagar, reage ao mouse,
  * deixa arrastar os nós (com limite elástico) e traz os do fundo para a frente aos poucos.
  */
-export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
+export default function RedeHero({ rede, analistas: daBusca, onEscolher }: RedeHeroProps) {
+  // Com a rede pessoal, as pessoas vêm em ordem de proximidade; sem ela, as da busca
+  const pessoas: NoRede[] = rede
+    ? rede.pessoas
+    : daBusca.map((a, i) => ({ analista: a, relacao: 'rede', motivo: null, proximidade: 1 - i / Math.max(1, daBusca.length) }))
+  const analistas = pessoas.map((p) => p.analista)
+  const ligacoesRef = useRef(rede?.ligacoes ?? [])
+  ligacoesRef.current = rede?.ligacoes ?? []
+  const pessoasRef = useRef(pessoas)
+  pessoasRef.current = pessoas
   const heroRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const tipRef = useRef<HTMLDivElement>(null)
-  const simboloRef = useRef<HTMLHeadingElement>(null)
+  const simboloRef = useRef<HTMLDivElement>(null)
   const nosRef = useRef<Array<HTMLButtonElement | null>>([])
   const escolherRef = useRef(onEscolher)
   escolherRef.current = onEscolher
 
-  const chave = analistas.map((a) => a.id).join(',')
+  const chave = `${rede?.eu.id ?? 0}:${analistas.map((a) => a.id).join(',')}`
 
   useEffect(() => {
     const hero = heroRef.current
@@ -64,7 +79,11 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
       const el = nosRef.current[i]
       if (!el) return []
       return [{
-        a, el, base: 66 + r() * 26,
+        // quanto mais próxima, maior a bolinha
+        a, el, base: 58 + 34 * (pessoasRef.current[i]?.proximidade ?? 0.5) + r() * 4,
+        prox: pessoasRef.current[i]?.proximidade ?? 0.5,
+        motivo: pessoasRef.current[i]?.motivo ?? null,
+        ligadoAoCentro: !!rede && pessoasRef.current[i]?.relacao !== 'rede',
         hx: 0, hy: 0, x: 0, y: 0, vx: 0, vy: 0,
         z: 0.5, zEf: 0.5, zFase: r() * Math.PI * 2, zVel: 0.1 + r() * 0.12,
         f1: 0.18 + r() * 0.2, f2: 0.11 + r() * 0.15, p1: r() * 6.3, p2: r() * 6.3, p3: r() * 6.3,
@@ -103,7 +122,13 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
           p.y = centro.y + dy * k
         }
       }
-      const pts = nos.map(() => ({ x: reg.x0 + rr() * (reg.x1 - reg.x0), y: reg.y0 + rr() * (reg.y1 - reg.y0) }))
+      // Em volta do centro: quem é mais próximo começa mais perto (ângulo áureo para espalhar)
+      const rx = (reg.x1 - reg.x0) / 2, ry = (reg.y1 - reg.y0) / 2
+      const pts = nos.map((n, i) => {
+        const raio = 0.45 + 0.55 * (1 - n.prox)
+        const ang = i * 2.39996 + rr() * 0.4
+        return { x: centro.x + Math.cos(ang) * rx * raio, y: centro.y + Math.sin(ang) * ry * raio }
+      })
       const minD = Math.sqrt(((reg.x1 - reg.x0) * (reg.y1 - reg.y0)) / Math.max(1, nos.length)) * 0.95
       for (let it = 0; it < 220; it++) {
         for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
@@ -130,40 +155,12 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
       })
       iniciado = true
 
-      // Ligações: 2 vizinhos mais próximos, sem atravessar o símbolo, + garantia de rede conectada
-      const chaves = new Set<string>()
-      links = []
-      const cruzaCentro = (a: number, b: number) => {
-        const ax = (pts[a].x - centro.x) / centro.ra, ay = (pts[a].y - centro.y) / centro.rb
-        const bx = (pts[b].x - centro.x) / centro.ra, by = (pts[b].y - centro.y) / centro.rb
-        const dx = bx - ax, dy = by - ay
-        const t = Math.max(0, Math.min(1, -(ax * dx + ay * dy) / (dx * dx + dy * dy || 1)))
-        return Math.hypot(ax + dx * t, ay + dy * t) < 1
-      }
-      const ligar = (a: number, b: number, forcar = false) => {
-        const k = a < b ? `${a}-${b}` : `${b}-${a}`
-        if (a !== b && !chaves.has(k) && (forcar || !cruzaCentro(a, b))) { chaves.add(k); links.push([a, b]) }
-      }
-      const dist = (a: number, b: number) => Math.hypot(pts[a].x - pts[b].x, pts[a].y - pts[b].y)
-      pts.forEach((_, i) => {
-        pts.map((__, j) => j).filter((j) => j !== i).sort((a, b) => dist(i, a) - dist(i, b)).slice(0, 2).forEach((j) => ligar(i, j))
-      })
-      const pai = pts.map((_, i) => i)
-      const raiz = (i: number): number => (pai[i] === i ? i : (pai[i] = raiz(pai[i])))
-      links.forEach(([a, b]) => { pai[raiz(a)] = raiz(b) })
-      for (;;) {
-        let melhor: [number, number, number] | null = null
-        for (let i = 0; i < pts.length; i++) for (let j = 0; j < pts.length; j++) {
-          if (raiz(i) !== raiz(j) && (!melhor || dist(i, j) < melhor[2])) melhor = [i, j, dist(i, j)]
-        }
-        if (!melhor) break
-        ligar(melhor[0], melhor[1], true)
-        pai[raiz(melhor[0])] = raiz(melhor[1])
-      }
-      for (let k = 0; k < 5; k++) ligar(Math.floor(rr() * pts.length), Math.floor(rr() * pts.length))
-      ligadosAoCentro = pts.map((_, i) => i)
-        .sort((a, b) => Math.hypot(pts[a].x - centro.x, pts[a].y - centro.y) - Math.hypot(pts[b].x - centro.x, pts[b].y - centro.y))
-        .slice(0, 6)
+      // Ligações reais (mesma unidade ou tema em comum), vindas da Rede
+      const indice = new Map(nos.map((n, i) => [n.a.id, i]))
+      links = ligacoesRef.current
+        .map((l) => [indice.get(l.a), indice.get(l.b)] as [number | undefined, number | undefined])
+        .filter((l): l is [number, number] => l[0] !== undefined && l[1] !== undefined)
+      ligadosAoCentro = nos.map((n, i) => (n.ligadoAoCentro ? i : -1)).filter((i) => i >= 0)
       vizinhos = nos.map(() => [])
       links.forEach(([a, b]) => { vizinhos[a].push(b); vizinhos[b].push(a) })
     }
@@ -202,7 +199,7 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
     const mostrarTip = (n: No) => {
       ativo = n
       tip.querySelector('strong')!.textContent = n.a.nome
-      tip.querySelector('span')!.textContent = [n.a.cargo_fce, n.a.ministerio_sigla ?? n.a.ministerio].filter(Boolean).join(' · ')
+      tip.querySelector('span')!.textContent = n.motivo ?? [n.a.cargo_fce, n.a.ministerio_sigla ?? n.a.ministerio].filter(Boolean).join(' · ')
       tip.classList.add(styles.show)
     }
     const esconderTip = (n: No) => {
@@ -364,9 +361,12 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
 
       if (ativo) {
         const d = ativo.base * escala * (0.6 + 0.52 * ativo.zEf) * (1 + 0.1 * ativo.hover)
-        const tw = tip.offsetWidth
+        const tw = tip.offsetWidth, th = tip.offsetHeight
         const x = Math.min(W - tw - 12, Math.max(12, ativo.x - tw / 2))
-        tip.style.transform = `translate(${x}px, ${ativo.y + d / 2 + 10}px)`
+        // embaixo da bolinha; se não couber no topo, em cima dela
+        const abaixo = ativo.y + d / 2 + 10
+        const y = abaixo + th > H - 8 ? ativo.y - d / 2 - 10 - th : abaixo
+        tip.style.transform = `translate(${x}px, ${Math.max(8, y)}px)`
       }
     }
     raf = requestAnimationFrame(quadro)
@@ -403,13 +403,28 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
         <strong />
         <span />
       </div>
-      <h1 className={styles.simbolo} ref={simboloRef}>
-        {/* volta à tela inicial: busca sem filtros */}
-        <Link to="/busca" className={styles.simboloLink} aria-label="Rede ATPS, limpar a busca e os filtros">
-          <LogoEmpilhado />
+      {rede ? (
+        <div className={[styles.simbolo, styles.centro].join(' ')} ref={simboloRef}>
+          <Link to={`/analistas/${rede.eu.id}`} className={styles.centroLink} aria-label="Você, no centro da sua rede. Ver seu perfil">
+            <Avatar id={rede.eu.id} nome={rede.eu.nome} fotoPath={rede.eu.foto_path} tamanho={120} className={styles.centroFoto} />
+            <span className={styles.centroNome}>{nomeCurto(rede.eu.nome)}</span>
+          </Link>
+        </div>
+      ) : (
+        <div className={styles.simbolo} ref={simboloRef}>
+          <Link to="/busca" className={styles.simboloLink} aria-label="Rede ATPS, limpar a busca e os filtros">
+            <LogoEmpilhado />
+          </Link>
+        </div>
+      )}
+      {/* marca: volta à tela inicial, busca sem filtros */}
+      <h1 className={styles.marca}>
+        <Link to="/busca" aria-label="Rede ATPS, limpar a busca e os filtros">
+          <LogoHorizontal />
+          <span className={styles.marcaDivisor} aria-hidden />
+          <Andeps altura={18} />
         </Link>
       </h1>
-      <Andeps className={styles.andeps} altura={30} />
 
     </div>
   )

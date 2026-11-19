@@ -575,3 +575,26 @@ class NovidadesRedeOut(BaseModel):
     chegaram_unidade: list[AnalistaPublico]
     turma: str | None
     chegaram_turma: list[AnalistaPublico]
+
+
+# --- Minha rede (topo da busca) ---
+
+class NoRede(BaseModel):
+    analista: AnalistaPublico
+    # unidade: lotação em comum | tema: tema em comum | favorito | rede: só completa a rede
+    relacao: str
+    motivo: str | None
+    proximidade: float  # 0 a 1: quanto mais perto do centro
+
+
+class LigacaoRede(BaseModel):
+    a: int
+    b: int
+    tipo: str  # unidade | tema
+    rotulo: str
+
+
+class MinhaRedeOut(BaseModel):
+    eu: AnalistaPublico
+    pessoas: list[NoRede]
+    ligacoes: list[LigacaoRede]

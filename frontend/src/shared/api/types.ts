@@ -268,3 +268,18 @@ export interface ResumoPublico {
   analistas: number | null
   orgaos: number | null
 }
+
+/** Topo da busca: quem está logado no centro e as pessoas mais próximas ao redor */
+export interface NoRede {
+  analista: AnalistaPublico
+  relacao: 'unidade' | 'tema' | 'favorito' | 'rede'
+  motivo: string | null
+  /** 0 a 1: quanto maior, mais perto do centro */
+  proximidade: number
+}
+
+export interface MinhaRede {
+  eu: AnalistaPublico
+  pessoas: NoRede[]
+  ligacoes: Array<{ a: number; b: number; tipo: 'unidade' | 'tema'; rotulo: string }>
+}
