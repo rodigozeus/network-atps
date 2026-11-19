@@ -10,12 +10,17 @@ from auth import get_current_admin
 from database import get_db
 from email_utils import enviar_email_conta_ativada
 from models import Analista, ConflitoCadastro, Formacao, NivelFormacao, Role, TemaAtuacao
+import lotacao_siorg
+import novidades
+from lotacao_auto import normalizar
+from models import BaseAtps, UnidadeSiorg, condicao_perfil_visivel
 from routers.perfil import remover_foto
 from schemas import (
     AdminStats,
     AnalistaAdminOut,
     AnalistaAdminUpdate,
     ConflitoCadastroOut,
+    CoberturaOut,
     FormacaoStat,
     MinistrioStat,
     PaginatedAdminUsers,
@@ -111,8 +116,11 @@ def editar_usuario(
     updates = body.model_dump(exclude_unset=True)
     ativou_conta = updates.get('ativo') is True and not analista.ativo
 
+    lotacao_antes = novidades.foto_lotacao(analista)
     for field, value in updates.items():
         setattr(analista, field, value)
+    if novidades.foto_lotacao(analista) != lotacao_antes:
+        analista.lotacao_siorg_id = lotacao_siorg.resolver(db, analista)
 
     if updates.get('ativo') is True and analista.pendente_revisao:
         _confirmar_vinculo_manual(analista)
@@ -360,3 +368,51 @@ def confirmar_vinculo(
     db.commit()
     db.refresh(analista)
     return analista
+
+
+@router.get("/cobertura", response_model=CoberturaOut)
+def cobertura(db: Session = Depends(get_db), _: Analista = Depends(get_current_admin)):
+    """Quantos ATPS de cada órgão estão na Rede, comparado ao universo da cópia local da
+    base do Portal (ATPS ativos por órgão de exercício), e cadastros por dia."""
+    orgaos = {o.id: o for o in db.scalars(select(UnidadeSiorg).where(UnidadeSiorg.profundidade == 0))}
+    por_nome = {normalizar(o.nome): o.id for o in orgaos.values()}
+    orgao_da_unidade = dict(db.execute(select(UnidadeSiorg.id, UnidadeSiorg.orgao_id)).all())
+
+    universo: dict[int | None, int] = {}
+    for orgao_id, n in db.execute(select(BaseAtps.orgao_siorg_id, func.count()).group_by(BaseAtps.orgao_siorg_id)):
+        universo[orgao_id] = n
+    referencia = db.scalar(select(func.max(BaseAtps.referencia)))
+
+    rede: dict[int | None, int] = {}
+    membros = db.query(Analista).filter(condicao_perfil_visivel()).all()
+    for a in membros:
+        orgao_id = orgao_da_unidade.get(a.lotacao_siorg_id) if a.lotacao_siorg_id else None
+        if orgao_id is None and a.ministerio:
+            orgao_id = por_nome.get(normalizar(a.ministerio))
+        rede[orgao_id] = rede.get(orgao_id, 0) + 1
+
+    linhas = []
+    for orgao_id in (set(universo) | set(rede)) - {None}:
+        o = orgaos.get(orgao_id)
+        if o is None:
+            continue
+        linhas.append({"orgao_id": o.id, "nome": o.nome, "sigla": o.sigla,
+                       "universo": universo.get(orgao_id, 0), "rede": rede.get(orgao_id, 0)})
+    linhas.sort(key=lambda l: (-l["universo"], -l["rede"], l["nome"]))
+
+    desde = datetime.now(timezone.utc).date().toordinal() - 29
+    dias: dict[str, int] = {}
+    for a in db.query(Analista).all():
+        if a.criado_em and a.criado_em.date().toordinal() >= desde:
+            dia = a.criado_em.date().isoformat()
+            dias[dia] = dias.get(dia, 0) + 1
+
+    return CoberturaOut(
+        referencia=referencia,
+        total_universo=sum(universo.values()),
+        total_rede=len(membros),
+        orgaos=linhas,
+        sem_orgao_universo=universo.get(None, 0),
+        sem_orgao_rede=rede.get(None, 0),
+        cadastros_por_dia=[{"dia": d, "total": n} for d, n in sorted(dias.items())],
+    )

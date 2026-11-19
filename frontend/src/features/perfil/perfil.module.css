@@ -1107,3 +1107,115 @@
   font-size: 14px;
   line-height: 1.5;
 }
+
+/* "Em que posso ajudar" */
+.campo textarea {
+  width: 100%;
+  min-height: 104px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--campo-borda);
+  background: #fff;
+  font: 500 15px/1.5 var(--font);
+  color: var(--ink);
+  resize: vertical;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.campo textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(241, 94, 35, 0.14);
+}
+
+/* Perfil sempre atualizado: sugestão vinda do Portal */
+.sugestao {
+  margin: 0 0 20px;
+  padding: 18px 22px;
+  border-radius: 20px;
+  background: #eef5fc;
+  border: 1.5px solid #c9dcf1;
+  color: #0d2a5c;
+}
+
+.sugestao h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0d2a5c;
+}
+
+.sugestao p {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.sugestao dl {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.sugestao dt {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #47648f;
+}
+
+.sugestao dd {
+  margin: 2px 0 0;
+  display: grid;
+  gap: 2px;
+  font-size: 14px;
+}
+
+.sugestao dd small {
+  color: #47648f;
+  font-weight: 600;
+}
+
+.sugestaoAcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Bloco "Em que posso ajudar" no perfil público */
+.podeAjudar {
+  margin-top: 28px;
+  padding: 18px 22px;
+  border-radius: 20px;
+  background: #f7f5f2;
+}
+
+.podeAjudar h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.podeAjudar p {
+  margin: 0;
+  white-space: pre-line;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.lotacao a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(13, 42, 92, 0.25);
+  text-underline-offset: 3px;
+}
+
+.lotacao a:hover {
+  text-decoration-color: currentColor;
+}

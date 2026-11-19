@@ -76,9 +76,22 @@ class Analista(Base):
     # "portal" quando a lotação foi preenchida automaticamente com o órgão e a unidade de
     # exercício do Portal da Transparência; volta a None quando o titular a altera.
     lotacao_origem: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Unidade mais funda da lotação na estrutura oficial (UnidadeSiorg.id). Permite propagar
+    # renomeações do SIORG e montar as páginas de unidade.
+    lotacao_siorg_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    # "portal" quando cargo/turma vieram do Portal e ainda não foram alterados pelo titular
+    cargo_origem: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    turma_origem: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # Perfil sempre atualizado: mudança vista no Portal, aguardando o titular aceitar ou descartar
+    sugestao_atualizacao: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    sugestao_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sugestao_descartada: Mapped[str | None] = mapped_column(String(64), nullable=True)  # assinatura
+    conferido_portal_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    novidades_rede_vistas_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Complementar
     cargo_fce: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    pode_ajudar: Mapped[str | None] = mapped_column(Text, nullable=True)  # "Em que posso ajudar"
     portal_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     linkedin_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     lattes_url: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -237,6 +250,48 @@ class UnidadeSiorg(Base):
     nome: Mapped[str] = mapped_column(String(400), nullable=False)
     sigla: Mapped[str | None] = mapped_column(String(60), nullable=True)
     profundidade: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class UnidadeSiorgDetalhe(Base):
+    """Competência, contato e endereço de uma unidade, buscados no SIORG sob demanda."""
+    __tablename__ = "unidades_siorg_detalhe"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    competencia: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contato: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
+    endereco: Mapped[str | None] = mapped_column(Text, nullable=True)
+    atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+
+
+class BaseAtps(Base):
+    """Cópia dos ATPS ativos do download em massa do Portal da Transparência (SIAPE).
+    Usada quando a API do Portal está fora do ar (verificação e preenchimento) e como
+    universo do painel de cobertura. Do CPF fica só o HMAC dos 6 dígitos que o Portal
+    divulga (o restante já vem mascarado na fonte)."""
+    __tablename__ = "base_atps"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)  # Id_SERVIDOR_PORTAL
+    cpf_meio_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    nome: Mapped[str] = mapped_column(String(200), nullable=False)
+    cod_org_exercicio: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    org_exercicio: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    uorg_exercicio: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    orgao_siorg_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    funcao_sigla: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    funcao_nivel: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    atividade: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    ano_ingresso_servico_publico: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    referencia: Mapped[str] = mapped_column(String(6), nullable=False)  # AAAAMM
+
+
+class EnvioEmail(Base):
+    """Registro de envios para o limite por hora/dia (sem destinatário nem conteúdo)."""
+    __tablename__ = "envios_email"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tipo: Mapped[str] = mapped_column(String(40), nullable=False)
+    essencial: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    enviado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc, index=True)
 
 
 class TemaAtuacao(Base):

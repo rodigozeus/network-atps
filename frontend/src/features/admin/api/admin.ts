@@ -147,3 +147,19 @@ export async function getConflitos(): Promise<ConflitoCadastro[]> {
 export async function resolverConflito(id: number): Promise<void> {
   await api.post(`/admin/conflitos/${id}/resolver`)
 }
+
+export interface Cobertura {
+  /** AAAAMM da cópia local da base do Portal (universo) */
+  referencia: string | null
+  total_universo: number
+  total_rede: number
+  orgaos: Array<{ orgao_id: number; nome: string; sigla: string | null; universo: number; rede: number }>
+  sem_orgao_universo: number
+  sem_orgao_rede: number
+  cadastros_por_dia: Array<{ dia: string; total: number }>
+}
+
+export async function getCobertura(): Promise<Cobertura> {
+  const { data } = await api.get<Cobertura>('/admin/cobertura')
+  return data
+}

@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { IconCheck, IconPhotoUp, IconTrash } from '@tabler/icons-react'
+import { IconCheck, IconPhotoUp, IconRefresh, IconTrash } from '@tabler/icons-react'
 import type { AnalistaOut, AnalistaUpdate, Turma } from '@shared/api/types'
 import { perfilApi } from '@shared/api/perfil'
 import { semEndpoint } from '@shared/api/semEndpoint'
@@ -22,6 +22,8 @@ const telefone = z.string().refine((v) => !v || /^\(\d{2}\) \d{4,5}-\d{4}$/.test
 const emailOpcional = z.string().refine((v) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), 'Esse e-mail não parece válido.')
 
 // Mesmas regras do backend: cada link só pode apontar para o site correspondente
+const PODE_AJUDAR_MAXIMO = 600
+
 const link = (valido: (v: string) => boolean, msg: string) => z.string().refine((v) => !v.trim() || valido(v.trim()), msg)
 
 const schema = z.object({
@@ -37,6 +39,7 @@ const schema = z.object({
   linkedin_url: link(isLinkLinkedin, 'Cole o endereço do seu perfil, começando com https://www.linkedin.com/'),
   lattes_url: link(isLinkLattes, 'Cole o endereço do seu currículo em lattes.cnpq.br'),
   turma: z.string(),
+  pode_ajudar: z.string().max(PODE_AJUDAR_MAXIMO, `Use no máximo ${PODE_AJUDAR_MAXIMO} caracteres.`),
 })
 type Form = z.infer<typeof schema>
 
@@ -81,6 +84,10 @@ export default function ProfilePage() {
         </p>
       </div>
 
+      {perfil.sugestao_atualizacao && (
+        <SugestaoAtualizacao perfil={perfil} onRespondida={(p) => { setPerfil(p); atualizarUsuario(p) }} />
+      )}
+
       <div className={styles.abas} role="tablist" aria-label="Seções do perfil">
         {ABAS.map(([id, rotulo]) => (
           <button key={id} type="button" role="tab" id={`aba-${id}`} aria-controls={`painel-${id}`}
@@ -101,7 +108,7 @@ export default function ProfilePage() {
       </div>
 
       <div id="painel-dados" role="tabpanel" aria-labelledby="aba-dados" hidden={aba !== 'dados'}>
-        <DadosPerfil perfil={perfil} primeiroAcesso={primeiroAcesso}
+        <DadosPerfil key={perfil.atualizado_em} perfil={perfil} primeiroAcesso={primeiroAcesso}
           onSalvo={(p) => {
             setPerfil(p)
             atualizarUsuario(p)
@@ -137,7 +144,7 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
   onSalvo: (p: AnalistaOut) => void
   onCancelar: () => void
 }) {
-  const { register, control, handleSubmit, formState: { errors, isDirty, isSubmitting }, setFocus } = useForm<Form>({
+  const { register, control, handleSubmit, watch, formState: { errors, isDirty, isSubmitting }, setFocus } = useForm<Form>({
     resolver: zodResolver(schema),
     defaultValues: {
       nome: perfil.nome,
@@ -152,8 +159,10 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
       linkedin_url: perfil.linkedin_url ?? '',
       lattes_url: perfil.lattes_url ?? '',
       turma: perfil.turma ?? '',
+      pode_ajudar: perfil.pode_ajudar ?? '',
     },
   })
+  const tamanhoAjuda = watch('pode_ajudar').length
 
   const lotacaoInicial = useMemo(() => lotacaoDe(perfil), [perfil])
   const [lotacao, setLotacao] = useState<LotacaoValor>(lotacaoInicial)
@@ -234,6 +243,7 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
       portal_url: nulo(d.portal_url) as string,
       linkedin_url: nulo(d.linkedin_url) as string,
       lattes_url: nulo(d.lattes_url) as string,
+      pode_ajudar: nulo(d.pode_ajudar),
     }
     try {
       let atualizado = await perfilApi.updateMe(corpo)
@@ -324,6 +334,18 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
       </section>
 
       <section className={styles.secao}>
+        <h2>Em que posso ajudar<small>Conte a colegas sobre o que você topa conversar: temas, experiências, programas, métodos. Aparece no seu perfil e entra na busca.</small></h2>
+        <div className={styles.campo}>
+          <label htmlFor="pode_ajudar" className="sr-only">Em que posso ajudar</label>
+          <textarea id="pode_ajudar" rows={4} maxLength={PODE_AJUDAR_MAXIMO} {...register('pode_ajudar')}
+            placeholder="ex.: Posso ajudar com avaliação de programas sociais, Cadastro Único e uso de dados administrativos."
+            aria-invalid={!!errors.pode_ajudar} aria-describedby="pode-ajudar-contador" />
+          <p className={styles.ajuda} id="pode-ajudar-contador">{tamanhoAjuda}/{PODE_AJUDAR_MAXIMO} caracteres</p>
+          {errors.pode_ajudar && <p className={styles.erro} role="alert">{errors.pode_ajudar.message}</p>}
+        </div>
+      </section>
+
+      <section className={styles.secao}>
         <h2>Contato</h2>
         <div className={styles.campos}>
           <Controller control={control} name="telefone_institucional" render={({ field }) => (
@@ -350,7 +372,8 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
       <section className={styles.secao}>
         <h2>Complementar</h2>
         <div className={styles.grade2}>
-          <Campo id="cargo_fce" rotulo="Cargo ou função">
+          <Campo id="cargo_fce" rotulo="Cargo ou função"
+            ajuda={perfil.cargo_origem === 'portal' ? 'Preenchido com a sua função comissionada no Portal da Transparência. Confira.' : undefined}>
             <input id="cargo_fce" maxLength={100} placeholder="ex.: Chefe de Divisão" {...register('cargo_fce')} />
           </Campo>
           <Campo id="portal_url" rotulo="Link do currículo no SouGov.br" erro={errors.portal_url?.message}>
@@ -362,7 +385,8 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
           <Campo id="lattes_url" rotulo="Link do Currículo Lattes" erro={errors.lattes_url?.message}>
             <input id="lattes_url" type="url" inputMode="url" placeholder="http://lattes.cnpq.br/…" {...register('lattes_url')} aria-invalid={!!errors.lattes_url} />
           </Campo>
-          <Campo id="turma" rotulo="Turma">
+          <Campo id="turma" rotulo="Turma"
+            ajuda={perfil.turma_origem === 'portal' ? 'Sugerida pelo ano de ingresso no serviço público registrado no Portal. Confira.' : undefined}>
             <select id="turma" {...register('turma')}>
               <option value="">Selecione…</option>
               {(Object.keys(TURMAS) as Turma[]).map((t) => <option key={t} value={t}>{TURMAS[t]}</option>)}
@@ -413,3 +437,60 @@ const Chave = forwardRef<HTMLInputElement, { rotulo: string } & InputHTMLAttribu
     )
   },
 )
+
+const ROTULOS_NIVEL: Record<string, string> = {
+  ministerio: 'Ministério', secretaria: 'Secretaria', departamento: 'Departamento',
+  coordenacao_geral: 'Coordenação-Geral', coordenacao: 'Coordenação',
+}
+
+/** Perfil sempre atualizado: o Portal mostrou outro exercício ou outra função. Nada muda sem o "sim". */
+function SugestaoAtualizacao({ perfil, onRespondida }: { perfil: AnalistaOut; onRespondida: (p: AnalistaOut) => void }) {
+  const s = perfil.sugestao_atualizacao
+  const [enviando, setEnviando] = useState(false)
+  const [erro, setErro] = useState('')
+  if (!s) return null
+  const responder = async (aceitar: boolean) => {
+    setEnviando(true)
+    setErro('')
+    try {
+      onRespondida(await perfilApi.responderSugestao(aceitar))
+    } catch {
+      setErro('Não foi possível salvar agora. Tente de novo.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+  return (
+    <section className={styles.sugestao} aria-labelledby="titulo-sugestao">
+      <h2 id="titulo-sugestao"><IconRefresh size={18} aria-hidden />Seu perfil pode estar desatualizado</h2>
+      <p>No Portal da Transparência, seu exercício aparece diferente do que está no perfil. Quer atualizar?</p>
+      <dl>
+        {s.lotacao && (
+          <div>
+            <dt>Lotação</dt>
+            <dd>
+              {s.lotacao.caminho.map((n) => (
+                <span key={n.nivel}><small>{ROTULOS_NIVEL[n.nivel] ?? n.nivel}</small> {n.nome}{n.sigla ? ` (${n.sigla})` : ''}</span>
+              ))}
+            </dd>
+          </div>
+        )}
+        {s.cargo && (
+          <div>
+            <dt>Cargo ou função</dt>
+            <dd><span>{s.cargo}</span></dd>
+          </div>
+        )}
+      </dl>
+      {erro && <p className={styles.erro} role="alert">{erro}</p>}
+      <div className={styles.sugestaoAcoes}>
+        <button type="button" className={[styles.botao, styles.primario].join(' ')} disabled={enviando} onClick={() => void responder(true)}>
+          <IconCheck size={18} aria-hidden />Atualizar meu perfil
+        </button>
+        <button type="button" className={[styles.botao, styles.secundario].join(' ')} disabled={enviando} onClick={() => void responder(false)}>
+          Não, está certo
+        </button>
+      </div>
+    </section>
+  )
+}

@@ -20,10 +20,13 @@ from schemas import (
     FormacaoBase, FormacaoOut,
     LotacaoComumOut, LotacaoOut, ProximoOut,
     RegularizarIn,
+    SugestaoIn,
     TemaBase, TemaCatalogoOut, TemaOut,
 )
 from auth import get_current_user, get_usuario_regular, verify_password
+import atualizacao
 import lotacao_auto
+import lotacao_siorg
 import novidades
 from consentimentos import (
     EXIBIR_CELULAR, EXIBIR_EMAIL_PESSOAL, EXIBIR_PERFIL,
@@ -97,6 +100,7 @@ def update_meu_perfil(
         _verificar_novo_nome(analista, novo_nome)
 
     lotacao_antes = novidades.foto_lotacao(analista)
+    cargo_antes, turma_antes = analista.cargo_fce, analista.turma
     for field, value in updates.items():
         if field in AUTORIZACOES_EXIBICAO:
             if value is None:
@@ -106,9 +110,34 @@ def update_meu_perfil(
                 acao = AcaoConsentimento.aceito if value == valor_exibir else AcaoConsentimento.revogado
                 registrar(analista, tipo, acao, request)
         setattr(analista, field, value)
+    # O titular mexeu no que veio do Portal: deixa de ser "preenchido automaticamente",
+    # e uma sugestão de atualização pendente perde o sentido.
     if novidades.foto_lotacao(analista) != lotacao_antes:
         analista.lotacao_origem = None
+        analista.lotacao_siorg_id = lotacao_siorg.resolver(db, analista)
+        atualizacao.limpar(analista)
+    if analista.cargo_fce != cargo_antes:
+        analista.cargo_origem = None
+        atualizacao.limpar(analista)
+    if analista.turma != turma_antes:
+        analista.turma_origem = None
     novidades.registrar_lotacao(db, analista, lotacao_antes)
+    db.commit()
+    db.refresh(analista)
+    return analista
+
+
+@router.post("/perfil/sugestao", response_model=AnalistaOut)
+def responder_sugestao(
+    body: SugestaoIn,
+    analista: Analista = Depends(get_usuario_regular),
+    db: Session = Depends(get_db),
+):
+    """Aceita ou descarta a sugestão de atualização vinda do Portal."""
+    if body.aceitar:
+        atualizacao.aceitar(db, analista)
+    else:
+        atualizacao.descartar(analista)
     db.commit()
     db.refresh(analista)
     return analista
@@ -184,6 +213,8 @@ def regularizar(
             resultado = consultar_situacao_atps(decifrar_cpf(analista.cpf_cifrado), None)
         if resultado is not None and resultado.confirmado:
             lotacao_auto.preencher(db, analista, resultado.exercicio)
+    if resultado is not None and resultado.confirmado:
+        atualizacao.registrar(db, analista, resultado.exercicio)
 
     db.commit()
     db.refresh(analista)
@@ -228,7 +259,9 @@ def get_analista(
         result = result.model_copy(update={"email_pessoal": None})
     if not analista.visibilidade_celular:
         result = result.model_copy(update={"celular": None})
-    return result
+    # códigos SIORG de cada nível da lotação, para ligar às páginas de unidade
+    ids = [u.id for u in lotacao_siorg.caminho(db, analista.lotacao_siorg_id)]
+    return result.model_copy(update={"lotacao_ids": ids})
 
 
 # Proximidade na lotação: vale o nível mais fundo em comum. Ordena antes dos temas.
@@ -371,7 +404,7 @@ def sugestoes_temas(
     from sqlalchemy import select, func
     stmt = (
         select(TemaAtuacao.tema)
-        .where(TemaAtuacao.tema.ilike(f"%{q}%"))
+        .where(func.f_unaccent(func.lower(TemaAtuacao.tema)).like(func.f_unaccent(func.lower(f"%{q}%"))))
         .group_by(TemaAtuacao.tema)
         .order_by(func.count().desc(), TemaAtuacao.tema)
         .limit(8)

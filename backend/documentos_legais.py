@@ -25,6 +25,13 @@ AUTORIZACAO_CONSULTA_CPF = "autorizacao_consulta_cpf"
 # Documentos cujo aceite na versão atual é condição para usar a Rede.
 OBRIGATORIOS = (TERMO_CONSENTIMENTO, AUTORIZACAO_CONSULTA_CPF)
 
+# A partir desta versão da Autorização de consulta do CPF, o texto precisa cobrir também:
+# preencher cargo/função comissionada e turma (pelo ano de ingresso no serviço público),
+# sugerir ao titular atualizações do perfil quando o Portal mostrar mudança de exercício ou
+# de função, e usar a cópia local dos dados abertos do Portal quando a API estiver fora.
+# Enquanto essa versão não for publicada, esses recursos ficam desligados.
+VERSAO_AUTORIZACAO_AMPLIADA = 3
+
 
 @dataclass(frozen=True)
 class Documento:

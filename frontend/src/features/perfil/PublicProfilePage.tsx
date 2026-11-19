@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   IconAddressBook, IconAffiliate, IconAlertTriangle, IconAt, IconBrandLinkedin, IconBrandWhatsapp, IconBriefcase, IconBuilding,
-  IconBuildingCommunity, IconCertificate, IconCircleCheck, IconFileCv, IconMail, IconPencil, IconPhone, IconSchool, IconSparkles, IconStar,
+  IconBuildingCommunity, IconCertificate, IconCircleCheck, IconFileCv, IconHeartHandshake, IconMail, IconPencil, IconPhone, IconSchool, IconSparkles, IconStar,
   IconStarFilled, IconTrash,
 } from '@tabler/icons-react'
 import type { AnalistaPublico, EventoPerfil, NivelLotacao, Proximo } from '@shared/api/types'
@@ -170,15 +170,30 @@ export default function PublicProfilePage() {
             </section>
           )}
 
+          {perfil.pode_ajudar && (
+            <section className={styles.podeAjudar} aria-labelledby="titulo-pode-ajudar">
+              <h2 id="titulo-pode-ajudar"><IconHeartHandshake size={18} aria-hidden />Em que posso ajudar</h2>
+              <p>{perfil.pode_ajudar}</p>
+            </section>
+          )}
+
           <div className={styles.colunas}>
             <div>
               <section className={styles.bloco}>
                 <h2 className={styles.blocoTitulo}><span className={[styles.ico, styles.icoLot].join(' ')}><IconBuilding size={16} aria-hidden /></span>Lotação</h2>
                 {nivelLotacao.length ? (
                   <ol className={styles.lotacao}>
-                    {nivelLotacao.map((n, i) => (
-                      <li key={i}><strong>{n.nome ?? n.sigla}</strong>{n.nome && n.sigla && <span>{n.sigla}</span>}</li>
-                    ))}
+                    {nivelLotacao.map((n, i) => {
+                      // cada nível com código SIORG leva à página da unidade
+                      const unidade = perfil.lotacao_ids?.[i]
+                      const nome = n.nome ?? n.sigla
+                      return (
+                        <li key={i}>
+                          <strong>{unidade ? <Link to={`/unidades/${unidade}`}>{nome}</Link> : nome}</strong>
+                          {n.nome && n.sigla && <span>{n.sigla}</span>}
+                        </li>
+                      )
+                    })}
                   </ol>
                 ) : <p className={styles.vazio}>Lotação não informada.</p>}
               </section>

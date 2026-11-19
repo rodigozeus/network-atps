@@ -14,8 +14,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 import novidades
-from documentos_legais import AUTORIZACAO_CONSULTA_CPF
-from models import Analista, UnidadeSiorg
+from documentos_legais import AUTORIZACAO_CONSULTA_CPF, VERSAO_AUTORIZACAO_AMPLIADA
+from models import Analista, Turma, UnidadeSiorg
 from portal_transparencia import Exercicio
 from siorg import CAMPOS_ATE
 
@@ -108,28 +108,57 @@ def casar_unidade(siape: str, candidatas: list[UnidadeSiorg]) -> UnidadeSiorg | 
     return melhores[0] if len(melhores) == 1 else None
 
 
+def versao_autorizacao(a: Analista) -> int:
+    return a.versao_aceita(AUTORIZACAO_CONSULTA_CPF) or 0
+
+
+TURMAS_POR_ANO_INGRESSO = {
+    # ano de ingresso no serviço público -> turma (concurso de 2012: posse em 2013-2014;
+    # CPNU 2024: posse em 2025-2026). Fora disso (quem já era servidor antes), não infere.
+    2013: Turma.turma_2012, 2014: Turma.turma_2012,
+    2025: Turma.turma_2024_cpnu, 2026: Turma.turma_2024_cpnu,
+}
+
+
 def pode_preencher(a: Analista) -> bool:
-    versao = a.versao_aceita(AUTORIZACAO_CONSULTA_CPF)
-    return versao is not None and versao >= VERSAO_MINIMA_AUTORIZACAO and not (a.ministerio or "").strip()
+    """Há algo em branco que o Portal pode preencher, com a autorização aceita para isso."""
+    v = versao_autorizacao(a)
+    lotacao = v >= VERSAO_MINIMA_AUTORIZACAO and not (a.ministerio or "").strip()
+    ampliada = v >= VERSAO_AUTORIZACAO_AMPLIADA and (not (a.cargo_fce or "").strip() or a.turma is None)
+    return lotacao or ampliada
 
 
-def preencher(db: Session, a: Analista, ex: Exercicio | None) -> bool:
-    """Preenche a lotação em branco. Devolve True se preencheu. Não faz commit."""
-    if ex is None or not ex.orgao_sigla or not pode_preencher(a):
-        return False
-    orgao = db.scalars(
-        select(UnidadeSiorg).where(UnidadeSiorg.profundidade == 0)
-    ).all()
-    orgao = next((o for o in orgao if (o.sigla or "").upper() == ex.orgao_sigla.strip().upper()), None)
+def casar_orgao(nome: str | None, sigla: str | None, orgaos: list[UnidadeSiorg]) -> UnidadeSiorg | None:
+    """Órgão do SIORG pela sigla, pelo nome igual ou pelo nome abreviado do SIAPE
+    ("MIN DESENV ASSIS SOCI FAMIL COMBATE FOME")."""
+    if sigla:
+        s = [o for o in orgaos if (o.sigla or "").upper() == sigla.strip().upper()]
+        if len(s) == 1:
+            return s[0]
+    if nome:
+        n = normalizar(nome)
+        e = [o for o in orgaos if normalizar(o.nome) == n]
+        if len(e) == 1:
+            return e[0]
+        return casar_unidade(nome, orgaos)
+    return None
+
+
+def caminho_para(db: Session, ex: Exercicio) -> list[UnidadeSiorg]:
+    """Caminho no SIORG (órgão > ... > unidade de exercício), até a profundidade dos campos
+    do perfil. Vazio se o órgão não for encontrado; só o órgão se a unidade não casar."""
+    orgao = db.get(UnidadeSiorg, ex.orgao_siorg_id) if ex.orgao_siorg_id else None
     if orgao is None:
-        return False
-
+        orgaos = list(db.scalars(select(UnidadeSiorg).where(UnidadeSiorg.profundidade == 0)))
+        orgao = casar_orgao(ex.orgao_nome, ex.orgao_sigla, orgaos)
+    if orgao is None:
+        return []
     caminho = [orgao]
     if ex.unidade:
-        candidatas = db.scalars(
+        candidatas = list(db.scalars(
             select(UnidadeSiorg).where(UnidadeSiorg.orgao_id == orgao.id, UnidadeSiorg.profundidade > 0)
-        ).all()
-        unidade = casar_unidade(ex.unidade, list(candidatas))
+        ))
+        unidade = casar_unidade(ex.unidade, candidatas)
         if unidade is not None:
             por_id = {u.id: u for u in candidatas}
             cadeia = []
@@ -138,7 +167,11 @@ def preencher(db: Session, a: Analista, ex: Exercicio | None) -> bool:
                 cadeia.append(atual)
                 atual = por_id.get(atual.pai_id)
             caminho += [u for u in reversed(cadeia) if u.profundidade <= CAMPOS_ATE]
+    return caminho
 
+
+def aplicar_lotacao(db: Session, a: Analista, caminho: list[UnidadeSiorg]) -> None:
+    """Troca a lotação inteira pelo caminho oficial. Não faz commit."""
     antes = novidades.foto_lotacao(a)
     for nome, sigla in CAMPOS.values():
         setattr(a, nome, None)
@@ -149,7 +182,32 @@ def preencher(db: Session, a: Analista, ex: Exercicio | None) -> bool:
         setattr(a, nome, u.nome[:200])
         if sigla:
             setattr(a, sigla, (u.sigla or "")[:30] or None)
+    a.lotacao_siorg_id = caminho[-1].id
     a.lotacao_origem = "portal"
     if a.id is not None:
         novidades.registrar_lotacao(db, a, antes)
-    return True
+
+
+def preencher(db: Session, a: Analista, ex: Exercicio | None) -> bool:
+    """Preenche o que estiver em branco (lotação; com a autorização ampliada, também cargo
+    e turma). Devolve True se mudou algo. Não faz commit."""
+    if ex is None:
+        return False
+    v = versao_autorizacao(a)
+    mudou = False
+    if v >= VERSAO_MINIMA_AUTORIZACAO and not (a.ministerio or "").strip():
+        caminho = caminho_para(db, ex)
+        if caminho:
+            aplicar_lotacao(db, a, caminho)
+            mudou = True
+    if v >= VERSAO_AUTORIZACAO_AMPLIADA:
+        if ex.funcao and not (a.cargo_fce or "").strip():
+            a.cargo_fce = ex.funcao[:100]
+            a.cargo_origem = "portal"
+            mudou = True
+        turma = TURMAS_POR_ANO_INGRESSO.get(ex.ano_ingresso_servico_publico)
+        if turma is not None and a.turma is None:
+            a.turma = turma
+            a.turma_origem = "portal"
+            mudou = True
+    return mudou

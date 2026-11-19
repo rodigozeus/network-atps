@@ -1,19 +1,51 @@
 import logging
 import smtplib
+from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 
-from database import settings
+from sqlalchemy import func, select
+
+from database import SessionLocal, settings
+from models import EnvioEmail
 
 logger = logging.getLogger(__name__)
 
+# Limite de envios (todos os tipos contam). Acima dele, só sai e-mail essencial:
+# recuperação de senha, ativação de conta e avisos de segurança ou sobre o vínculo.
+LIMITE_POR_HORA = 100
+LIMITE_POR_DIA = 300
 
-def _enviar_email(destinatario: str, assunto: str, corpo: str) -> None:
+
+def _dentro_do_limite(db) -> bool:
+    agora = datetime.now(timezone.utc)
+
+    def contar(desde: datetime) -> int:
+        stmt = select(func.count()).select_from(EnvioEmail).where(EnvioEmail.enviado_em >= desde)
+        return db.scalar(stmt) or 0
+
+    return contar(agora - timedelta(hours=1)) < LIMITE_POR_HORA and contar(agora - timedelta(days=1)) < LIMITE_POR_DIA
+
+
+def _enviar_email(destinatario: str, assunto: str, corpo: str, tipo: str, essencial: bool = False) -> bool:
+    """Envia e registra o envio (só o tipo e a hora, sem destinatário nem conteúdo)."""
+    with SessionLocal() as db:
+        if not essencial and not _dentro_do_limite(db):
+            logger.warning("Limite de e-mails atingido: '%s' (não essencial) não enviado", tipo)
+            return False
+        enviado = _smtp(destinatario, assunto, corpo)
+        if enviado:
+            db.add(EnvioEmail(tipo=tipo, essencial=essencial))
+            db.commit()
+        return enviado
+
+
+def _smtp(destinatario: str, assunto: str, corpo: str) -> bool:
     if not settings.smtp_host:
         logger.warning(
             "SMTP não configurado — e-mail '%s' para %s não enviado:\n%s",
             assunto, destinatario, corpo,
         )
-        return
+        return False
 
     msg = MIMEText(corpo, "plain", "utf-8")
     msg["Subject"] = assunto
@@ -26,8 +58,10 @@ def _enviar_email(destinatario: str, assunto: str, corpo: str) -> None:
             if settings.smtp_user:
                 server.login(settings.smtp_user, settings.smtp_password or "")
             server.sendmail(msg["From"], [destinatario], msg.as_string())
+        return True
     except Exception:
         logger.exception("Falha ao enviar e-mail '%s' para %s", assunto, destinatario)
+        return False
 
 
 def enviar_email_redefinicao_senha(destinatario: str, nome: str, token: str) -> None:
@@ -39,7 +73,7 @@ def enviar_email_redefinicao_senha(destinatario: str, nome: str, token: str) -> 
         f"{link}\n\n"
         "Se você não solicitou essa redefinição, pode ignorar este e-mail."
     )
-    _enviar_email(destinatario, "Redefinição de senha — Rede ATPS", corpo)
+    _enviar_email(destinatario, "Redefinição de senha — Rede ATPS", corpo, "redefinicao_senha", essencial=True)
 
 
 def enviar_email_boas_vindas(destinatario: str, nome: str) -> None:
@@ -53,7 +87,7 @@ def enviar_email_boas_vindas(destinatario: str, nome: str) -> None:
         f"{link}\n\n"
         "Bem-vindo(a) à Rede ATPS!"
     )
-    _enviar_email(destinatario, "Bem-vindo(a) à Rede ATPS", corpo)
+    _enviar_email(destinatario, "Bem-vindo(a) à Rede ATPS", corpo, "boas_vindas")
 
 
 def enviar_email_cadastro_recebido(destinatario: str, nome: str, motivo: str) -> None:
@@ -66,7 +100,7 @@ def enviar_email_cadastro_recebido(destinatario: str, nome: str, motivo: str) ->
         "Por isso, seu cadastro está pendente de verificação e será analisado por um "
         "administrador. Você receberá um novo e-mail com o resultado."
     )
-    _enviar_email(destinatario, "Cadastro recebido — Rede ATPS", corpo)
+    _enviar_email(destinatario, "Cadastro recebido — Rede ATPS", corpo, "cadastro_recebido")
 
 
 def enviar_email_alerta_cpf_em_uso(destinatario: str, nome: str) -> None:
@@ -81,7 +115,8 @@ def enviar_email_alerta_cpf_em_uso(destinatario: str, nome: str) -> None:
         "Se não foi você, nenhuma ação é necessária — sua conta continua protegida. "
         "Um administrador poderá entrar em contato."
     )
-    _enviar_email(destinatario, "Tentativa de cadastro com seu CPF — Rede ATPS", corpo)
+    _enviar_email(destinatario, "Tentativa de cadastro com seu CPF — Rede ATPS", corpo,
+                  "alerta_cpf_em_uso", essencial=True)
 
 
 def enviar_email_conta_ativada(destinatario: str, nome: str) -> None:
@@ -94,7 +129,7 @@ def enviar_email_conta_ativada(destinatario: str, nome: str) -> None:
         f"{link}\n\n"
         "Bem-vindo(a) à Rede ATPS!"
     )
-    _enviar_email(destinatario, "Sua conta na Rede ATPS foi ativada", corpo)
+    _enviar_email(destinatario, "Sua conta na Rede ATPS foi ativada", corpo, "conta_ativada", essencial=True)
 
 
 def enviar_email_vinculo_suspenso(destinatario: str, nome: str, prazo_dias: int, exclusao_em: str) -> None:
@@ -108,7 +143,7 @@ def enviar_email_vinculo_suspenso(destinatario: str, nome: str, prazo_dias: int,
         f"{prazo_dias} dias para contestar — se possível, com um comprovante de vínculo.\n\n"
         f"Sem contestação, sua conta e seus dados serão excluídos em {exclusao_em}."
     )
-    _enviar_email(destinatario, "Vínculo não confirmado — Rede ATPS", corpo)
+    _enviar_email(destinatario, "Vínculo não confirmado — Rede ATPS", corpo, "vinculo_suspenso", essencial=True)
 
 
 def enviar_email_conta_excluida_vinculo(destinatario: str, nome: str) -> None:
@@ -118,7 +153,7 @@ def enviar_email_conta_excluida_vinculo(destinatario: str, nome: str) -> None:
         "sua conta na Rede ATPS e os dados associados a ela foram excluídos.\n\n"
         "Se isso foi um engano, você pode se cadastrar novamente."
     )
-    _enviar_email(destinatario, "Conta excluída — Rede ATPS", corpo)
+    _enviar_email(destinatario, "Conta excluída — Rede ATPS", corpo, "conta_excluida", essencial=True)
 
 
 def enviar_email_termos_atualizados(destinatario: str, nome: str) -> None:
@@ -130,4 +165,4 @@ def enviar_email_termos_atualizados(destinatario: str, nome: str) -> None:
         "usando a Rede. Se preferir não aceitar, você pode excluir sua conta na mesma tela.\n\n"
         f"{link}"
     )
-    _enviar_email(destinatario, "Atualização dos termos — Rede ATPS", corpo)
+    _enviar_email(destinatario, "Atualização dos termos — Rede ATPS", corpo, "termos_atualizados")

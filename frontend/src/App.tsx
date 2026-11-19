@@ -14,6 +14,10 @@ import AdminLayout from '@features/admin/AdminLayout'
 import UsuariosPage from '@features/admin/usuarios/UsuariosPage'
 import StatsPage from '@features/admin/stats/StatsPage'
 import ConflitosPage from '@features/admin/conflitos/ConflitosPage'
+import CoberturaPage from '@features/admin/cobertura/CoberturaPage'
+import UnidadesPage from '@features/unidades/UnidadesPage'
+import UnidadePage from '@features/unidades/UnidadePage'
+import SobrePage from '@features/sobre/SobrePage'
 
 function PlaceholderPage({ title, desc }: { title: string; desc?: string }) {
   return (
@@ -35,6 +39,7 @@ export default function App() {
           <Route path="/registrar" element={<RegisterPage />} />
           <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
           <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
+          <Route path="/sobre" element={<SobrePage />} />
 
           {/* Páginas internas: quem tem pendência cadastral vê a regularização em tela cheia */}
           <Route element={<PrivateRoute />}>
@@ -43,6 +48,8 @@ export default function App() {
               <Route path="/busca" element={<SearchPage />} />
               <Route path="/analistas/:id" element={<PublicProfilePage />} />
               <Route path="/perfil" element={<ProfilePage />} />
+              <Route path="/unidades" element={<UnidadesPage />} />
+              <Route path="/unidades/:id" element={<UnidadePage />} />
 
               <Route element={<AdminRoute />}>
                 <Route element={<AdminLayout />}>
@@ -50,6 +57,7 @@ export default function App() {
                   <Route path="/admin/usuarios" element={<UsuariosPage />} />
                   <Route path="/admin/stats" element={<StatsPage />} />
                   <Route path="/admin/conflitos" element={<ConflitosPage />} />
+                  <Route path="/admin/cobertura" element={<CoberturaPage />} />
                 </Route>
               </Route>
             </Route>

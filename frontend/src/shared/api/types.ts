@@ -19,6 +19,12 @@ export interface Tema {
 export interface AnalistaOut {
   /** 'portal' quando a lotação foi preenchida automaticamente e ainda não foi alterada */
   lotacao_origem?: 'portal' | null
+  cargo_origem?: 'portal' | null
+  turma_origem?: 'portal' | null
+  lotacao_siorg_id?: number | null
+  /** Mudança vista no Portal, aguardando o titular aceitar ou descartar */
+  sugestao_atualizacao?: SugestaoAtualizacao | null
+  pode_ajudar?: string | null
   id: number
   nome: string
   email_pessoal: string
@@ -76,9 +82,12 @@ export interface AnalistaPublico {
   linkedin_url: string | null
   lattes_url: string | null
   turma: Turma | null
+  pode_ajudar?: string | null
   foto_path: string | null
   formacoes: Formacao[]
   temas: Tema[]
+  /** Códigos SIORG da lotação, do órgão à unidade (só no perfil completo) */
+  lotacao_ids?: number[]
 }
 
 export interface BuscaResponse {
@@ -134,6 +143,7 @@ export interface Consentimento {
 }
 
 export interface AnalistaUpdate {
+  pode_ajudar?: string | null
   nome?: string
   email_pessoal?: string
   email_institucional?: string
@@ -214,4 +224,45 @@ export interface EventoPerfil {
 export interface NovidadesFavorito {
   analista_id: number
   eventos: EventoPerfil[]
+}
+
+export interface SugestaoAtualizacao {
+  lotacao?: { siorg_id: number; caminho: Array<{ nivel: NivelLotacao; nome: string; sigla: string | null }> }
+  cargo?: string
+}
+
+export interface UnidadeRef {
+  id: number
+  nome: string
+  sigla: string | null
+}
+
+export interface OrgaoResumo extends UnidadeRef {
+  membros: number
+}
+
+export interface Unidade extends UnidadeRef {
+  profundidade: number
+  nivel: NivelLotacao
+  caminho: UnidadeRef[]
+  subunidades: Array<UnidadeRef & { membros: number }>
+  competencia: string | null
+  contato: { telefones: string[]; emails: string[]; sites: string[] } | null
+  endereco: string | null
+  membros_aqui: number
+  membros_total: number
+  membros: AnalistaPublico[]
+  temas: Array<{ tema: string; total: number }>
+}
+
+export interface NovidadesRede {
+  unidade: string | null
+  chegaram_unidade: AnalistaPublico[]
+  turma: Turma | null
+  chegaram_turma: AnalistaPublico[]
+}
+
+export interface ResumoPublico {
+  analistas: number | null
+  orgaos: number | null
 }

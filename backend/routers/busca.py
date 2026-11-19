@@ -3,7 +3,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, exists, func, case
+from sqlalchemy import and_, or_, exists, func, case
 
 from auth import get_usuario_regular
 from database import get_db
@@ -12,6 +12,12 @@ from novidades import condicao_novidade
 from schemas import AnalistaPublico, BuscaResponse
 
 router = APIRouter(prefix="/busca", tags=["busca"])
+
+# Palavras que não ajudam a achar ninguém ("coordenação DE políticas")
+PALAVRAS_VAZIAS = {"a", "as", "o", "os", "de", "da", "das", "do", "dos", "e", "em", "na", "no", "para", "com"}
+# Tolerância a erro de digitação (só PostgreSQL, com pg_trgm): termos a partir deste tamanho
+TERMO_MINIMO_APROXIMADO = 4
+SIMILARIDADE_MINIMA = 0.55
 
 
 def _aplicar_visibilidade(analista: Analista) -> AnalistaPublico:
@@ -23,9 +29,50 @@ def _aplicar_visibilidade(analista: Analista) -> AnalistaPublico:
     return result
 
 
+def _sem_acento(coluna):
+    """Minúsculas e sem acento dos dois lados: "saude" acha "Saúde".
+    f_unaccent é criada pela migração (PostgreSQL) e registrada na conexão nos testes."""
+    return func.f_unaccent(func.lower(coluna))
+
+
+def _contem(coluna, termo: str):
+    return _sem_acento(coluna).like(func.f_unaccent(func.lower(f"%{termo}%")))
+
+
+def _parecido(coluna, termo: str):
+    return func.word_similarity(func.f_unaccent(func.lower(termo)), _sem_acento(coluna)) >= SIMILARIDADE_MINIMA
+
+
+def _termos(q: str) -> list[str]:
+    return [t for t in q.split() if t.casefold() not in PALAVRAS_VAZIAS][:8]
+
+
+def _casa_termo(termo: str, aproximado: bool):
+    """O termo aparece em algum campo do perfil (nome, lotação, cargo, "em que posso
+    ajudar", temas ou formação)."""
+    colunas = [
+        Analista.nome, Analista.ministerio, Analista.ministerio_sigla, Analista.secretaria,
+        Analista.secretaria_sigla, Analista.departamento, Analista.departamento_sigla,
+        Analista.coordenacao_geral, Analista.coordenacao, Analista.cargo_fce, Analista.pode_ajudar,
+    ]
+    condicoes = [_contem(c, termo) for c in colunas]
+    condicoes.append(exists().where(TemaAtuacao.analista_id == Analista.id, _contem(TemaAtuacao.tema, termo)))
+    condicoes.append(exists().where(
+        Formacao.analista_id == Analista.id,
+        or_(_contem(Formacao.curso, termo), _contem(Formacao.instituicao, termo)),
+    ))
+    if aproximado and len(termo) >= TERMO_MINIMO_APROXIMADO:
+        # erro de digitação: "polítcas", "cuidadso" — no nome e nos temas
+        condicoes.append(_parecido(Analista.nome, termo))
+        condicoes.append(exists().where(TemaAtuacao.analista_id == Analista.id, _parecido(TemaAtuacao.tema, termo)))
+    return or_(*condicoes)
+
+
 @router.get("", response_model=BuscaResponse)
 def buscar(
-    q: str | None = Query(None, description="Palavra-chave geral (nome, ministério, secretaria, temas)"),
+    q: str | None = Query(None, description="Palavras-chave: cada uma precisa aparecer em algum campo "
+                                             "(nome, lotação, cargo, em que posso ajudar, temas, formação). "
+                                             "Ignora acentos e maiúsculas."),
     ministerio: str | None = Query(None, description="Filtra por ministério (sigla ou nome)"),
     secretaria: str | None = Query(None, description="Filtra por secretaria (sigla ou nome)"),
     tema: str | None = Query(None, description="Filtra por tema de atuação"),
@@ -45,55 +92,26 @@ def buscar(
     eu: Analista = Depends(get_usuario_regular),
 ):
     query = db.query(Analista).filter(condicao_perfil_visivel())
+    aproximado = db.get_bind().dialect.name == "postgresql"
 
-    if q:
-        kw = f"%{q}%"
-        query = query.filter(or_(
-            Analista.nome.ilike(kw),
-            Analista.ministerio.ilike(kw),
-            Analista.ministerio_sigla.ilike(kw),
-            Analista.secretaria.ilike(kw),
-            Analista.secretaria_sigla.ilike(kw),
-            exists().where(
-                TemaAtuacao.analista_id == Analista.id,
-                TemaAtuacao.tema.ilike(kw),
-            ),
-        ))
+    termos = _termos(q or "")
+    for termo in termos:
+        query = query.filter(_casa_termo(termo, aproximado))
 
     if ministerio:
-        pat = f"%{ministerio}%"
-        query = query.filter(or_(
-            Analista.ministerio.ilike(pat),
-            Analista.ministerio_sigla.ilike(pat),
-        ))
+        query = query.filter(or_(_contem(Analista.ministerio, ministerio), _contem(Analista.ministerio_sigla, ministerio)))
 
     if secretaria:
-        pat = f"%{secretaria}%"
-        query = query.filter(or_(
-            Analista.secretaria.ilike(pat),
-            Analista.secretaria_sigla.ilike(pat),
-        ))
+        query = query.filter(or_(_contem(Analista.secretaria, secretaria), _contem(Analista.secretaria_sigla, secretaria)))
 
     if tema:
-        pat = f"%{tema}%"
-        query = query.filter(
-            exists().where(
-                TemaAtuacao.analista_id == Analista.id,
-                TemaAtuacao.tema.ilike(pat),
-            )
-        )
+        query = query.filter(exists().where(TemaAtuacao.analista_id == Analista.id, _contem(TemaAtuacao.tema, tema)))
 
     if formacao:
-        pat = f"%{formacao}%"
-        query = query.filter(
-            exists().where(
-                Formacao.analista_id == Analista.id,
-                or_(
-                    Formacao.curso.ilike(pat),
-                    Formacao.instituicao.ilike(pat),
-                ),
-            )
-        )
+        query = query.filter(exists().where(
+            Formacao.analista_id == Analista.id,
+            or_(_contem(Formacao.curso, formacao), _contem(Formacao.instituicao, formacao)),
+        ))
 
     if nivel_formacao:
         query = query.filter(
@@ -122,6 +140,10 @@ def buscar(
 
     eh_favorito = exists().where(Favorito.analista_id == eu.id, Favorito.favorito_id == Analista.id)
     favoritos_primeiro = case((eh_favorito, 0), else_=1)
+    # Buscando por nome, quem tem todos os termos no nome vem antes de quem só os tem nos temas
+    nome_primeiro = (
+        case((and_(*[_contem(Analista.nome, t) for t in termos]), 0), else_=1) if termos else None
+    )
 
     tem_foto = case((Analista.foto_path.is_(None), 1), else_=0)
 
@@ -138,6 +160,7 @@ def buscar(
         + case((Analista.portal_url.isnot(None), 1), else_=0)
         + case((Analista.linkedin_url.isnot(None), 1), else_=0)
         + case((Analista.lattes_url.isnot(None), 1), else_=0)
+        + case((Analista.pode_ajudar.isnot(None), 1), else_=0)
         + case((Analista.foto_path.isnot(None), 1), else_=0)
         + case((exists().where(Formacao.analista_id == Analista.id), 1), else_=0)
         + case((exists().where(TemaAtuacao.analista_id == Analista.id), 1), else_=0)
@@ -157,9 +180,10 @@ def buscar(
         criterios = (tem_foto, score.desc(), Analista.id)
 
     total = query.count()
+    ordenacao = [favoritos_primeiro] + ([nome_primeiro] if nome_primeiro is not None else []) + list(criterios)
     analistas = (
         query
-        .order_by(favoritos_primeiro, *criterios)
+        .order_by(*ordenacao)
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()

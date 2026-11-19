@@ -96,6 +96,59 @@ def sincronizar(db: Session) -> int:
     return len(linhas)
 
 
+DETALHE_VALIDADE_DIAS = 30
+DETALHE_TIMEOUT_S = 8
+
+
+def _endereco(lista) -> str | None:
+    e = (lista or [{}])[0] or {}
+    cep = str(e.get("cep") or "")
+    partes = [
+        ", ".join(str(x) for x in (e.get("logradouro"), e.get("numero")) if x),
+        e.get("complemento"), e.get("bairro"),
+        f"CEP {cep[:5]}-{cep[5:]}" if len(cep) == 8 else None, e.get("uf"),
+    ]
+    texto = " · ".join(str(p).strip() for p in partes if p and str(p).strip())
+    return texto or None
+
+
+def detalhe(db: Session, unidade_id: int):
+    """Competência, contato e endereço da unidade (SIORG), com cache. None se indisponível."""
+    import json
+    from datetime import datetime, timedelta, timezone
+    from models import UnidadeSiorgDetalhe
+
+    cache = db.get(UnidadeSiorgDetalhe, unidade_id)
+    agora = datetime.now(timezone.utc)
+    if cache is not None:
+        atualizado = cache.atualizado_em if cache.atualizado_em.tzinfo else cache.atualizado_em.replace(tzinfo=timezone.utc)
+        if agora - atualizado < timedelta(days=DETALHE_VALIDADE_DIAS):
+            return cache
+    try:
+        r = requests.get(f"{BASE}/unidade-organizacional/{unidade_id}/completa",
+                         headers={"Accept": "application/json"}, timeout=DETALHE_TIMEOUT_S)
+        r.raise_for_status()
+        dados = r.json()
+        u = (dados.get("unidade") or (dados.get("unidades") or [None])[0]) or {}
+    except (requests.RequestException, ValueError):
+        logger.warning("SIORG: detalhe da unidade %s indisponível", unidade_id)
+        return cache
+    contato = (u.get("contato") or [{}])[0] or {}
+    if cache is None:
+        cache = UnidadeSiorgDetalhe(id=unidade_id)
+        db.add(cache)
+    cache.competencia = (u.get("competencia") or u.get("finalidade") or "").strip() or None
+    cache.contato = json.dumps({
+        "telefones": [t for t in contato.get("telefone") or [] if t],
+        "emails": [e for e in contato.get("email") or [] if e],
+        "sites": [s for s in contato.get("site") or [] if s],
+    }, ensure_ascii=False)
+    cache.endereco = _endereco(u.get("endereco"))
+    cache.atualizado_em = agora
+    db.commit()
+    return cache
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     from database import SessionLocal

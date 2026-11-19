@@ -14,6 +14,7 @@ import { NIVEIS, ORDEM_NIVEIS } from '@shared/utils/analista'
 import RedeHero from './RedeHero'
 import AnalistaCard from './AnalistaCard'
 import AnalistaLinha from './AnalistaLinha'
+import NovidadesRede from './NovidadesRede'
 import styles from './busca.module.css'
 
 const PAGE_SIZE = 20
@@ -196,6 +197,7 @@ export default function SearchPage() {
       <RedeHero analistas={rede} onEscolher={escolher} />
 
       <section className={styles.lista} data-barra-limite>
+        <NovidadesRede />
         <div className={styles.listaHead}>
           <div ref={toolbar} className={[styles.toolbar, compacto ? styles.compacto : '', painelAberto ? styles.abertos : ''].join(' ')}>
             <label className={styles.search} ref={busca}>

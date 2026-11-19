@@ -32,6 +32,8 @@ export const perfilApi = {
   },
   getAnalista: (id: number | string) =>
     api.get<AnalistaPublico>(`/analistas/${id}`).then((r) => r.data),
+  responderSugestao: (aceitar: boolean) =>
+    api.post<AnalistaOut>('/perfil/sugestao', { aceitar }).then((r) => r.data),
   getProximos: (id: number | string) =>
     api.get<Proximo[]>(`/analistas/${id}/proximos`).then((r) => r.data),
   deleteMe: (senha: string) => api.delete('/perfil/me', { data: { senha } }),

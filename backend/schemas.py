@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from urllib.parse import urlparse
 from pydantic import BaseModel, EmailStr, field_validator
@@ -159,6 +160,12 @@ class AnalistaUpdate(BaseModel):
     linkedin_url: str | None = None
     lattes_url: str | None = None
     turma: Turma | None = None
+    pode_ajudar: str | None = None
+
+    @field_validator("pode_ajudar")
+    @classmethod
+    def _valida_pode_ajudar(cls, v: str | None) -> str | None:
+        return validar_pode_ajudar(v)
 
     @field_validator("portal_url")
     @classmethod
@@ -174,6 +181,18 @@ class AnalistaUpdate(BaseModel):
     @classmethod
     def _valida_lattes_url(cls, v: str | None) -> str | None:
         return validar_lattes_url(v)
+
+PODE_AJUDAR_MAXIMO = 600
+
+
+def validar_pode_ajudar(v: str | None) -> str | None:
+    if v is None:
+        return None
+    v = "\n".join(linha.rstrip() for linha in v.strip().splitlines())
+    if len(v) > PODE_AJUDAR_MAXIMO:
+        raise ValueError(f"Use no máximo {PODE_AJUDAR_MAXIMO} caracteres.")
+    return v or None
+
 
 class AnalistaPerfil(BaseModel):
     email_institucional: str | None = None
@@ -193,6 +212,7 @@ class AnalistaPerfil(BaseModel):
     linkedin_url: str | None = None
     lattes_url: str | None = None
     turma: Turma | None = None
+    pode_ajudar: str | None = None
 
 class AnalistaOut(AnalistaBase, AnalistaPerfil):
     id: int
@@ -207,11 +227,31 @@ class AnalistaOut(AnalistaBase, AnalistaPerfil):
     foto_path: str | None = None
     # "portal": lotação preenchida automaticamente, ainda não alterada pelo titular
     lotacao_origem: str | None = None
+    cargo_origem: str | None = None
+    turma_origem: str | None = None
+    lotacao_siorg_id: int | None = None
+    # Mudança vista no Portal aguardando o titular: {"lotacao": {...}, "cargo": "..."}
+    sugestao_atualizacao: dict | None = None
     criado_em: datetime
     atualizado_em: datetime
     formacoes: list[FormacaoOut] = []
     temas: list[TemaOut] = []
     model_config = {"from_attributes": True}
+
+    @field_validator("sugestao_atualizacao", mode="before")
+    @classmethod
+    def _le_sugestao(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except ValueError:
+                return None
+        return v
+
+
+class SugestaoIn(BaseModel):
+    aceitar: bool
+
 
 class AnalistaPublico(BaseModel):
     """Campos exibidos para outros analistas — respeita visibilidade."""
@@ -234,9 +274,12 @@ class AnalistaPublico(BaseModel):
     linkedin_url: str | None = None
     lattes_url: str | None = None
     turma: Turma | None = None
+    pode_ajudar: str | None = None
     foto_path: str | None = None
     formacoes: list[FormacaoOut] = []
     temas: list[TemaOut] = []
+    # códigos SIORG da lotação, do órgão à unidade (só em GET /analistas/{id})
+    lotacao_ids: list[int] = []
     model_config = {"from_attributes": True}
 
 
@@ -449,3 +492,84 @@ class RedefinirSenhaIn(BaseModel):
 
 class ExcluirContaIn(BaseModel):
     senha: str
+
+
+# --- Painel de cobertura e números públicos ---
+
+class CoberturaOrgao(BaseModel):
+    orgao_id: int
+    nome: str
+    sigla: str | None
+    universo: int  # ATPS ativos em exercício no órgão (cópia local da base do Portal)
+    rede: int  # perfis visíveis na Rede
+
+
+class CadastrosDia(BaseModel):
+    dia: str
+    total: int
+
+
+class CoberturaOut(BaseModel):
+    referencia: str | None  # AAAAMM da cópia local
+    total_universo: int
+    total_rede: int
+    orgaos: list[CoberturaOrgao]
+    sem_orgao_universo: int
+    sem_orgao_rede: int
+    cadastros_por_dia: list[CadastrosDia]
+
+
+class ResumoPublico(BaseModel):
+    analistas: int | None  # None enquanto a Rede for pequena demais para mostrar
+    orgaos: int | None
+
+
+# --- Páginas de unidade ---
+
+class OrgaoResumoOut(BaseModel):
+    id: int
+    nome: str
+    sigla: str | None
+    membros: int
+
+
+class UnidadeRef(BaseModel):
+    id: int
+    nome: str
+    sigla: str | None
+
+
+class SubunidadeOut(UnidadeRef):
+    membros: int
+
+
+class ContatoUnidade(BaseModel):
+    telefones: list[str] = []
+    emails: list[str] = []
+    sites: list[str] = []
+
+
+class UnidadeOut(BaseModel):
+    id: int
+    nome: str
+    sigla: str | None
+    profundidade: int
+    nivel: str  # ministerio | secretaria | departamento | coordenacao_geral | coordenacao
+    caminho: list[UnidadeRef]  # do órgão até o nível acima
+    subunidades: list[SubunidadeOut]
+    competencia: str | None
+    contato: ContatoUnidade | None
+    endereco: str | None
+    membros_aqui: int
+    membros_total: int  # na unidade e nas de baixo
+    membros: list[AnalistaPublico]
+    temas: list[TemaCatalogoOut]
+
+
+# --- Novidades da rede ---
+
+class NovidadesRedeOut(BaseModel):
+    unidade: str | None  # onde "chegou gente nova" é contado: secretaria ou ministério
+    chegaram_unidade: list[AnalistaPublico]
+    turma: str | None
+    chegaram_turma: list[AnalistaPublico]

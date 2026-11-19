@@ -7,7 +7,8 @@
 2. Exclusão de contas com vínculo suspenso cujo prazo de contestação venceu.
 3. Aviso por e-mail quando há nova versão de documento obrigatório.
 4. Cópia da estrutura organizacional oficial (SIORG), usada nas listas de lotação.
-5. Limpeza das novidades de perfil mais antigas que a retenção (novidades.RETENCAO_DIAS).
+5. Conferência dos perfis no Portal (perfil sempre atualizado).
+6. Limpeza das novidades de perfil mais antigas que a retenção (novidades.RETENCAO_DIAS).
 
 Os logs nunca incluem CPF, nome ou e-mail — só contagens e ids internos.
 """
@@ -31,8 +32,12 @@ from email_utils import (
 )
 from models import Analista
 from novidades import RETENCAO_DIAS, apagar_antigas
+import atualizacao
+import base_local
 import lotacao_auto
+import lotacao_siorg
 import siorg
+from documentos_legais import VERSAO_AUTORIZACAO_AMPLIADA
 from portal_transparencia import MOTIVOS, StatusVerificacao, consultar_situacao_atps
 from routers.perfil import remover_foto
 
@@ -71,6 +76,7 @@ def reverificar_vinculos(db: Session, agora: datetime) -> None:
 
         if resultado.confirmado:
             lotacao_auto.preencher(db, conta, resultado.exercicio)
+            atualizacao.registrar(db, conta, resultado.exercicio)
             conta.cpf_verificado_em = agora
             conta.vinculo_manual = False
             conta.vinculo_suspenso_em = None
@@ -140,6 +146,46 @@ def avisar_novos_termos(db: Session, agora: datetime) -> None:
 
 def sincronizar_siorg(db: Session, agora: datetime) -> None:
     logger.info("SIORG: %d unidades sincronizadas", siorg.sincronizar(db))
+    logger.info("SIORG nos perfis: %s", lotacao_siorg.propagar(db))
+
+
+CONFERENCIA_INTERVALO_DIAS = 30
+CONFERENCIA_LOTE = 100
+
+
+def conferir_perfis(db: Session, agora: datetime) -> None:
+    """Perfil sempre atualizado: a cada ~30 dias, confere no Portal (ou na cópia local, se
+    a API estiver fora) o exercício e a função de quem aceitou a autorização ampliada,
+    preenche o que estiver em branco e guarda sugestão do que mudou."""
+    limite = agora - timedelta(days=CONFERENCIA_INTERVALO_DIAS)
+    contas = (
+        db.query(Analista)
+        .filter(
+            Analista.ativo.is_(True),
+            Analista.cpf_cifrado.isnot(None),
+            Analista.vinculo_suspenso_em.is_(None),
+            or_(Analista.conferido_portal_em.is_(None), Analista.conferido_portal_em < limite),
+        )
+        .order_by(Analista.conferido_portal_em.asc().nulls_first())
+        .all()
+    )
+    contas = [c for c in contas if lotacao_auto.versao_autorizacao(c) >= VERSAO_AUTORIZACAO_AMPLIADA][:CONFERENCIA_LOTE]
+    contagem = {"conferidos": 0, "sugestoes": 0, "sem_resposta": 0}
+    for conta in contas:
+        cpf = decifrar_cpf(conta.cpf_cifrado)
+        resultado = consultar_situacao_atps(cpf, None)
+        time.sleep(PAUSA_ENTRE_CONSULTAS_S)
+        if resultado.status == StatusVerificacao.inconclusivo:
+            resultado = base_local.consultar(cpf, conta.nome) or resultado
+        if not resultado.confirmado:
+            contagem["sem_resposta"] += 1
+            continue
+        lotacao_auto.preencher(db, conta, resultado.exercicio)
+        atualizacao.registrar(db, conta, resultado.exercicio)
+        contagem["conferidos"] += 1
+        contagem["sugestoes"] += conta.sugestao_atualizacao is not None
+        db.commit()
+    logger.info("Conferência de perfis: %s", contagem)
 
 
 def limpar_novidades(db: Session, agora: datetime) -> None:
@@ -148,7 +194,7 @@ def limpar_novidades(db: Session, agora: datetime) -> None:
 
 def executar() -> None:
     agora = datetime.now(timezone.utc)
-    for tarefa in (sincronizar_siorg, reverificar_vinculos, excluir_suspensos_vencidos, avisar_novos_termos, limpar_novidades):
+    for tarefa in (sincronizar_siorg, reverificar_vinculos, conferir_perfis, excluir_suspensos_vencidos, avisar_novos_termos, limpar_novidades):
         db = SessionLocal()
         try:
             tarefa(db, agora)

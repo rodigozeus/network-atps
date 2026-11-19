@@ -794,3 +794,73 @@
 .ordem {
   flex-basis: 210px;
 }
+
+/* Novidades da rede (quem chegou na sua unidade/turma) e aviso de perfil desatualizado */
+.novidadesRede {
+  display: grid;
+  gap: 10px;
+  margin: 0 auto 20px;
+  max-width: 1320px;
+}
+
+.novidadeLinha {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+  box-shadow: 0 1px 3px rgba(13, 42, 92, 0.08);
+}
+
+.novidadeLinha > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--color-primary);
+}
+
+.novidadeLinha > div {
+  flex: 1;
+}
+
+.novidadeLinha p {
+  margin: 0;
+}
+
+.novidadeLinha a {
+  color: inherit;
+  font-weight: 700;
+}
+
+.chegaramPessoas a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+  text-decoration: none;
+}
+
+.chegaramPessoas a:hover {
+  text-decoration: underline;
+}
+
+.novidadeFechar {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.novidadeFechar:hover {
+  background: #f3f1ee;
+}

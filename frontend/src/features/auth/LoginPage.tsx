@@ -64,6 +64,9 @@ export default function LoginPage() {
       <div className={styles.footer}>
         Ainda não tem conta? <Link to="/registrar">Cadastre-se</Link>
       </div>
+      <p className={styles.footer}>
+        <Link to="/sobre">Conheça a Rede ATPS</Link>
+      </p>
     </TelaAcesso>
   )
 }
