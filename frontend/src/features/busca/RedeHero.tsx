@@ -82,14 +82,15 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
       const rr = rng(42)
       // No desktop a rede respeita a largura do conteúdo (1320px) e ganha respiro em cima e embaixo
       const margem = Math.max(0.06 * W, (W - Math.min(W - 32, 1320)) / 2 + 45)
+      // em cima fica a barra do site; embaixo, a marca da ANDEPS
       const reg = mobile
-        ? { x0: 0.11 * W, x1: 0.89 * W, y0: 0.16 * H, y1: 0.9 * H }
-        : { x0: margem, x1: W - margem, y0: 0.17 * H, y1: 0.83 * H }
+        ? { x0: 0.08 * W, x1: 0.92 * W, y0: 0.34 * H, y1: 0.8 * H }
+        : { x0: margem, x1: W - margem, y0: 0.27 * H, y1: 0.8 * H }
       // Área livre em volta do símbolo central (elipse)
       const sb = simbolo!.getBoundingClientRect()
       centro = {
         x: W / 2, y: H / 2,
-        a: sb.width / 2 + (mobile ? 40 : 85), b: sb.height / 2 + (mobile ? 46 : 75),
+        a: sb.width / 2 + (mobile ? 22 : 60), b: sb.height / 2 + (mobile ? 18 : 34),
         ra: sb.width / 2 + 16, rb: sb.height / 2 + 16,
       }
       const foraDoCentro = (p: { x: number; y: number }) => {
@@ -119,7 +120,7 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
           foraDoCentro(p)
         })
       }
-      escala = mobile ? 0.62 : 1
+      escala = mobile ? 0.46 : 0.78
       nos.forEach((n, i) => {
         n.hx = pts[i].x
         n.hy = pts[i].y

@@ -1000,7 +1000,7 @@
 
 @media (max-width: 760px) {
   .hero { height: 320px; }
-  .perfil { margin-top: -160px; }
+  .perfil { margin-top: -185px; }
   .ficha { padding: 0 20px 28px; border-radius: 28px; }
   .fichaTopo { flex-direction: column; align-items: center; text-align: center; gap: 16px; padding-bottom: 24px; }
   .avatar { --tam: 150px !important; margin-top: -75px; border-width: 6px; font-size: 44px !important; }

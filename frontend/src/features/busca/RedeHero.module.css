@@ -1,6 +1,6 @@
 .hero {
   position: relative;
-  height: 790px;
+  height: 395px;
   overflow: hidden;
   color: #fff;
   background:
@@ -110,7 +110,7 @@
   left: 50%;
   top: 50%;
   z-index: 60;
-  width: clamp(170px, 20vw, 290px);
+  width: clamp(120px, 15vw, 210px);
   margin: 0;
   color: #fff;
   transform: translate(-50%, -50%);
@@ -121,7 +121,7 @@
 .andeps {
   position: absolute;
   left: 50%;
-  bottom: 36px;
+  bottom: 22px;
   z-index: 60;
   transform: translateX(-50%);
   filter: drop-shadow(0 4px 16px rgba(120, 20, 0, 0.35));
@@ -135,11 +135,11 @@
 
 @media (max-width: 760px) {
   .hero {
-    height: 540px;
+    height: 270px;
   }
 
   .andeps {
-    --h: 22px !important;
-    bottom: 22px;
+    --h: 18px !important;
+    bottom: 12px;
   }
 }
