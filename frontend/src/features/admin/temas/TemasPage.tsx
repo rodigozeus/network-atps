@@ -53,6 +53,7 @@ export default function TemasPage() {
       (filtro === 'reprovados' ? x.reprovado : !x.reprovado)
       && (filtro === 'todos' || filtro === 'reprovados' || (filtro === 'revisar' ? !x.revisado : x.tipo === filtro))
       && (!q || semAcento([x.nome, ...x.apelidos].join(' ')).includes(q)))
+      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt', { sensitivity: 'base' }))
   }, [dados, busca, filtro])
 
   if (!dados) return <p className={styles.empty}>{erro || 'Carregando…'}</p>
