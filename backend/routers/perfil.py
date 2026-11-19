@@ -41,37 +41,45 @@ router = APIRouter(tags=["perfil"])
 UPLOAD_DIR = "uploads/fotos"
 FORMATOS_ACEITOS = {"JPEG", "PNG", "WEBP"}
 TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024
-DIMENSAO_MAXIMA_PX = 800
-# Miniatura para avatares pequenos (cards, listas, topo da busca): 120 px em tela 2x
-MINIATURA_PX = 240
+# Três tamanhos: a foto completa só é baixada quando alguém amplia
+DIMENSAO_MAXIMA_PX = 1600  # completa (ampliação)
+MEDIA_PX = 480  # topo do perfil (200 px em tela 2x)
+MINIATURA_PX = 240  # cards, listas, topo da busca (120 px em tela 2x)
+VARIANTES = {"_m": MEDIA_PX, "_p": MINIATURA_PX}
 EXTENSOES_SERVIDAS = {".jpg", ".jpeg", ".png", ".webp"}
 
 # Protege contra "bombas de descompressão" (imagens pequenas em bytes e enormes em pixels).
 Image.MAX_IMAGE_PIXELS = 40_000_000
 
 
-def caminho_miniatura(foto_path: str) -> str:
-    return f"{os.path.splitext(foto_path)[0]}_p.jpg"
+def caminho_variante(foto_path: str, sufixo: str) -> str:
+    return f"{os.path.splitext(foto_path)[0]}{sufixo}.jpg"
+
+
+def gravar_variantes(img: Image.Image, foto_path: str) -> None:
+    """Versões menores ao lado da foto: _m (480 px) e _p (240 px)."""
+    for sufixo, lado in VARIANTES.items():
+        menor = img.copy()
+        menor.thumbnail((lado, lado))
+        menor.save(caminho_variante(foto_path, sufixo), "JPEG", quality=80, optimize=True, progressive=True)
 
 
 def salvar_foto(img: Image.Image) -> str:
-    """Grava a foto (até 800 px) e a miniatura (240 px) em JPEG progressivo, sem metadados.
-    Devolve o caminho da foto; a miniatura fica ao lado, com sufixo _p."""
+    """Grava a foto (até 1600 px) e as versões de 480 e 240 px em JPEG progressivo, sem
+    metadados. Devolve o caminho da foto completa."""
     img = ImageOps.exif_transpose(img).convert("RGB")
     img.thumbnail((DIMENSAO_MAXIMA_PX, DIMENSAO_MAXIMA_PX))
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     caminho = f"{UPLOAD_DIR}/{uuid.uuid4()}.jpg"
     img.save(caminho, "JPEG", quality=82, optimize=True, progressive=True)
-    mini = img.copy()
-    mini.thumbnail((MINIATURA_PX, MINIATURA_PX))
-    mini.save(caminho_miniatura(caminho), "JPEG", quality=80, optimize=True, progressive=True)
+    gravar_variantes(img, caminho)
     return caminho
 
 
 def remover_foto(foto_path: str | None) -> None:
     if not foto_path:
         return
-    for caminho in (foto_path, caminho_miniatura(foto_path)):
+    for caminho in (foto_path, *(caminho_variante(foto_path, s) for s in VARIANTES)):
         if os.path.exists(caminho):
             os.remove(caminho)
 

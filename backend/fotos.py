@@ -1,8 +1,8 @@
-"""Recompacta as fotos de perfil já enviadas (até 800 px, JPEG progressivo, sem metadados)
-e gera as miniaturas de 240 px. Faz cópia de tudo antes, numa pasta ao lado.
+"""Manutenção das fotos de perfil.
 
-    python fotos.py            # simulação: mostra o que faria
-    python fotos.py --aplicar
+    python fotos.py variantes             # gera as versões menores que faltarem (não mexe na foto)
+    python fotos.py recompactar           # simulação da recompactação
+    python fotos.py recompactar --aplicar # recompacta tudo (com cópia antes)
 """
 import os
 import shutil
@@ -13,7 +13,19 @@ from PIL import Image
 
 from database import SessionLocal
 from models import Analista
-from routers.perfil import UPLOAD_DIR, remover_foto, salvar_foto
+from routers.perfil import UPLOAD_DIR, VARIANTES, caminho_variante, gravar_variantes, remover_foto, salvar_foto
+
+
+def variantes() -> None:
+    db = SessionLocal()
+    for a in db.query(Analista).filter(Analista.foto_path.isnot(None)):
+        if not os.path.exists(a.foto_path):
+            continue
+        if all(os.path.exists(caminho_variante(a.foto_path, s)) for s in VARIANTES):
+            continue
+        with Image.open(a.foto_path) as img:
+            gravar_variantes(img.convert("RGB"), a.foto_path)
+        print(f"conta {a.id}: versões menores geradas")
 
 
 def recompactar(aplicar: bool) -> None:
@@ -44,4 +56,9 @@ def recompactar(aplicar: bool) -> None:
 
 
 if __name__ == "__main__":
-    recompactar("--aplicar" in sys.argv)
+    if sys.argv[1:2] == ["variantes"]:
+        variantes()
+    elif sys.argv[1:2] == ["recompactar"]:
+        recompactar("--aplicar" in sys.argv)
+    else:
+        sys.exit(__doc__)

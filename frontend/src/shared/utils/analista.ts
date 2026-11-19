@@ -50,10 +50,10 @@ export function fotoUrl(path: string | null): string | null {
   return /^(https?:)?\//.test(path) ? path : `/${path}`
 }
 
-/** Miniatura de 240 px gravada ao lado da foto (sufixo _p), para avatares pequenos */
-export function miniaturaUrl(path: string | null): string | null {
+/** Versão menor gravada ao lado da foto: 'p' (240 px, avatares pequenos) ou 'm' (480 px, topo do perfil) */
+export function miniaturaUrl(path: string | null, tamanho: 'p' | 'm' = 'p'): string | null {
   const url = fotoUrl(path)
-  return url ? url.replace(/\.[a-z]+$/i, '_p.jpg') : null
+  return url ? url.replace(/\.[a-z]+$/i, `_${tamanho}.jpg`) : null
 }
 
 // Gradiente da capa por órgão: o mesmo órgão sempre recebe a mesma cor
