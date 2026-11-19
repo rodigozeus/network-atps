@@ -11,6 +11,7 @@ function voltarPara(p: string): Voltar | null {
   if (p === '/perfil') return { para: '/busca', rotulo: 'Pessoas na rede' }
   if (p.startsWith('/unidades/')) return { para: '/unidades', rotulo: 'Órgãos e unidades' }
   if (p === '/unidades') return { para: '/busca', rotulo: 'Pessoas na rede' }
+  if (p === '/rede') return { para: '/busca', rotulo: 'Pessoas na rede' }
   return null
 }
 

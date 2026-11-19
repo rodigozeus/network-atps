@@ -598,3 +598,39 @@ class MinhaRedeOut(BaseModel):
     eu: AnalistaPublico
     pessoas: list[NoRede]
     ligacoes: list[LigacaoRede]
+
+
+# --- Página "Minha rede" (órbitas) ---
+
+class PessoaOrbita(BaseModel):
+    analista: AnalistaPublico
+    temas_comuns: list[str]
+    favorito: bool
+    recente: bool  # entrou na Rede nos últimos 30 dias
+
+
+class AnelOut(BaseModel):
+    chave: str  # coordenacao | coordenacao_geral | departamento | secretaria | ministerio | temas | favoritos
+    titulo: str
+    unidade: str | None  # nome da sua unidade naquele nível (anéis de lotação)
+    total: int
+    pessoas: list[PessoaOrbita]
+
+
+class LugarVazio(BaseModel):
+    nivel: str
+    titulo: str  # "sua coordenação-geral"
+    nome: str
+
+
+class MeuTemaOut(BaseModel):
+    tema: str
+    total: int  # pessoas na Rede (fora você) com esse tema
+
+
+class MinhaRedePaginaOut(BaseModel):
+    eu: AnalistaPublico
+    aneis: list[AnelOut]
+    vazios: list[LugarVazio]
+    temas: list[MeuTemaOut]
+    recentes: list[AnalistaPublico]

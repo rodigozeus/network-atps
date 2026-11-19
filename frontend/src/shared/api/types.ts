@@ -283,3 +283,20 @@ export interface MinhaRede {
   pessoas: NoRede[]
   ligacoes: Array<{ a: number; b: number; tipo: 'unidade' | 'tema'; rotulo: string }>
 }
+
+/** Página "Minha rede": anéis de proximidade em volta de quem está logado */
+export interface AnelRede {
+  chave: 'coordenacao' | 'coordenacao_geral' | 'departamento' | 'secretaria' | 'ministerio' | 'temas' | 'favoritos'
+  titulo: string
+  unidade: string | null
+  total: number
+  pessoas: Array<{ analista: AnalistaPublico; temas_comuns: string[]; favorito: boolean; recente: boolean }>
+}
+
+export interface MinhaRedePagina {
+  eu: AnalistaPublico
+  aneis: AnelRede[]
+  vazios: Array<{ nivel: string; titulo: string; nome: string }>
+  temas: Array<{ tema: string; total: number }>
+  recentes: AnalistaPublico[]
+}

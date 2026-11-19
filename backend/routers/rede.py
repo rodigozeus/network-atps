@@ -9,7 +9,10 @@ from auth import get_usuario_regular
 from database import get_db
 from models import Analista, Favorito, UnidadeSiorg, condicao_perfil_visivel
 from routers.busca import _aplicar_visibilidade
-from schemas import LigacaoRede, MinhaRedeOut, NoRede, NovidadesRedeOut, ResumoPublico
+from schemas import (
+    AnelOut, LigacaoRede, LugarVazio, MeuTemaOut, MinhaRedeOut, MinhaRedePaginaOut, NoRede,
+    NovidadesRedeOut, PessoaOrbita, ResumoPublico,
+)
 
 router = APIRouter(tags=["rede"])
 
@@ -173,3 +176,86 @@ def minha_rede(
         ligacoes.append(LigacaoRede(a=a, b=b, tipo=tipo, rotulo=rotulo))
 
     return MinhaRedeOut(eu=_aplicar_visibilidade(eu), pessoas=pessoas, ligacoes=ligacoes)
+
+
+# --- Página "Minha rede": anéis de proximidade em volta de quem está logado ---
+
+ANEIS = [
+    ("coordenacao", "Na sua coordenação", "sua coordenação"),
+    ("coordenacao_geral", "Na sua coordenação-geral", "sua coordenação-geral"),
+    ("departamento", "No seu departamento", "seu departamento"),
+    ("secretaria", "Na sua secretaria", "sua secretaria"),
+    ("ministerio", "No seu ministério", "seu ministério"),
+    ("temas", "Temas em comum", None),
+    ("favoritos", "Seus favoritos", None),
+]
+NIVEIS_LOTACAO = ["ministerio", "secretaria", "departamento", "coordenacao_geral", "coordenacao"]
+SIGLA_DO_NIVEL = {"ministerio": "ministerio_sigla", "secretaria": "secretaria_sigla", "departamento": "departamento_sigla"}
+POR_ANEL = 60
+RECENTE = timedelta(days=30)
+
+
+@router.get("/rede/pagina", response_model=MinhaRedePaginaOut)
+def minha_rede_pagina(eu: Analista = Depends(get_usuario_regular), db: Session = Depends(get_db)):
+    """Cada pessoa aparece uma vez, no anel da relação mais próxima com você: a unidade mais
+    funda em comum; sem lotação em comum, temas em comum; senão, se for sua favorita."""
+    from routers.perfil import _chave, _lotacao_comum
+
+    agora = datetime.now(timezone.utc)
+    meus_temas = {_chave(t.tema): t.tema.strip() for t in eu.temas}
+    favoritos = set(db.scalars(select(Favorito.favorito_id).where(Favorito.analista_id == eu.id)))
+    outros = db.query(Analista).filter(condicao_perfil_visivel(), Analista.id != eu.id).all()
+
+    grupos: dict[str, list] = {chave: [] for chave, *_ in ANEIS}
+    alcance = {n: 0 for n in NIVEIS_LOTACAO}  # quantos compartilham ao menos até cada nível
+    for c in outros:
+        comuns = sorted({meus_temas[k] for k in (_chave(t.tema) for t in c.temas) if k in meus_temas})
+        lot = _lotacao_comum(eu, c)
+        fav = c.id in favoritos
+        if lot:
+            for n in NIVEIS_LOTACAO[: NIVEIS_LOTACAO.index(lot[0]) + 1]:
+                alcance[n] += 1
+        anel = lot[0] if lot else ("temas" if comuns else ("favoritos" if fav else None))
+        if anel:
+            recente = _como_utc(c.criado_em) > agora - RECENTE if c.criado_em else False
+            grupos[anel].append((-len(comuns), not fav, c.nome.casefold(), c, comuns, fav, recente))
+
+    aneis = []
+    for chave, titulo, _ in ANEIS:
+        lista = sorted(grupos[chave], key=lambda x: x[:3])
+        if not lista:
+            continue
+        unidade = None
+        if chave in NIVEIS_LOTACAO:
+            unidade = getattr(eu, SIGLA_DO_NIVEL[chave]) if chave in SIGLA_DO_NIVEL else None
+            unidade = unidade or getattr(eu, chave)
+        aneis.append(AnelOut(
+            chave=chave, titulo=titulo, unidade=unidade, total=len(lista),
+            pessoas=[PessoaOrbita(analista=_aplicar_visibilidade(c), temas_comuns=comuns, favorito=fav, recente=rec)
+                     for *_, c, comuns, fav, rec in lista[:POR_ANEL]],
+        ))
+
+    # lugares da sua lotação onde ainda não há ninguém da Rede (do mais específico ao mais amplo)
+    vazios = []
+    for chave, _, rotulo in ANEIS[:5]:
+        nome = (getattr(eu, chave) or "").strip()
+        if nome and alcance[chave] == 0:
+            vazios.append(LugarVazio(nivel=chave, titulo=rotulo, nome=nome))
+
+    # seus temas: quantas pessoas da Rede trabalham com cada um
+    contagem: dict[str, int] = {}
+    for c in outros:
+        for k in {_chave(t.tema) for t in c.temas}:
+            if k in meus_temas:
+                contagem[k] = contagem.get(k, 0) + 1
+    temas = sorted((MeuTemaOut(tema=v, total=contagem.get(k, 0)) for k, v in meus_temas.items()),
+                   key=lambda t: (-t.total, t.tema.casefold()))
+
+    recentes = sorted(
+        (x for chave, *_ in ANEIS for x in grupos[chave] if x[-1]),
+        key=lambda x: _como_utc(x[3].criado_em), reverse=True,
+    )
+    return MinhaRedePaginaOut(
+        eu=_aplicar_visibilidade(eu), aneis=aneis, vazios=vazios, temas=temas,
+        recentes=[_aplicar_visibilidade(x[3]) for x in recentes[:12]],
+    )

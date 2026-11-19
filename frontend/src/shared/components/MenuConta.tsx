@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { IconBuildingCommunity, IconChevronDown, IconLogout, IconPencil, IconShieldCog, IconUser } from '@tabler/icons-react'
+import { IconAffiliate, IconBuildingCommunity, IconChevronDown, IconLogout, IconPencil, IconShieldCog, IconUser } from '@tabler/icons-react'
 import { useAuth } from '@shared/hooks/useAuth'
 import { limparFavoritos } from '@shared/hooks/useFavoritos'
 import { nomeCurto } from '@shared/utils/analista'
@@ -91,6 +91,7 @@ export default function MenuConta() {
         </div>
         <Link to={`/analistas/${user.id}`} role="menuitem"><IconUser size={18} aria-hidden />Ver perfil</Link>
         <Link to="/perfil" role="menuitem"><IconPencil size={18} aria-hidden />Editar perfil</Link>
+        <Link to="/rede" role="menuitem"><IconAffiliate size={18} aria-hidden />Minha rede</Link>
         <Link to="/unidades" role="menuitem"><IconBuildingCommunity size={18} aria-hidden />Órgãos e unidades</Link>
         {podeAdministrar && (
           <Link to="/admin" role="menuitem"><IconShieldCog size={18} aria-hidden />Painel de administração</Link>

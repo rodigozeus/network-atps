@@ -19,6 +19,7 @@ import CoberturaPage from '@features/admin/cobertura/CoberturaPage'
 import UnidadesPage from '@features/unidades/UnidadesPage'
 import UnidadePage from '@features/unidades/UnidadePage'
 import SobrePage from '@features/sobre/SobrePage'
+import MinhaRedePage from '@features/rede/MinhaRedePage'
 
 function PlaceholderPage({ title, desc }: { title: string; desc?: string }) {
   return (
@@ -50,6 +51,7 @@ export default function App() {
               <Route path="/busca" element={<SearchPage />} />
               <Route path="/analistas/:id" element={<PublicProfilePage />} />
               <Route path="/perfil" element={<ProfilePage />} />
+              <Route path="/rede" element={<MinhaRedePage />} />
               <Route path="/unidades" element={<UnidadesPage />} />
               <Route path="/unidades/:id" element={<UnidadePage />} />
 

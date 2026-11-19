@@ -7,7 +7,7 @@ import type { Unidade } from '@shared/api/types'
 import { unidadesApi } from '@shared/api/unidades'
 import { Spinner } from '@shared/components'
 import { gradienteOrgao } from '@shared/utils/analista'
-import AnalistaCard from '@features/busca/AnalistaCard'
+import AnalistaLinha from '@features/busca/AnalistaLinha'
 import busca from '@features/busca/busca.module.css'
 import perfil from '@features/perfil/perfil.module.css'
 import styles from './unidades.module.css'
@@ -171,7 +171,7 @@ export default function UnidadePage() {
           {u.membros.length > 0 && (
             <section className={styles.pessoas} aria-labelledby="titulo-pessoas">
               <h2 id="titulo-pessoas"><IconUsers size={16} aria-hidden />Quem está aqui</h2>
-              <div className={busca.grid}>{u.membros.map((a) => <AnalistaCard key={a.id} a={a} />)}</div>
+              <div className={busca.linhas}>{u.membros.map((a) => <AnalistaLinha key={a.id} a={a} />)}</div>
               {u.membros_total > u.membros.length && (
                 <p className={styles.fonte}>Mostrando {u.membros.length} de {u.membros_total}. Use a busca para filtrar.</p>
               )}
