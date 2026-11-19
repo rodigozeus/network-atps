@@ -14,7 +14,6 @@ import styles from './rede.module.css'
 export default function MinhaRedePage() {
   const [d, setD] = useState<MinhaRedePagina | null>(null)
   const [erro, setErro] = useState(false)
-  const [tema, setTema] = useState<string | null>(null)
 
   useEffect(() => {
     redeApi.pagina().then(setD).catch(() => setErro(true))
@@ -25,8 +24,6 @@ export default function MinhaRedePage() {
   if (erro) return <p className={styles.vazio}>Não foi possível carregar sua rede. Tente de novo.</p>
   if (!d) return <div className={styles.carregando}><Spinner size="lg" /></div>
 
-  const temaInfo = d.temas.find((t) => t.tema === tema)
-
   return (
     <div className={styles.pagina}>
       <header className={styles.topo}>
@@ -34,29 +31,8 @@ export default function MinhaRedePage() {
         <p>Quem da carreira está perto de você, pela lotação e pelos temas em que você atua.</p>
       </header>
 
-      {d.temas.length > 0 && (
-        <section className={styles.temas} aria-label="Seus temas">
-          <span className={styles.rotulo}>Seus temas</span>
-          <div className={styles.chips}>
-            {d.temas.map((t) => (
-              <button key={t.tema} type="button" aria-pressed={tema === t.tema}
-                onClick={() => setTema(tema === t.tema ? null : t.tema)}>
-                {t.tema} <small>{t.total}</small>
-              </button>
-            ))}
-          </div>
-          {temaInfo && (
-            <p className={styles.temaInfo}>
-              {temaInfo.total === 0
-                ? <>Ninguém mais na Rede informou “{temaInfo.tema}” ainda.</>
-                : <>Destacadas abaixo as pessoas perto de você que atuam com “{temaInfo.tema}”. <Link to={`/busca?tema=${encodeURIComponent(temaInfo.tema)}`}>Ver as {temaInfo.total} na Rede</Link></>}
-            </p>
-          )}
-        </section>
-      )}
-
       {d.aneis.length > 0 ? (
-        <Orbitas eu={d.eu} aneis={d.aneis} tema={tema} />
+        <Orbitas eu={d.eu} aneis={d.aneis} />
       ) : (
         <p className={styles.vazio}>Ainda não há ninguém da Rede na sua lotação, nos seus temas ou nos seus favoritos.</p>
       )}
@@ -85,7 +61,7 @@ export default function MinhaRedePage() {
           </h2>
           <div className={busca.linhas}>
             {anel.pessoas.map((p) => (
-              <div key={p.analista.id} className={[styles.item, tema && !p.temas_comuns.includes(tema) ? styles.apagado : ''].join(' ')}>
+              <div key={p.analista.id} className={styles.item}>
                 {(anel.chave === 'temas' || p.temas_comuns.length > 0) && (
                   <p className={styles.motivo}>{anel.chave === 'temas' ? '' : `${MOTIVO_DO_ANEL[anel.chave]} · `}Em comum: {p.temas_comuns.join(', ')}</p>
                 )}

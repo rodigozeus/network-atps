@@ -24,7 +24,7 @@ const pct = (v: number) => `${(v / LADO) * 100}%`
 
 /** Você no centro; cada anel é uma relação, do mais perto (dentro) ao mais longe (fora).
  *  Sem linhas: a distância ao centro já diz a proximidade. Passar o mouse mostra nome e motivo. */
-export default function Orbitas({ eu, aneis, tema }: { eu: AnalistaPublico; aneis: AnelRede[]; tema: string | null }) {
+export default function Orbitas({ eu, aneis }: { eu: AnalistaPublico; aneis: AnelRede[] }) {
   const visiveis = aneis.slice(0, MAX_ANEIS)
   const c = LADO / 2
   const passo = (c - MARGEM - RAIO_CENTRO) / visiveis.length
@@ -57,13 +57,12 @@ export default function Orbitas({ eu, aneis, tema }: { eu: AnalistaPublico; anei
               {MOTIVO_DO_ANEL[anel.chave]}
             </span>
             {mostrar.map((p, i) => {
-              const destaque = !tema || p.temas_comuns.includes(tema)
               const motivo = anel.chave === 'temas'
                 ? `Em comum: ${p.temas_comuns.join(', ')}`
                 : [MOTIVO_DO_ANEL[anel.chave], p.temas_comuns.length ? `Em comum: ${p.temas_comuns.join(', ')}` : ''].filter(Boolean).join(' · ')
               return (
                 <Link key={p.analista.id} to={`/analistas/${p.analista.id}`}
-                  className={[styles.pessoa, destaque ? '' : styles.apagado, tema && destaque ? styles.destacado : ''].join(' ')}
+                  className={styles.pessoa}
                   style={posicao(i)} aria-label={`${p.analista.nome}. ${motivo}`}>
                   <Avatar id={p.analista.id} nome={p.analista.nome} fotoPath={p.analista.foto_path} tamanho={FOTO} />
                   {p.recente && <span className={styles.novo} aria-hidden>novo</span>}
