@@ -16,9 +16,6 @@ export interface Voltar {
  * Barra fixa do topo. Sobre um topo colorido (busca, perfil) começa transparente e fica laranja,
  * com a logo, quando o conteúdo marcado com data-barra-limite chega nela.
  */
-// px de rolagem em que a barra vai do transparente ao laranja
-const FAIXA_TRANSICAO = 200
-
 export default function Barra({ voltar }: { voltar: Voltar | null }) {
   const { isAuthenticated, isLoading } = useAuth()
   const { pathname } = useLocation()
@@ -30,8 +27,10 @@ export default function Barra({ voltar }: { voltar: Voltar | null }) {
   useEffect(() => {
     const atualizar = () => {
       const limite = document.querySelector('[data-barra-limite]')
-      const topo = limite ? limite.getBoundingClientRect().top : 0
-      setProgresso(limite ? Math.min(1, Math.max(0, (72 + FAIXA_TRANSICAO - topo) / FAIXA_TRANSICAO)) : 1)
+      if (!limite) { setProgresso(1); return }
+      // transparente com a página no topo; laranja completo quando o conteúdo chega à barra
+      const rolagemAteBarra = limite.getBoundingClientRect().top + window.scrollY - 72
+      setProgresso(rolagemAteBarra <= 0 ? 1 : Math.min(1, Math.max(0, window.scrollY / rolagemAteBarra)))
     }
     atualizar()
     window.addEventListener('scroll', atualizar, { passive: true })
