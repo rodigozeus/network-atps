@@ -256,3 +256,21 @@
 .pessoasTopo {
   margin-top: 28px;
 }
+
+/* Competência em itens: um por linha */
+.competencia p {
+  margin: 0 0 8px;
+}
+
+.competencia p:last-child {
+  margin-bottom: 0;
+}
+
+.subunidades[hidden] {
+  display: none;
+}
+
+.bloco .verMais {
+  display: block;
+  margin: 0 0 10px;
+}

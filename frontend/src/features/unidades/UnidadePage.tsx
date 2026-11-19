@@ -17,7 +17,16 @@ const NIVEL: Record<string, string> = {
   coordenacao_geral: 'Coordenação-Geral', coordenacao: 'Coordenação',
 }
 const COMPETENCIA_CURTA = 520
-const SUBUNIDADES_INICIO = 8 // as com mais gente da Rede vêm primeiro
+
+/** Competências do SIORG costumam vir como itens numerados numa linha só ("I - ...; II - ...;
+ *  e III - ..."). Quebra a linha antes de cada item (I, II..., 1, 2..., a, b...) para ler melhor. */
+function emItens(texto: string): string[] {
+  return texto
+    .replace(/\s*([;:])(\s+e)?\s+(?=(?:[IVXLC]{1,7}|\d{1,3}|[a-z])\s?[-–—).]\s)/g, (_, sinal: string, e?: string) => `${sinal}${e ?? ''}\n`)
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+}
 
 /** Página de uma unidade da estrutura oficial (SIORG): o que faz, contato e quem está ali. */
 export default function UnidadePage() {
@@ -25,14 +34,14 @@ export default function UnidadePage() {
   const [u, setU] = useState<Unidade | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [tudo, setTudo] = useState(false)
-  const [todasSub, setTodasSub] = useState(false)
+  const [verSub, setVerSub] = useState(false)
 
   useEffect(() => {
     if (!id) return
     let vivo = true
     setCarregando(true)
     setTudo(false)
-    setTodasSub(false)
+    setVerSub(false)
     unidadesApi.ver(id)
       .then((d) => vivo && setU(d))
       .catch(() => vivo && setU(null))
@@ -120,9 +129,10 @@ export default function UnidadePage() {
               {competencia && (
                 <section className={styles.bloco}>
                   <h2><IconBuilding size={16} aria-hidden />O que faz</h2>
-                  <p className={styles.competencia}>
-                    {longa && !tudo ? `${competencia.slice(0, COMPETENCIA_CURTA).trimEnd()}…` : competencia}
-                  </p>
+                  <div className={styles.competencia}>
+                    {emItens(longa && !tudo ? `${competencia.slice(0, COMPETENCIA_CURTA).trimEnd()}…` : competencia)
+                      .map((linha, i) => <p key={i}>{linha}</p>)}
+                  </div>
                   {longa && (
                     <button type="button" className={styles.verMais} onClick={() => setTudo((v) => !v)} aria-expanded={tudo}>
                       {tudo ? 'Mostrar menos' : 'Ler todas as competências'}
@@ -166,8 +176,12 @@ export default function UnidadePage() {
               {u.subunidades.length > 0 && (
                 <section className={styles.bloco}>
                   <h2><IconChevronRight size={16} aria-hidden />Unidades</h2>
-                  <ul className={styles.subunidades}>
-                    {(todasSub ? u.subunidades : u.subunidades.slice(0, SUBUNIDADES_INICIO)).map((s) => (
+                  <button type="button" className={styles.verMais} onClick={() => setVerSub((v) => !v)}
+                    aria-expanded={verSub} aria-controls="lista-subunidades">
+                    {verSub ? 'Recolher' : `Ver as ${u.subunidades.length} unidades`}
+                  </button>
+                  <ul className={styles.subunidades} id="lista-subunidades" hidden={!verSub}>
+                    {u.subunidades.map((s) => (
                       <li key={s.id}>
                         <Link to={`/unidades/${s.id}`}>
                           <span><b>{s.sigla ?? s.nome}</b>{s.sigla && <small>{s.nome}</small>}</span>
@@ -176,11 +190,6 @@ export default function UnidadePage() {
                       </li>
                     ))}
                   </ul>
-                  {u.subunidades.length > SUBUNIDADES_INICIO && (
-                    <button type="button" className={styles.verMais} onClick={() => setTodasSub((v) => !v)} aria-expanded={todasSub}>
-                      {todasSub ? 'Mostrar menos' : `Ver todas (${u.subunidades.length})`}
-                    </button>
-                  )}
                 </section>
               )}
             </aside>
