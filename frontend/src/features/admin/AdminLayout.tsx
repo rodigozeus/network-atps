@@ -43,6 +43,14 @@ export default function AdminLayout() {
             Cobertura
           </NavLink>
           <NavLink
+            to="/admin/temas"
+            className={({ isActive }) =>
+              [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
+            }
+          >
+            Temas
+          </NavLink>
+          <NavLink
             to="/admin/conflitos"
             className={({ isActive }) =>
               [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')

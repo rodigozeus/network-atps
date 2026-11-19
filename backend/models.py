@@ -309,12 +309,38 @@ class Acesso(Base):
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
 
 
+class Tema(Base):
+    """Catálogo de temas: Áreas de política ("area") e Ferramentas e métodos ("ferramenta").
+    Mantido pela curadoria do painel admin; temas criados por pessoas entram como não revisados."""
+    __tablename__ = "temas"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    nome: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    tipo: Mapped[str] = mapped_column(String(12), nullable=False, default="area")
+    apelidos: Mapped[str] = mapped_column(Text, nullable=False, default="")  # um por linha
+    revisado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
+    criado_por_id: Mapped[int | None] = mapped_column(ForeignKey("analistas.id", ondelete="SET NULL"), nullable=True)
+
+    @property
+    def lista_apelidos(self) -> list[str]:
+        return [a.strip() for a in (self.apelidos or "").splitlines() if a.strip()]
+
+
 class TemaAtuacao(Base):
     __tablename__ = "temas_atuacao"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     analista_id: Mapped[int] = mapped_column(ForeignKey("analistas.id"), nullable=False)
+    # cópia do nome do tema do catálogo (busca, cards e novidades leem daqui); a curadoria
+    # atualiza as cópias ao renomear ou juntar temas
     tema: Mapped[str] = mapped_column(String(200), nullable=False)
+    tema_id: Mapped[int | None] = mapped_column(ForeignKey("temas.id"), nullable=True, index=True)
     em_exercicio_atual: Mapped[bool] = mapped_column(Boolean, default=True)
 
     analista: Mapped["Analista"] = relationship(back_populates="temas")
+    catalogo: Mapped["Tema | None"] = relationship(lazy="joined")
+
+    @property
+    def tipo(self) -> str:
+        return self.catalogo.tipo if self.catalogo else "area"

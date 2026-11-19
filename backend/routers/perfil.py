@@ -10,7 +10,7 @@ from sqlalchemy import func, null, or_, select
 from sqlalchemy.orm import Session
 from database import get_db
 from models import (
-    AcaoConsentimento, Analista, ConflitoCadastro, Formacao, TemaAtuacao, UnidadeSiorg,
+    AcaoConsentimento, Analista, ConflitoCadastro, Formacao, Tema, TemaAtuacao, UnidadeSiorg,
     condicao_perfil_visivel,
 )
 from schemas import (
@@ -21,10 +21,11 @@ from schemas import (
     LotacaoComumOut, LotacaoOut, ProximoOut,
     RegularizarIn,
     SugestaoIn,
-    TemaBase, TemaCatalogoOut, TemaOut,
+    TemaCatalogoOut, TemaCreate, TemaOut, TemaSugestaoOut,
 )
 from auth import get_current_user, get_usuario_regular, verify_password
 import atualizacao
+import catalogo_temas
 import lotacao_auto
 import lotacao_siorg
 import novidades
@@ -397,13 +398,49 @@ def delete_formacao(
 
 # --- Temas de atuação ---
 
+def _sugestao(t: Tema, total: int, apelido: str | None = None) -> dict:
+    return {"id": t.id, "nome": t.nome, "tipo": t.tipo, "total": total, "apelido": apelido}
+
+
 @router.post("/perfil/tema", response_model=TemaOut, status_code=status.HTTP_201_CREATED)
 def add_tema(
-    body: TemaBase,
+    body: TemaCreate,
     analista: Analista = Depends(get_usuario_regular),
     db: Session = Depends(get_db),
 ):
-    tema = TemaAtuacao(analista_id=analista.id, **body.model_dump())
+    """Inclui um tema do catálogo no perfil. Nome digitado que já existe (nome oficial, sigla ou
+    apelido) usa o tema existente; nome que nunca foi usado só vira tema novo com confirmação —
+    sem ela, 409 com os temas parecidos (o atrito para não espalhar variações)."""
+    if body.tema_id is not None:
+        cat = db.get(Tema, body.tema_id)
+        if cat is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tema não encontrado.")
+    else:
+        nome = catalogo_temas.normalizar(body.tema or "")
+        if len(nome) < 2:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Digite o nome do tema.")
+        cat = catalogo_temas.achar_exato(db, nome)
+        if cat is None:
+            if not body.confirmar_novo:
+                totais = catalogo_temas.totais(db)
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={
+                    "codigo": "tema_novo",
+                    "nome": nome,
+                    "parecidos": [_sugestao(t, totais.get(t.id, 0)) for t, _ in catalogo_temas.parecidos(db, nome)],
+                })
+            cat = Tema(nome=nome, tipo=body.tipo, revisado=False, criado_por_id=analista.id)
+            db.add(cat)
+            db.flush()
+
+    if any(t.tema_id == cat.id for t in analista.temas):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Esse tema já está no seu perfil.")
+    if sum(1 for t in analista.temas if t.tipo == cat.tipo) >= catalogo_temas.MAX_POR_TIPO:
+        grupo = "áreas de política" if cat.tipo == "area" else "ferramentas e métodos"
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Você já tem {catalogo_temas.MAX_POR_TIPO} {grupo}. Remova um para incluir outro.")
+
+    tema = TemaAtuacao(analista_id=analista.id, tema=cat.nome, tema_id=cat.id, em_exercicio_atual=body.em_exercicio_atual)
+    tema.catalogo = cat
     db.add(tema)
     db.flush()
     novidades.registrar_tema(db, tema)
@@ -426,21 +463,31 @@ def delete_tema(
     db.commit()
 
 
-@router.get("/perfil/temas/sugestoes", response_model=list[str])
+@router.get("/perfil/temas/sugestoes", response_model=list[TemaSugestaoOut])
 def sugestoes_temas(
     q: str = "",
+    tipo: str | None = None,
+    limite: int = 10,
     _: Analista = Depends(get_usuario_regular),
     db: Session = Depends(get_db),
 ):
-    from sqlalchemy import select, func
-    stmt = (
-        select(TemaAtuacao.tema)
-        .where(func.f_unaccent(func.lower(TemaAtuacao.tema)).like(func.f_unaccent(func.lower(f"%{q}%"))))
-        .group_by(TemaAtuacao.tema)
-        .order_by(func.count().desc(), TemaAtuacao.tema)
-        .limit(8)
-    )
-    return list(db.scalars(stmt))
+    """Temas do catálogo que combinam com o que está sendo digitado (aceita sigla, apelido, palavra
+    pela metade e erro de digitação), dos mais usados para os menos. Sem texto: os mais usados."""
+    totais = catalogo_temas.totais(db)
+    achados = []
+    for t in db.scalars(select(Tema)):
+        if tipo and t.tipo != tipo:
+            continue
+        nota = catalogo_temas.pontuacao_busca(q, t)
+        if nota <= 0:
+            continue
+        apelido = None
+        if q.strip() and catalogo_temas.chave(q) not in catalogo_temas.chave(t.nome):
+            kq = catalogo_temas.chave(q)
+            apelido = next((a for a in t.lista_apelidos if kq in catalogo_temas.chave(a)), None)
+        achados.append((nota, totais.get(t.id, 0), t, apelido))
+    achados.sort(key=lambda x: (-x[0], -x[1], x[2].nome))
+    return [_sugestao(t, n, apelido) for _, n, t, apelido in achados[: max(1, min(limite, 30))]]
 
 
 # --- Foto de perfil ---
@@ -586,14 +633,15 @@ def _unidades_siorg(db: Session, caminho: list[str | None]) -> list[UnidadeSiorg
 
 
 @router.get("/temas", response_model=list[TemaCatalogoOut])
-def catalogo_temas(db: Session = Depends(get_db), _: Analista = Depends(get_usuario_regular)):
+def listar_temas(db: Session = Depends(get_db), _: Analista = Depends(get_usuario_regular)):
     """Todos os temas de atuação dos perfis visíveis, do mais citado ao menos citado."""
     total = func.count(func.distinct(TemaAtuacao.analista_id))
     stmt = (
-        select(TemaAtuacao.tema, total)
+        select(TemaAtuacao.tema, func.coalesce(Tema.tipo, "area"), total)
         .join(Analista, Analista.id == TemaAtuacao.analista_id)
+        .outerjoin(Tema, Tema.id == TemaAtuacao.tema_id)
         .where(condicao_perfil_visivel())
-        .group_by(TemaAtuacao.tema)
+        .group_by(TemaAtuacao.tema, Tema.tipo)
         .order_by(total.desc(), TemaAtuacao.tema)
     )
-    return [TemaCatalogoOut(tema=t, total=n) for t, n in db.execute(stmt)]
+    return [TemaCatalogoOut(tema=t, tipo=tp, total=n) for t, tp, n in db.execute(stmt)]

@@ -1,7 +1,9 @@
 import json
 from datetime import datetime
 from urllib.parse import urlparse
-from pydantic import BaseModel, EmailStr, field_validator
+from typing import Literal
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from cpf_utils import cpf_valido
 from models import AcaoConsentimento, NivelFormacao, Role, Turma
 
@@ -76,7 +78,27 @@ class TemaBase(BaseModel):
 
 class TemaOut(TemaBase):
     id: int
+    tema_id: int | None = None
+    tipo: str = "area"  # area (Áreas de política) | ferramenta (Ferramentas e métodos)
     model_config = {"from_attributes": True}
+
+
+class TemaCreate(BaseModel):
+    """Escolher um tema do catálogo (tema_id) ou digitar um nome. Nome que ainda não existe no
+    catálogo só vira tema novo com confirmar_novo=True (antes disso, 409 com os parecidos)."""
+    tema_id: int | None = None
+    tema: str | None = Field(None, max_length=120)
+    tipo: Literal["area", "ferramenta"] = "area"
+    em_exercicio_atual: bool = True
+    confirmar_novo: bool = False
+
+
+class TemaSugestaoOut(BaseModel):
+    id: int
+    nome: str
+    tipo: str
+    total: int
+    apelido: str | None = None  # quando casou por apelido/sigla, qual foi
 
 
 # --- Analista ---
@@ -294,6 +316,48 @@ class LotacaoOut(BaseModel):
 class TemaCatalogoOut(BaseModel):
     tema: str
     total: int
+    tipo: str = "area"
+
+
+# --- Curadoria de temas (admin) ---
+
+class TemaAdminOut(BaseModel):
+    id: int
+    nome: str
+    tipo: str
+    apelidos: list[str]
+    revisado: bool
+    total: int
+    criado_em: datetime | None = None
+    criado_por: str | None = None
+
+
+class TemaParOut(BaseModel):
+    a: TemaAdminOut
+    b: TemaAdminOut
+    similaridade: float
+
+
+class TemasAdminOut(BaseModel):
+    temas: list[TemaAdminOut]
+    pares: list[TemaParOut]
+
+
+class TemaAdminIn(BaseModel):
+    nome: str = Field(..., min_length=2, max_length=120)
+    tipo: Literal["area", "ferramenta"] = "area"
+    apelidos: list[str] = []
+
+
+class TemaAdminUpdate(BaseModel):
+    nome: str | None = Field(None, min_length=2, max_length=120)
+    tipo: Literal["area", "ferramenta"] | None = None
+    apelidos: list[str] | None = None
+    revisado: bool | None = None
+
+
+class TemaJuntarIn(BaseModel):
+    destino_id: int
 
 
 class LotacaoComumOut(BaseModel):

@@ -117,8 +117,9 @@ export default function PublicProfilePage() {
   const nivelLotacao = lotacao(perfil)
   const tel = perfil.celular
   const favorito = ehFavorito(perfil.id)
-  const temasAtuais = perfil.temas.filter((t) => t.em_exercicio_atual)
-  const temasAnteriores = perfil.temas.filter((t) => !t.em_exercicio_atual)
+  const gruposTemas = ([['area', 'Áreas de política'], ['ferramenta', 'Ferramentas e métodos']] as const)
+    .map(([tipo, titulo]) => ({ titulo, itens: perfil.temas.filter((t) => (t.tipo ?? 'area') === tipo) }))
+    .filter((g) => g.itens.length)
   const emailContato = perfil.email_institucional || perfil.email_pessoal
 
   return (
@@ -221,22 +222,21 @@ export default function PublicProfilePage() {
 
               <section className={styles.bloco}>
                 <h2 className={styles.blocoTitulo}><span className={[styles.ico, styles.icoTema].join(' ')}><IconBriefcase size={16} aria-hidden /></span>Temas de atuação</h2>
-                {perfil.temas.length ? (
-                  <>
-                    {temasAtuais.length > 0 && (
-                      <>
-                        {temasAnteriores.length > 0 && <p className={styles.subtitulo}>Em exercício atual</p>}
-                        <div className={styles.temas}>{temasAtuais.map((t) => <span key={t.id}>{t.tema}</span>)}</div>
-                      </>
-                    )}
-                    {temasAnteriores.length > 0 && (
-                      <>
-                        <p className={styles.subtitulo}>Experiência anterior</p>
-                        <div className={[styles.temas, styles.anteriores].join(' ')}>{temasAnteriores.map((t) => <span key={t.id}>{t.tema}</span>)}</div>
-                      </>
-                    )}
-                  </>
-                ) : <p className={styles.vazio}>Nenhum tema informado.</p>}
+                {gruposTemas.length ? gruposTemas.map((g) => (
+                  <div key={g.titulo} className={styles.grupoTemas}>
+                    <p className={styles.subtitulo}>{g.titulo}</p>
+                    {/* experiência anterior vem depois, em tom mais apagado */}
+                    <div className={styles.temas}>
+                      {[...g.itens].sort((a, b) => Number(b.em_exercicio_atual) - Number(a.em_exercicio_atual)).map((t) => (
+                        <Link key={t.id} to={`/busca?tema=${encodeURIComponent(t.tema)}`}
+                          className={t.em_exercicio_atual ? '' : styles.temaAnterior}
+                          title={t.em_exercicio_atual ? `Ver quem mais atua com ${t.tema}` : `${t.tema} (experiência anterior)`}>
+                          {t.tema}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )) : <p className={styles.vazio}>Nenhum tema informado.</p>}
               </section>
             </div>
 

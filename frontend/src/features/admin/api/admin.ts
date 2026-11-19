@@ -173,3 +173,49 @@ export async function getCobertura(): Promise<Cobertura> {
   const { data } = await api.get<Cobertura>('/admin/cobertura')
   return data
 }
+
+// --- Curadoria de temas ---
+
+export type TipoTema = 'area' | 'ferramenta'
+
+export interface TemaAdmin {
+  id: number
+  nome: string
+  tipo: TipoTema
+  apelidos: string[]
+  revisado: boolean
+  total: number
+  criado_em: string | null
+  criado_por: string | null
+}
+
+export interface TemasAdmin {
+  temas: TemaAdmin[]
+  pares: Array<{ a: TemaAdmin; b: TemaAdmin; similaridade: number }>
+}
+
+export async function getTemas(): Promise<TemasAdmin> {
+  const { data } = await api.get<TemasAdmin>('/admin/temas')
+  return data
+}
+
+export async function criarTema(body: { nome: string; tipo: TipoTema; apelidos: string[] }): Promise<TemaAdmin> {
+  const { data } = await api.post<TemaAdmin>('/admin/temas', body)
+  return data
+}
+
+export async function editarTema(
+  id: number, body: Partial<{ nome: string; tipo: TipoTema; apelidos: string[]; revisado: boolean }>,
+): Promise<TemaAdmin> {
+  const { data } = await api.patch<TemaAdmin>(`/admin/temas/${id}`, body)
+  return data
+}
+
+export async function juntarTema(id: number, destinoId: number): Promise<TemaAdmin> {
+  const { data } = await api.post<TemaAdmin>(`/admin/temas/${id}/juntar`, { destino_id: destinoId })
+  return data
+}
+
+export async function excluirTema(id: number): Promise<void> {
+  await api.delete(`/admin/temas/${id}`)
+}

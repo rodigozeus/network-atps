@@ -7,7 +7,7 @@ from sqlalchemy import and_, or_, exists, func, case
 
 from auth import get_usuario_regular
 from database import get_db
-from models import Analista, EventoPerfil, Favorito, Formacao, NivelFormacao, TemaAtuacao, condicao_perfil_visivel
+from models import Analista, EventoPerfil, Favorito, Formacao, NivelFormacao, Tema, TemaAtuacao, condicao_perfil_visivel
 from novidades import condicao_novidade
 from schemas import AnalistaPublico, BuscaResponse
 
@@ -57,6 +57,10 @@ def _casa_termo(termo: str, aproximado: bool):
     ]
     condicoes = [_contem(c, termo) for c in colunas]
     condicoes.append(exists().where(TemaAtuacao.analista_id == Analista.id, _contem(TemaAtuacao.tema, termo)))
+    # siglas e apelidos do catálogo: "TED" acha quem tem "Termo de execução descentralizada"
+    condicoes.append(exists().where(
+        TemaAtuacao.analista_id == Analista.id, TemaAtuacao.tema_id == Tema.id, _contem(Tema.apelidos, termo),
+    ))
     condicoes.append(exists().where(
         Formacao.analista_id == Analista.id,
         or_(_contem(Formacao.curso, termo), _contem(Formacao.instituicao, termo)),
@@ -84,7 +88,7 @@ def buscar(
         "relevancia",
         description="relevancia: perfis mais completos primeiro, com rodízio diário; "
                     "nome: ordem alfabética; recentes: quem entrou na Rede há menos tempo. "
-                    "Em qualquer ordem, os favoritos de quem está logado vêm primeiro.",
+                    "Na relevância e no nome, os favoritos de quem está logado vêm primeiro.",
     ),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=30),
@@ -102,7 +106,11 @@ def buscar(
         query = query.filter(or_(_contem(Analista.secretaria, secretaria), _contem(Analista.secretaria_sigla, secretaria)))
 
     if tema:
-        query = query.filter(exists().where(TemaAtuacao.analista_id == Analista.id, _contem(TemaAtuacao.tema, tema)))
+        # tema do catálogo: nome exato (o filtro "Saúde" não traz quem só tem "Saúde mental")
+        query = query.filter(exists().where(
+            TemaAtuacao.analista_id == Analista.id,
+            _sem_acento(func.trim(TemaAtuacao.tema)) == func.f_unaccent(func.lower(tema.strip())),
+        ))
 
     if formacao:
         query = query.filter(exists().where(
@@ -189,7 +197,8 @@ def buscar(
         criterios = (tem_foto, score.desc(), Analista.id)
 
     total = query.count()
-    ordenacao = [favoritos_primeiro] + ([nome_primeiro] if nome_primeiro is not None else []) + list(criterios)
+    # "Chegaram há pouco" é sobre chegada: os favoritos não passam na frente
+    ordenacao = ([] if ordem == "recentes" else [favoritos_primeiro])         + ([nome_primeiro] if nome_primeiro is not None else []) + list(criterios)
     analistas = (
         query
         .order_by(*ordenacao)

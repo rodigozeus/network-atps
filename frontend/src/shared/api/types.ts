@@ -10,10 +10,25 @@ export interface Formacao {
   instituicao: string
 }
 
+/** area = Áreas de política; ferramenta = Ferramentas e métodos */
+export type TipoTema = 'area' | 'ferramenta'
+
 export interface Tema {
   id: number
   tema: string
   em_exercicio_atual: boolean
+  tema_id?: number | null
+  tipo?: TipoTema
+}
+
+/** Tema do catálogo sugerido enquanto a pessoa digita */
+export interface TemaSugestao {
+  id: number
+  nome: string
+  tipo: TipoTema
+  total: number
+  /** sigla ou apelido que casou com o que foi digitado */
+  apelido: string | null
 }
 
 export interface AnalistaOut {
@@ -199,6 +214,7 @@ export interface Lotacao {
 
 /** Item de GET /temas (novo no back-end): tema de atuação e quantas pessoas o citam */
 export interface TemaCatalogo {
+  tipo?: TipoTema
   tema: string
   total: number
 }

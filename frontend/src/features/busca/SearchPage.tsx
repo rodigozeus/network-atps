@@ -7,7 +7,7 @@ import { buscaApi } from '@shared/api/busca'
 import { favoritosApi } from '@shared/api/favoritos'
 import { lotacoesApi } from '@shared/api/lotacoes'
 import { temasApi } from '@shared/api/temas'
-import type { AnalistaPublico, BuscaParams, NivelFormacao, OrdemBusca } from '@shared/api/types'
+import type { AnalistaPublico, BuscaParams, NivelFormacao, OrdemBusca, TemaCatalogo } from '@shared/api/types'
 import { Spinner } from '@shared/components'
 import { useFavoritos } from '@shared/hooks/useFavoritos'
 import { NIVEIS, ORDEM_NIVEIS } from '@shared/utils/analista'
@@ -65,7 +65,7 @@ export default function SearchPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [rede, setRede] = useState<AnalistaPublico[]>([])
   const [ministerios, setMinisterios] = useState<string[]>([])
-  const [temas, setTemas] = useState<string[]>([])
+  const [temas, setTemas] = useState<TemaCatalogo[]>([])
   const [vista, setVista] = useState<Vista>(lerVista)
   const [trocouVista, setTrocouVista] = useState(0)
   const [compacto, setCompacto] = useState(false)
@@ -172,7 +172,7 @@ export default function SearchPage() {
     lotacoesApi.listar('ministerio').then((l) => {
       if (l.length) setMinisterios(l.map((x) => x.nome).sort((a, b) => a.localeCompare(b, 'pt')))
     }).catch(() => {})
-    temasApi.listar().then((t) => setTemas(t.map((x) => x.tema).sort((a, b) => a.localeCompare(b, 'pt')))).catch(() => {})
+    temasApi.listar().then((t) => setTemas([...t].sort((a, b) => a.tema.localeCompare(b.tema, 'pt')))).catch(() => {})
   }, [])
 
   // Favoritos ainda sem endpoint: filtra entre as pessoas já carregadas
@@ -260,8 +260,12 @@ export default function SearchPage() {
                 <select value={filtros.tema} onChange={(e) => mudarFiltro('tema', e.target.value)}
                   aria-label="Filtrar por tema" className={filtros.tema ? styles.ativo : ''}>
                   <option value="">Todos os temas</option>
-                  {temas.map((t) => <option key={t} value={t}>{t}</option>)}
-                  {filtros.tema && !temas.includes(filtros.tema) && <option value={filtros.tema}>{filtros.tema}</option>}
+                  {([['area', 'Áreas de política'], ['ferramenta', 'Ferramentas e métodos']] as const).map(([tipo, rotulo]) => (
+                    <optgroup key={tipo} label={rotulo}>
+                      {temas.filter((t) => (t.tipo ?? 'area') === tipo).map((t) => <option key={t.tema} value={t.tema}>{t.tema}</option>)}
+                    </optgroup>
+                  ))}
+                  {filtros.tema && !temas.some((t) => t.tema === filtros.tema) && <option value={filtros.tema}>{filtros.tema}</option>}
                 </select>
                 <IconChevronDown size={18} aria-hidden />
               </label>
@@ -289,7 +293,7 @@ export default function SearchPage() {
               )}
               <label className={[styles.select, styles.ordem].join(' ')}>
                 <select value={filtros.ordem} onChange={(e) => mudarFiltro('ordem', e.target.value === 'relevancia' ? '' : e.target.value)}
-                  aria-label="Ordenar por" title="Seus favoritos aparecem sempre primeiro">
+                  aria-label="Ordenar por" title={filtros.ordem === 'recentes' ? 'Quem entrou na Rede há menos tempo' : 'Seus favoritos aparecem primeiro'}>
                   {(Object.keys(ORDENS) as OrdemBusca[]).map((o) => <option key={o} value={o}>{ORDENS[o]}</option>)}
                 </select>
                 <IconChevronDown size={18} aria-hidden />

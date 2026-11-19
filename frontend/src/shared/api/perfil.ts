@@ -1,7 +1,7 @@
 import { api } from './client'
 import type {
   AnalistaOut, AnalistaPublico, AnalistaUpdate, Consentimento, DocumentoLegal, Formacao,
-  NivelFormacao, Proximo, RegularizarIn, Tema,
+  NivelFormacao, Proximo, RegularizarIn, Tema, TemaSugestao, TipoTema,
 } from './types'
 
 export interface FormacaoInput {
@@ -10,9 +10,14 @@ export interface FormacaoInput {
   instituicao: string
 }
 
+/** Um tema do catálogo (tema_id) ou um nome digitado. Nome que ainda não existe na Rede só vira
+ *  tema novo com confirmar_novo; sem isso a API responde 409 com os temas parecidos. */
 export interface TemaInput {
-  tema: string
+  tema_id?: number
+  tema?: string
+  tipo: TipoTema
   em_exercicio_atual: boolean
+  confirmar_novo?: boolean
 }
 
 export const perfilApi = {
@@ -23,8 +28,8 @@ export const perfilApi = {
   deleteFormacao: (id: number) => api.delete(`/perfil/formacao/${id}`),
   addTema: (data: TemaInput) => api.post<Tema>('/perfil/tema', data).then((r) => r.data),
   deleteTema: (id: number) => api.delete(`/perfil/tema/${id}`),
-  getTemassugestoes: (q: string) =>
-    api.get<string[]>('/perfil/temas/sugestoes', { params: { q } }).then((r) => r.data),
+  getTemassugestoes: (q: string, tipo?: TipoTema) =>
+    api.get<TemaSugestao[]>('/perfil/temas/sugestoes', { params: { q, tipo } }).then((r) => r.data),
   uploadFoto: (file: File) => {
     const form = new FormData()
     form.append('file', file)

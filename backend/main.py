@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import get_db, settings
-from routers import auth, perfil, busca, admin, documentos, favoritos, rede, unidades
+from routers import auth, perfil, busca, admin, admin_temas, documentos, favoritos, rede, unidades
 
 _docs = settings.enable_docs
 app = FastAPI(
@@ -28,6 +28,7 @@ app.include_router(auth.router)
 app.include_router(perfil.router)
 app.include_router(busca.router)
 app.include_router(admin.router)
+app.include_router(admin_temas.router)
 app.include_router(documentos.router)
 app.include_router(favoritos.router)
 app.include_router(rede.router)

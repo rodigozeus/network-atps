@@ -15,7 +15,7 @@ export const temasApi = {
     } catch (err) {
       if (!semEndpoint(err)) throw err
       const sugestoes = await perfilApi.getTemassugestoes('')
-      return sugestoes.map((tema) => ({ tema, total: 0 }))
+      return sugestoes.map((s) => ({ tema: s.nome, tipo: s.tipo, total: s.total }))
     }
   },
 }

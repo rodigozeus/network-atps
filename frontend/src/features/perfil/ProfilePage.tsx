@@ -46,7 +46,7 @@ type Form = z.infer<typeof schema>
 
 type Aba = 'dados' | 'formacao' | 'privacidade'
 
-const ABAS = [['dados', 'Dados do perfil'], ['formacao', 'Formação e temas'], ['privacidade', 'Privacidade']] as const
+const ABAS = [['dados', 'Dados do perfil'], ['formacao', 'Temas e formação'], ['privacidade', 'Privacidade']] as const
 
 const lotacaoDe = (p: AnalistaOut): LotacaoValor => ({
   ministerio: { nome: p.ministerio ?? '', sigla: p.ministerio_sigla ?? '', novo: false },
@@ -120,8 +120,12 @@ export default function ProfilePage() {
 
       <div id="painel-formacao" role="tabpanel" aria-labelledby="aba-formacao" hidden={aba !== 'formacao'} className={styles.painel}>
         <section className={styles.secao}>
-          <h2>Temas de atuação<small>Ajudam colegas a encontrar você pela busca e pelos filtros. Cada alteração é salva na hora.</small></h2>
-          <EditorTemas temas={perfil.temas} onChange={(temas) => { const p = { ...perfil, temas }; setPerfil(p); atualizarUsuario(p) }} />
+          <h2>Áreas de política<small>Os campos de política pública em que você atua ou já atuou. Comece a digitar e escolha da lista: usar os mesmos temas dos colegas é o que faz a busca funcionar.</small></h2>
+          <EditorTemas tipo="area" temas={perfil.temas} onChange={(temas) => { const p = { ...perfil, temas }; setPerfil(p); atualizarUsuario(p) }} />
+        </section>
+        <section className={styles.secao}>
+          <h2>Ferramentas e métodos<small>Instrumentos, sistemas e técnicas que você domina, como monitoramento e avaliação, TransfereGov ou compras públicas.</small></h2>
+          <EditorTemas tipo="ferramenta" temas={perfil.temas} onChange={(temas) => { const p = { ...perfil, temas }; setPerfil(p); atualizarUsuario(p) }} />
         </section>
         <section className={styles.secao}>
           <h2>Formação acadêmica<small>Cada alteração é salva na hora.</small></h2>

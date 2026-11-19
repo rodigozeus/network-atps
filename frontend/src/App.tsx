@@ -16,6 +16,7 @@ import UsuariosPage from '@features/admin/usuarios/UsuariosPage'
 import StatsPage from '@features/admin/stats/StatsPage'
 import ConflitosPage from '@features/admin/conflitos/ConflitosPage'
 import CoberturaPage from '@features/admin/cobertura/CoberturaPage'
+import TemasPage from '@features/admin/temas/TemasPage'
 import UnidadesPage from '@features/unidades/UnidadesPage'
 import UnidadePage from '@features/unidades/UnidadePage'
 import SobrePage from '@features/sobre/SobrePage'
@@ -62,6 +63,7 @@ export default function App() {
                   <Route path="/admin/stats" element={<StatsPage />} />
                   <Route path="/admin/conflitos" element={<ConflitosPage />} />
                   <Route path="/admin/cobertura" element={<CoberturaPage />} />
+                  <Route path="/admin/temas" element={<TemasPage />} />
                 </Route>
               </Route>
             </Route>
