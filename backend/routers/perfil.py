@@ -496,7 +496,9 @@ def servir_foto(nome_arquivo: str, _: Analista = Depends(get_usuario_regular)):
     nome = os.path.basename(nome_arquivo)
     caminho = f"{UPLOAD_DIR}/{nome}"
     if nome != nome_arquivo or os.path.splitext(nome)[1].lower() not in EXTENSOES_SERVIDAS or not os.path.isfile(caminho):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Foto não encontrada")
+        # sem cache: o Cloudflare guardaria o "não encontrado" de uma versão que ainda vai existir
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Foto não encontrada",
+                            headers={"Cache-Control": "no-store"})
     return FileResponse(
         caminho,
         headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=3600"},
