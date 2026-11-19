@@ -41,8 +41,18 @@ MOTIVOS = {
 
 
 @dataclass
+class Exercicio:
+    """Onde a pessoa está em exercício, segundo o SIAPE. Usado só para preencher a
+    lotação em branco (lotacao_auto.py), com a Autorização de consulta do CPF v2."""
+    orgao_sigla: str | None
+    orgao_nome: str | None
+    unidade: str | None  # nome da UORG, abreviado e truncado pelo SIAPE
+
+
+@dataclass
 class ResultadoVerificacao:
     status: StatusVerificacao
+    exercicio: Exercicio | None = None
 
     @property
     def confirmado(self) -> bool:
@@ -80,6 +90,22 @@ def _registro_e_atps(registro: dict) -> bool:
     return False
 
 
+def _texto(valor) -> str | None:
+    v = str(valor or "").strip()
+    return None if not v or v.lower() == "sem informação" else v
+
+
+def _exercicio(registro: dict) -> Exercicio | None:
+    orgao = (registro.get("servidor") or {}).get("orgaoServidorExercicio") or {}
+    unidade = next(
+        (_texto(f.get("uorgExercicio")) for f in registro.get("fichasCargoEfetivo") or []
+         if isinstance(f, dict) and CARGO_ATPS_PALAVRA_CHAVE in _normalizar(str(f.get("cargo", "")))),
+        None,
+    )
+    ex = Exercicio(_texto(orgao.get("sigla")), _texto(orgao.get("nome")), unidade)
+    return ex if ex.orgao_sigla else None
+
+
 def _nome_oficial(registro: dict) -> str:
     servidor = registro.get("servidor") or {}
     return str((servidor.get("pessoa") or {}).get("nome", ""))
@@ -91,7 +117,8 @@ def consultar_situacao_atps(cpf_limpo: str, nome_informado: str | None) -> Resul
     nome informado confere com o registro (`nome_informado=None` pula essa checagem —
     usado na reverificação periódica, já que o nome pode mudar legitimamente).
 
-    Nada do registro retornado é armazenado. Os logs nunca incluem o CPF nem a URL da
+    Do registro retornado, só o órgão e a unidade de exercício podem ser aproveitados, e
+    apenas para preencher a lotação em branco de quem aceitou a Autorização v2. Os logs nunca incluem o CPF nem a URL da
     consulta (que o contém). Qualquer resultado diferente de `confirmado` deixa o
     cadastro pendente de aprovação manual.
     """
@@ -128,9 +155,12 @@ def consultar_situacao_atps(cpf_limpo: str, nome_informado: str | None) -> Resul
     if not registros_atps:
         return ResultadoVerificacao(StatusVerificacao.nao_encontrado)
 
-    if nome_informado is not None and not any(
-        nomes_conferem(nome_informado, _nome_oficial(r)) for r in registros_atps
-    ):
-        return ResultadoVerificacao(StatusVerificacao.nome_divergente)
+    if nome_informado is not None:
+        registros_atps = [r for r in registros_atps if nomes_conferem(nome_informado, _nome_oficial(r))]
+        if not registros_atps:
+            return ResultadoVerificacao(StatusVerificacao.nome_divergente)
 
-    return ResultadoVerificacao(StatusVerificacao.confirmado)
+    # Mais de um vínculo ATPS ativo com exercícios diferentes: não dá para escolher
+    exercicios = {(e.orgao_sigla, e.unidade): e for e in map(_exercicio, registros_atps) if e}
+    exercicio = next(iter(exercicios.values())) if len(exercicios) == 1 else None
+    return ResultadoVerificacao(StatusVerificacao.confirmado, exercicio)

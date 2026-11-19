@@ -122,6 +122,12 @@ _CONSULTA_CPF_V1 = f"""Autorizo a consulta do meu CPF à base de servidores do P
 
 Estou ciente de que: meu CPF será guardado criptografado para essa finalidade e não será exibido a nenhum usuário; o nome que informei será comparado com o registrado no Portal; e, se o vínculo deixar de ser confirmado, meu perfil será ocultado e, após {PRAZO_CONTESTACAO_DIAS} dias sem contestação, minha conta será excluída."""
 
+_CONSULTA_CPF_V2 = f"""Autorizo a consulta do meu CPF à base de servidores do Portal da Transparência do Governo Federal, no cadastro e periodicamente (a cada {REVERIFICACAO_INTERVALO_DIAS} dias, aproximadamente) enquanto eu mantiver conta na Rede ATPS, para:
+a) confirmar meu vínculo como Analista Técnico(a) de Políticas Sociais, ativo(a) ou aposentado(a); e
+b) quando a lotação do meu perfil estiver em branco, preenchê-la com o órgão e a unidade de exercício registrados no Portal, conferidos com a estrutura organizacional oficial do Governo Federal (SIORG).
+
+Estou ciente de que: meu CPF será guardado criptografado para essas finalidades e não será exibido a nenhum usuário; o nome que informei será comparado com o registrado no Portal; nenhum outro dado do Portal é guardado; a lotação preenchida fica no meu perfil, visível como as demais informações de lotação, e posso alterá-la ou apagá-la a qualquer momento; e, se o vínculo deixar de ser confirmado, meu perfil será ocultado e, após {PRAZO_CONTESTACAO_DIAS} dias sem contestação, minha conta será excluída."""
+
 DOCUMENTOS: dict[str, list[Documento]] = {
     TERMO_CONSENTIMENTO: [
         Documento(
@@ -137,6 +143,10 @@ DOCUMENTOS: dict[str, list[Documento]] = {
         Documento(
             AUTORIZACAO_CONSULTA_CPF, 1, "2026-11-04",
             "Autorização de consulta do CPF ao Portal da Transparência", _CONSULTA_CPF_V1,
+        ),
+        Documento(
+            AUTORIZACAO_CONSULTA_CPF, 2, "2026-11-18",
+            "Autorização de consulta do CPF ao Portal da Transparência", _CONSULTA_CPF_V2,
         ),
     ],
 }

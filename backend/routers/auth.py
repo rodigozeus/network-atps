@@ -22,6 +22,7 @@ from email_utils import (
     enviar_email_alerta_cpf_em_uso,
 )
 from portal_transparencia import MOTIVOS, StatusVerificacao, consultar_situacao_atps
+import lotacao_auto
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -92,6 +93,9 @@ def register(
             status_code=status.HTTP_409_CONFLICT,
             detail="E-mail já cadastrado",
         )
+
+    if resultado.confirmado and lotacao_auto.preencher(db, analista, resultado.exercicio):
+        db.commit()
 
     if analista.ativo:
         background_tasks.add_task(enviar_email_boas_vindas, analista.email_pessoal, analista.nome)

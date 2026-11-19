@@ -205,6 +205,8 @@ class AnalistaOut(AnalistaBase, AnalistaPerfil):
     vinculo_suspenso_em: datetime | None = None
     vinculo_exclusao_em: datetime | None = None
     foto_path: str | None = None
+    # "portal": lotação preenchida automaticamente, ainda não alterada pelo titular
+    lotacao_origem: str | None = None
     criado_em: datetime
     atualizado_em: datetime
     formacoes: list[FormacaoOut] = []

@@ -313,8 +313,14 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
 
       <section className={styles.secao}>
         <h2>Órgão de exercício<small>As siglas aparecem nos cards da busca; os nomes completos, no seu perfil.</small></h2>
+        {perfil.lotacao_origem === 'portal' && (
+          <p className={styles.origemPortal} role="note">
+            Preenchido automaticamente com o seu órgão e a sua unidade de exercício no Portal da Transparência,
+            conferidos com a estrutura oficial do Governo Federal. Confira e ajuste se precisar.
+          </p>
+        )}
         <CamposLotacao valor={lotacao} erros={errosLotacao} onChange={(v) => { setLotacao(v); setErrosLotacao({}) }} />
-        <p className={styles.ajuda}>Não encontrou o seu na lista? Escolha a opção “+ Adicionar” no fim dela.</p>
+        <p className={styles.ajuda}>As listas seguem a estrutura oficial do Governo Federal (SIORG). Não encontrou o seu? Escolha a opção “+ Adicionar” no fim dela.</p>
       </section>
 
       <section className={styles.secao}>

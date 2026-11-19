@@ -32,7 +32,8 @@ interface Props {
 }
 
 /**
- * Órgão de exercício: um select por nível, cada um filtrado pelo nível acima (GET /lotacoes).
+ * Órgão de exercício: um select por nível, cada um filtrado pelo nível acima (GET /lotacoes,
+ * com a estrutura oficial do SIORG).
  * "+ Adicionar" abre um campo para um nome novo. Sem o endpoint, cada nível vira texto livre.
  */
 export default function CamposLotacao({ valor, onChange, erros }: Props) {
@@ -51,7 +52,7 @@ export default function CamposLotacao({ valor, onChange, erros }: Props) {
         return
       }
       const filtro: FiltroLotacao = Object.fromEntries(acima.map((x) => [x.id, valor[x.id].nome]))
-      lotacoesApi.listar(n.id, filtro).then((l) => {
+      lotacoesApi.listar(n.id, filtro, true).then((l) => {
         if (!vivo) return
         if (i === 0 && !l.length) setSemLista(true)
         setOpcoes((o) => ({ ...o, [n.id]: l }))

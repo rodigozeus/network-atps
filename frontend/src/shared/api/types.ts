@@ -17,6 +17,8 @@ export interface Tema {
 }
 
 export interface AnalistaOut {
+  /** 'portal' quando a lotação foi preenchida automaticamente e ainda não foi alterada */
+  lotacao_origem?: 'portal' | null
   id: number
   nome: string
   email_pessoal: string

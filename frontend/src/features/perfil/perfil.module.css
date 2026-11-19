@@ -1095,3 +1095,15 @@
   font-size: 12px;
 }
 
+
+/* Lotação preenchida a partir do Portal da Transparência */
+.origemPortal {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #eef5fc;
+  border: 1.5px solid #c9dcf1;
+  color: #0d2a5c;
+  font-size: 14px;
+  line-height: 1.5;
+}

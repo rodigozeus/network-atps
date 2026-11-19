@@ -6,7 +6,8 @@
 1. Reverificação periódica do vínculo no Portal da Transparência.
 2. Exclusão de contas com vínculo suspenso cujo prazo de contestação venceu.
 3. Aviso por e-mail quando há nova versão de documento obrigatório.
-4. Limpeza das novidades de perfil mais antigas que a retenção (novidades.RETENCAO_DIAS).
+4. Cópia da estrutura organizacional oficial (SIORG), usada nas listas de lotação.
+5. Limpeza das novidades de perfil mais antigas que a retenção (novidades.RETENCAO_DIAS).
 
 Os logs nunca incluem CPF, nome ou e-mail — só contagens e ids internos.
 """
@@ -30,6 +31,8 @@ from email_utils import (
 )
 from models import Analista
 from novidades import RETENCAO_DIAS, apagar_antigas
+import lotacao_auto
+import siorg
 from portal_transparencia import MOTIVOS, StatusVerificacao, consultar_situacao_atps
 from routers.perfil import remover_foto
 
@@ -67,6 +70,7 @@ def reverificar_vinculos(db: Session, agora: datetime) -> None:
         time.sleep(PAUSA_ENTRE_CONSULTAS_S)
 
         if resultado.confirmado:
+            lotacao_auto.preencher(db, conta, resultado.exercicio)
             conta.cpf_verificado_em = agora
             conta.vinculo_manual = False
             conta.vinculo_suspenso_em = None
@@ -134,13 +138,17 @@ def avisar_novos_termos(db: Session, agora: datetime) -> None:
     logger.info("Aviso de novos termos: %d e-mails enviados", avisadas)
 
 
+def sincronizar_siorg(db: Session, agora: datetime) -> None:
+    logger.info("SIORG: %d unidades sincronizadas", siorg.sincronizar(db))
+
+
 def limpar_novidades(db: Session, agora: datetime) -> None:
     logger.info("Novidades com mais de %d dias apagadas: %d", RETENCAO_DIAS, apagar_antigas(db, agora))
 
 
 def executar() -> None:
     agora = datetime.now(timezone.utc)
-    for tarefa in (reverificar_vinculos, excluir_suspensos_vencidos, avisar_novos_termos, limpar_novidades):
+    for tarefa in (sincronizar_siorg, reverificar_vinculos, excluir_suspensos_vencidos, avisar_novos_termos, limpar_novidades):
         db = SessionLocal()
         try:
             tarefa(db, agora)

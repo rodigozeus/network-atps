@@ -73,6 +73,9 @@ class Analista(Base):
     departamento_sigla: Mapped[str | None] = mapped_column(String(30), nullable=True)
     coordenacao_geral: Mapped[str | None] = mapped_column(String(200), nullable=True)
     coordenacao: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # "portal" quando a lotação foi preenchida automaticamente com o órgão e a unidade de
+    # exercício do Portal da Transparência; volta a None quando o titular a altera.
+    lotacao_origem: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # Complementar
     cargo_fce: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -220,6 +223,20 @@ class EventoPerfil(Base):
     ref_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     descricao: Mapped[str] = mapped_column(String(500), nullable=False)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc, index=True)
+
+
+class UnidadeSiorg(Base):
+    """Estrutura organizacional oficial do Poder Executivo federal (SIORG), copiada pela
+    tarefa diária (siorg.py). Profundidade 0 = órgão (ministério); 1 a 4 correspondem a
+    secretaria, departamento, coordenação-geral e coordenação nos campos do perfil."""
+    __tablename__ = "unidades_siorg"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)  # código SIORG
+    pai_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    orgao_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    nome: Mapped[str] = mapped_column(String(400), nullable=False)
+    sigla: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    profundidade: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class TemaAtuacao(Base):

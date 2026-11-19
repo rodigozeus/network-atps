@@ -10,7 +10,8 @@ from sqlalchemy import func, null, select
 from sqlalchemy.orm import Session
 from database import get_db
 from models import (
-    AcaoConsentimento, Analista, ConflitoCadastro, Formacao, TemaAtuacao, condicao_perfil_visivel,
+    AcaoConsentimento, Analista, ConflitoCadastro, Formacao, TemaAtuacao, UnidadeSiorg,
+    condicao_perfil_visivel,
 )
 from schemas import (
     AnalistaOut, AnalistaUpdate, AnalistaPublico,
@@ -22,6 +23,7 @@ from schemas import (
     TemaBase, TemaCatalogoOut, TemaOut,
 )
 from auth import get_current_user, get_usuario_regular, verify_password
+import lotacao_auto
 import novidades
 from consentimentos import (
     EXIBIR_CELULAR, EXIBIR_EMAIL_PESSOAL, EXIBIR_PERFIL,
@@ -104,6 +106,8 @@ def update_meu_perfil(
                 acao = AcaoConsentimento.aceito if value == valor_exibir else AcaoConsentimento.revogado
                 registrar(analista, tipo, acao, request)
         setattr(analista, field, value)
+    if novidades.foto_lotacao(analista) != lotacao_antes:
+        analista.lotacao_origem = None
     novidades.registrar_lotacao(db, analista, lotacao_antes)
     db.commit()
     db.refresh(analista)
@@ -121,6 +125,7 @@ def regularizar(
     """Atualização cadastral exigida no login: informar o CPF (contas anteriores à
     criptografia do CPF) e/ou aceitar a versão atual dos documentos obrigatórios."""
     pendencias = analista.pendencias
+    resultado = None
 
     if "termos" in pendencias:
         if not (body.aceite_termos and body.aceite_consulta_cpf):
@@ -171,6 +176,14 @@ def regularizar(
 
     if "termos" in pendencias:
         registrar_aceite_obrigatorios(analista, request)
+
+    # Lotação em branco e Autorização v2 aceita: preenche com o exercício do Portal.
+    # Quem já tinha CPF guardado e só aceitou os termos agora ganha uma consulta para isso.
+    if lotacao_auto.pode_preencher(analista):
+        if resultado is None and analista.cpf_cifrado:
+            resultado = consultar_situacao_atps(decifrar_cpf(analista.cpf_cifrado), None)
+        if resultado is not None and resultado.confirmado:
+            lotacao_auto.preencher(db, analista, resultado.exercicio)
 
     db.commit()
     db.refresh(analista)
@@ -380,11 +393,15 @@ def listar_lotacoes(
     secretaria: str | None = None,
     departamento: str | None = None,
     coordenacao_geral: str | None = None,
+    oficial: bool = False,
     db: Session = Depends(get_db),
     _: Analista = Depends(get_usuario_regular),
 ):
-    """Lotações já cadastradas nos perfis visíveis, para as listas encadeadas da edição
-    e o filtro da busca. Cada nível é filtrado pelos nomes completos dos níveis acima."""
+    """Lotações de um nível, filtradas pelos nomes completos dos níveis acima.
+
+    oficial=false (filtro da busca): só o que já está nos perfis visíveis.
+    oficial=true (edição do perfil): a estrutura oficial do SIORG naquele ponto da árvore,
+    mais o que já foi digitado nos perfis e não existe no SIORG. `total` = perfis visíveis."""
     col_nome, col_sigla = NIVEIS_LOTACAO[nivel]
     # Sigla mais alta em ordem alfabética quando o mesmo nome tem siglas diferentes
     sigla = func.max(col_sigla) if col_sigla is not None else null()
@@ -399,10 +416,42 @@ def listar_lotacoes(
         "departamento": departamento, "coordenacao_geral": coordenacao_geral,
     }
     ordem = list(NIVEIS_LOTACAO)
-    for acima in ordem[: ordem.index(nivel)]:
-        if filtros[acima]:
-            stmt = stmt.where(NIVEIS_LOTACAO[acima][0] == filtros[acima])
-    return [LotacaoOut(nome=n, sigla=s, total=t) for n, s, t in db.execute(stmt)]
+    acima = ordem[: ordem.index(nivel)]
+    for n in acima:
+        if filtros[n]:
+            stmt = stmt.where(NIVEIS_LOTACAO[n][0] == filtros[n])
+    dos_perfis = [LotacaoOut(nome=n, sigla=s, total=t) for n, s, t in db.execute(stmt)]
+    if not oficial:
+        return dos_perfis
+
+    oficiais = _unidades_siorg(db, [filtros[n] for n in acima])
+    if oficiais is None:  # SIORG ainda não sincronizado ou caminho fora da estrutura oficial
+        return dos_perfis
+    totais = {l.nome: l.total for l in dos_perfis}
+    resultado = {u.nome: LotacaoOut(nome=u.nome, sigla=u.sigla if col_sigla is not None else None,
+                                    total=totais.get(u.nome, 0)) for u in oficiais}
+    for l in dos_perfis:
+        resultado.setdefault(l.nome, l)
+    return sorted(resultado.values(), key=lambda l: l.nome.casefold())
+
+
+def _unidades_siorg(db: Session, caminho: list[str | None]) -> list[UnidadeSiorg] | None:
+    """Filhas, no SIORG, da unidade apontada pelo caminho de nomes acima (vazio = órgãos)."""
+    if not caminho:
+        unidades = db.scalars(select(UnidadeSiorg).where(UnidadeSiorg.profundidade == 0)).all()
+        return list(unidades) or None
+    pai_id = None
+    for profundidade, nome in enumerate(caminho):
+        if not nome:
+            return None
+        cond = [UnidadeSiorg.profundidade == profundidade, UnidadeSiorg.nome == nome]
+        if pai_id is not None:
+            cond.append(UnidadeSiorg.pai_id == pai_id)
+        achadas = db.scalars(select(UnidadeSiorg).where(*cond)).all()
+        if len(achadas) != 1:
+            return None
+        pai_id = achadas[0].id
+    return list(db.scalars(select(UnidadeSiorg).where(UnidadeSiorg.pai_id == pai_id)))
 
 
 @router.get("/temas", response_model=list[TemaCatalogoOut])
