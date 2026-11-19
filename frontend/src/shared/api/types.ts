@@ -269,22 +269,7 @@ export interface ResumoPublico {
   orgaos: number | null
 }
 
-/** Topo da busca: quem está logado no centro e as pessoas mais próximas ao redor */
-export interface NoRede {
-  analista: AnalistaPublico
-  relacao: 'unidade' | 'tema' | 'favorito' | 'rede'
-  motivo: string | null
-  /** 0 a 1: quanto maior, mais perto do centro */
-  proximidade: number
-}
-
-export interface MinhaRede {
-  eu: AnalistaPublico
-  pessoas: NoRede[]
-  ligacoes: Array<{ a: number; b: number; tipo: 'unidade' | 'tema'; rotulo: string }>
-}
-
-/** Página "Minha rede": anéis de proximidade em volta de quem está logado */
+/** Página "Minha rede": grupos de proximidade com quem está logado */
 export interface AnelRede {
   chave: 'coordenacao' | 'coordenacao_geral' | 'departamento' | 'secretaria' | 'ministerio' | 'temas' | 'favoritos'
   titulo: string
@@ -296,7 +281,5 @@ export interface AnelRede {
 export interface MinhaRedePagina {
   eu: AnalistaPublico
   aneis: AnelRede[]
-  vazios: Array<{ nivel: string; titulo: string; nome: string }>
-  temas: Array<{ tema: string; total: number }>
   recentes: AnalistaPublico[]
 }

@@ -251,3 +251,8 @@
     gap: 28px;
   }
 }
+
+/* "Quem está aqui" logo depois do cabeçalho, antes das competências e subunidades */
+.pessoasTopo {
+  margin-top: 28px;
+}

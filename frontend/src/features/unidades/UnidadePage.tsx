@@ -17,6 +17,7 @@ const NIVEL: Record<string, string> = {
   coordenacao_geral: 'Coordenação-Geral', coordenacao: 'Coordenação',
 }
 const COMPETENCIA_CURTA = 520
+const SUBUNIDADES_INICIO = 8 // as com mais gente da Rede vêm primeiro
 
 /** Página de uma unidade da estrutura oficial (SIORG): o que faz, contato e quem está ali. */
 export default function UnidadePage() {
@@ -24,12 +25,14 @@ export default function UnidadePage() {
   const [u, setU] = useState<Unidade | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [tudo, setTudo] = useState(false)
+  const [todasSub, setTodasSub] = useState(false)
 
   useEffect(() => {
     if (!id) return
     let vivo = true
     setCarregando(true)
     setTudo(false)
+    setTodasSub(false)
     unidadesApi.ver(id)
       .then((d) => vivo && setU(d))
       .catch(() => vivo && setU(null))
@@ -102,6 +105,16 @@ export default function UnidadePage() {
             </p>
           </header>
 
+          {u.membros.length > 0 && (
+            <section className={[styles.pessoas, styles.pessoasTopo].join(' ')} aria-labelledby="titulo-pessoas">
+              <h2 id="titulo-pessoas"><IconUsers size={16} aria-hidden />Quem está aqui</h2>
+              <div className={busca.linhas}>{u.membros.map((a) => <AnalistaLinha key={a.id} a={a} />)}</div>
+              {u.membros_total > u.membros.length && (
+                <p className={styles.fonte}>Mostrando {u.membros.length} de {u.membros_total}. Use a busca para filtrar.</p>
+              )}
+            </section>
+          )}
+
           <div className={styles.colunas}>
             <div>
               {competencia && (
@@ -154,7 +167,7 @@ export default function UnidadePage() {
                 <section className={styles.bloco}>
                   <h2><IconChevronRight size={16} aria-hidden />Unidades</h2>
                   <ul className={styles.subunidades}>
-                    {u.subunidades.map((s) => (
+                    {(todasSub ? u.subunidades : u.subunidades.slice(0, SUBUNIDADES_INICIO)).map((s) => (
                       <li key={s.id}>
                         <Link to={`/unidades/${s.id}`}>
                           <span><b>{s.sigla ?? s.nome}</b>{s.sigla && <small>{s.nome}</small>}</span>
@@ -163,20 +176,16 @@ export default function UnidadePage() {
                       </li>
                     ))}
                   </ul>
+                  {u.subunidades.length > SUBUNIDADES_INICIO && (
+                    <button type="button" className={styles.verMais} onClick={() => setTodasSub((v) => !v)} aria-expanded={todasSub}>
+                      {todasSub ? 'Mostrar menos' : `Ver todas (${u.subunidades.length})`}
+                    </button>
+                  )}
                 </section>
               )}
             </aside>
           </div>
 
-          {u.membros.length > 0 && (
-            <section className={styles.pessoas} aria-labelledby="titulo-pessoas">
-              <h2 id="titulo-pessoas"><IconUsers size={16} aria-hidden />Quem está aqui</h2>
-              <div className={busca.linhas}>{u.membros.map((a) => <AnalistaLinha key={a.id} a={a} />)}</div>
-              {u.membros_total > u.membros.length && (
-                <p className={styles.fonte}>Mostrando {u.membros.length} de {u.membros_total}. Use a busca para filtrar.</p>
-              )}
-            </section>
-          )}
         </article>
       </div>
     </>

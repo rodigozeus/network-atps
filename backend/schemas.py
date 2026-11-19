@@ -577,30 +577,7 @@ class NovidadesRedeOut(BaseModel):
     chegaram_turma: list[AnalistaPublico]
 
 
-# --- Minha rede (topo da busca) ---
-
-class NoRede(BaseModel):
-    analista: AnalistaPublico
-    # unidade: lotação em comum | tema: tema em comum | favorito | rede: só completa a rede
-    relacao: str
-    motivo: str | None
-    proximidade: float  # 0 a 1: quanto mais perto do centro
-
-
-class LigacaoRede(BaseModel):
-    a: int
-    b: int
-    tipo: str  # unidade | tema
-    rotulo: str
-
-
-class MinhaRedeOut(BaseModel):
-    eu: AnalistaPublico
-    pessoas: list[NoRede]
-    ligacoes: list[LigacaoRede]
-
-
-# --- Página "Minha rede" (órbitas) ---
+# --- Página "Minha rede" ---
 
 class PessoaOrbita(BaseModel):
     analista: AnalistaPublico
@@ -617,20 +594,7 @@ class AnelOut(BaseModel):
     pessoas: list[PessoaOrbita]
 
 
-class LugarVazio(BaseModel):
-    nivel: str
-    titulo: str  # "sua coordenação-geral"
-    nome: str
-
-
-class MeuTemaOut(BaseModel):
-    tema: str
-    total: int  # pessoas na Rede (fora você) com esse tema
-
-
 class MinhaRedePaginaOut(BaseModel):
     eu: AnalistaPublico
     aneis: list[AnelOut]
-    vazios: list[LugarVazio]
-    temas: list[MeuTemaOut]
     recentes: list[AnalistaPublico]

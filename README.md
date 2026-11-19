@@ -6,36 +6,45 @@ Plataforma de networking profissional para Analistas Técnicos/as de Políticas 
 
 ## O que é
 
-A Rede ATPS é uma plataforma web onde cada analista cria e mantém seu perfil profissional e pode encontrar colegas por ministério, área de atuação, formação acadêmica ou tema de política pública. Baseada na proposta da **Rede ATPS** idealizada pela Andeps em 2018, desenvolvida voluntariamente por um ATPS da carreira.
+A Rede ATPS é uma plataforma web onde cada analista cria e mantém seu perfil profissional e pode encontrar colegas por órgão, unidade, tema de atuação, formação ou cargo. Baseada na proposta da **Rede ATPS** idealizada pela Andeps em 2018, desenvolvida voluntariamente por um ATPS da carreira. Visual da Invicta Comunicação.
+
+Sem feed e sem algoritmo de engajamento: cada pessoa vê quem procurou ou escolheu acompanhar.
 
 ---
 
 ## Funcionalidades
 
-### Implementadas
+### Cadastro e verificação
 
-- **Autenticação** — registro e login por e-mail pessoal (privado por padrão, compartilhado só com consentimento explícito); JWT com refresh token; rotas protegidas; após login redireciona direto para a busca
-- **Redefinição de senha por e-mail** — fluxo "esqueci minha senha" com token de uso único (válido por 1h, hash `sha256` no banco); envio por SMTP configurável, com fallback para log no console em dev quando o SMTP não está configurado
-- **Bloqueio por tentativas de login** — 5 tentativas incorretas bloqueiam a conta por 15 minutos
-- **Validação de cadastro por CPF (Portal da Transparência)** — no registro, o CPF é consultado na API de Dados do Portal da Transparência: o campo de cargo precisa indicar ATPS (ativo ou aposentado) e o nome informado precisa conferir com o do Portal; confirmado → conta ativada na hora; não confirmado (ou API indisponível) → conta fica `pendente_revisao`, com o motivo informado ao usuário, até um admin aprovar manualmente. CPF já cadastrado → a conta não é criada, o titular é alertado por e-mail e a tentativa vai para "Conflitos de CPF" no admin
-- **Reverificação periódica do vínculo** — o serviço `atps-tarefas` (`backend/tarefas.py`) reconsulta o CPF a cada 180 dias; se o vínculo não for confirmado, o perfil é ocultado, o usuário é avisado por e-mail e a conta é excluída após 30 dias sem contestação. Contas aprovadas manualmente por admin só geram alerta
-- **Consentimento versionado** — Termo de Consentimento e Autorização de consulta do CPF ficam em `backend/documentos_legais.py`, com versão e hash do texto; cada aceite/revogação (inclusive exibição de perfil, e-mail e celular) é registrado em `consentimentos` com data, IP e navegador. Nova versão → reaceite obrigatório no próximo acesso + aviso por e-mail. Seção "Privacidade" no perfil mostra as autorizações e permite ocultar o perfil sem excluir a conta
-- **Perfil completo** — ministério → secretaria → departamento → CG → coordenação (com siglas), contatos, controle de visibilidade (celular e e-mail pessoal), cargo FCE, portal URL, turma (2012, 2016, CPNU 2024), foto de perfil
-- **Formação acadêmica** — múltiplos registros por nível (graduação, especialização, mestrado, doutorado)
-- **Temas de atuação** — lista dinâmica com flag de exercício atual (habilita busca por histórico)
-- **Busca multi-critério** — palavra-chave geral, filtros por ministério, secretaria, tema e formação, combinados livremente; sincronizado com URL (compartilhável); scroll infinito no frontend (carrega a próxima página automaticamente ao aproximar do fim da lista)
-- **Ordenação ponderada** — sem filtros ativos, perfis aparecem em ordem aleatória ponderada pela completude: cada campo preenchido (13 itens únicos — contatos, lotação, cargo, foto, formação, temas) aumenta o peso no sorteio; todos têm chance de aparecer no topo, mas perfis mais completos têm até 14× mais probabilidade; perfis sem foto são sempre exibidos ao final da lista
-- **Painel administrativo Andeps** — gestão de usuários (busca, filtro por status/pendência, edição, ativação/desativação/reativação, exclusão permanente), estatísticas da carreira (por ministério, formação e tema, com gráficos), exportação CSV completa; roles: `admin` (acesso total) e `andeps` (sem edição de perfil, sem exclusão)
-- **Exclusão de conta pelo próprio usuário** — apaga permanentemente todos os dados pessoais (perfil, formações, temas, foto), conforme LGPD
-- **Layout responsivo** — experiência otimizada para mobile: header compacto, sidebar de filtros colapsável, cards em coluna única em telas pequenas, padding adaptado em todos os formulários
-- **Consentimento LGPD** — ativação de visibilidade de celular/e-mail pessoal exige confirmação explícita; celular exibido como link direto para o WhatsApp com mensagem pré-preenchida
-- **CI/CD automático** — push em `main` → build → migrations Alembic → deploy no damaceno com smoke test
+- **Verificação do vínculo pelo CPF** — no cadastro, o CPF é consultado na API de Dados do Portal da Transparência: o cargo precisa indicar ATPS (ativo ou aposentado) e o nome informado precisa conferir com o do Portal. Confirmado → conta ativa na hora; não confirmado → conta `pendente_revisao` até um admin aprovar. CPF já cadastrado → a conta não é criada, o titular é avisado por e-mail e a tentativa vai para "Conflitos de CPF" no admin
+- **Reserva quando o Portal cai** — se a API não responder, o vínculo é confirmado pela cópia local dos dados abertos do Portal (`base_atps`, ver [Operação](#operação)), pelos 6 dígitos do CPF que o Portal divulga e pelo nome. A cópia só confirma, nunca recusa (é mensal e não tem aposentados)
+- **Cadastro pré-pronto** — com a Autorização de consulta do CPF aceita, campos em branco são preenchidos com dados do Portal: lotação (órgão e unidade de exercício, conferidos com o SIORG), cargo/função comissionada ("Coordenador(a)-Geral · FCE 1.13") e turma (pelo ano de ingresso no serviço público). Tudo marcado como "preenchido automaticamente — confira" e editável
+- **Reverificação periódica** — o serviço `atps-tarefas` reconsulta o CPF a cada 180 dias; vínculo não confirmado → perfil oculto, aviso por e-mail e exclusão após 30 dias sem contestação. Contas aprovadas manualmente só geram alerta ao admin
+- **Consentimento versionado** — Termo de Consentimento e Autorização de consulta do CPF em `backend/documentos_legais.py`, com versão e hash do texto; cada aceite/revogação vai para `consentimentos` (data, IP, navegador). Nova versão → reaceite obrigatório no próximo acesso
 
-### Previstas (próximas fases)
+### Perfil
 
-- Notificação de perfil desatualizado
-- Exportação do perfil em PDF
-- Autenticação google.com
+- **Lotação oficial** — ministério → secretaria → departamento → coordenação-geral → coordenação, em listas encadeadas com nomes e siglas oficiais do **SIORG**; o perfil guarda o código SIORG da unidade (`lotacao_siorg_id`), então renomeações oficiais chegam sozinhas aos perfis. Ainda dá para digitar uma unidade fora da lista
+- **Perfil sempre atualizado** — a cada 30 dias o exercício e a função no Portal são conferidos; se mudaram, o titular recebe a sugestão "Atualizar meu perfil / Não, está certo". Nada muda sem o "sim", e uma sugestão descartada não volta
+- **Em que posso ajudar** — texto livre (até 600 caracteres) no perfil, que também entra na busca
+- **Formação, temas, contatos e links** — formação por nível (graduação a pós-doutorado), temas de atuação (atual ou anterior), contatos com controle de visibilidade, links do SouGov.br, Lattes e LinkedIn (só aceitos desses domínios), foto
+- **Privacidade** — aba própria: ocultar o perfil sem excluir a conta, histórico das autorizações, exclusão definitiva da conta
+
+### Encontrar pessoas
+
+- **Busca** — várias palavras (cada uma precisa aparecer em algum campo: nome, lotação, cargo, "em que posso ajudar", temas, formação), sem diferenciar acentos e maiúsculas, tolerante a erros de digitação leves (PostgreSQL `unaccent` + `pg_trgm`); filtros por órgão, tema, nível de formação e favoritos, sincronizados com a URL
+- **Ordenação** — escolhida por quem busca: perfis mais completos (rodízio diário estável entre páginas), nome ou chegada recente. Os favoritos vêm sempre primeiro
+- **Favoritos e novidades** — favoritar é privado; quando um favorito muda de lotação, entra num tema atual ou registra formação nova, aparece o selo "Novidade" (retenção de 90 dias)
+- **Novidades da rede** — no alto da busca: quem chegou à sua secretaria e à sua turma desde a última visita
+- **Pessoas próximas** — no perfil, quem está mais perto na lotação (mesma coordenação > CG > departamento > secretaria > ministério), com temas em comum desempatando
+- **Órgãos e unidades** — página de cada órgão e unidade do SIORG: competências oficiais, contato institucional, endereço, subunidades, quem da Rede está lá e os temas dessas pessoas
+
+### Administração e público
+
+- **Painel administrativo** — usuários (busca, filtros, edição, ativação, exclusão), estatísticas, conflitos de CPF, exportação CSV; roles `admin` e `andeps`
+- **Cobertura** — ATPS na Rede × ATPS ativos de cada órgão (pela cópia local do Portal) e cadastros por dia
+- **Página pública `/sobre`** — apresentação da Rede, sem nenhum perfil; números agregados só a partir de 30 perfis. Link na tela de login
+- **Limite de e-mails** — 100 por hora e 300 por dia; acima disso só saem os essenciais (recuperação de senha, ativação de conta, avisos de segurança e de vínculo)
 
 ---
 
@@ -43,14 +52,15 @@ A Rede ATPS é uma plataforma web onde cada analista cria e mantém seu perfil p
 
 | Camada | Tecnologia |
 |---|---|
-| Frontend | React 18 + Vite + TypeScript |
+| Frontend | React 18 + Vite + TypeScript, CSS Modules, Manrope, Tabler Icons |
 | Backend | FastAPI (Python 3.12) |
-| Banco | PostgreSQL 16 |
-| ORM | SQLAlchemy + Alembic |
+| Banco | PostgreSQL 16 (+ extensões `unaccent` e `pg_trgm`) |
+| ORM | SQLAlchemy 2 + Alembic |
 | Servidor web | nginx |
 | Containers | Docker + docker-compose |
 | CI/CD | GitHub Actions (self-hosted runner) |
 | Acesso público | Cloudflare Tunnel → `redeatps.org` |
+| Dados externos | API do Portal da Transparência, dados abertos do SIAPE, SIORG |
 
 ---
 
@@ -58,17 +68,20 @@ A Rede ATPS é uma plataforma web onde cada analista cria e mantém seu perfil p
 
 ```
 GitHub (push em main)
-  └── GitHub Actions — runner damaceno-atps
-        └── docker compose -f docker-compose.prod.yml up --build
-              ├── atps-frontend  (nginx + React build)  → 127.0.0.1:8512
-              │     Cloudflare Tunnel → redeatps.org
-              └── atps-api       (FastAPI)
-                    └── db-network → postgres:5432/atps_db
+  └── GitHub Actions — runner no servidor damaceno
+        ├── escreve .env a partir do secret ENV_PROD (+ CPF_ENCRYPTION_KEY guardada no servidor)
+        └── docker compose -f docker-compose.prod.yml up --build  →  alembic upgrade head
+              ├── atps-frontend  (nginx + build React)  → 127.0.0.1:8512 → Cloudflare Tunnel → redeatps.org
+              ├── atps-api       (FastAPI)  ── Portal da Transparência (API), SIORG (detalhe de unidades)
+              ├── atps-tarefas   (tarefas.py --loop, uma vez por dia)
+              └── db-network → postgres:5432/atps_db
 ```
+
+Tarefas diárias (`backend/tarefas.py`): sincronizar o SIORG e propagar renomeações aos perfis, reverificar vínculos, conferir perfis no Portal (sugestões de atualização), excluir contas com vínculo vencido, avisar novos termos e apagar novidades antigas.
 
 ### Frontend: MFE-ready
 
-Cada domínio isolado em `src/features/<domínio>/` com componentes, hooks e chamadas de API próprios. Permite extrair para Module Federation no futuro sem reescrever o código.
+Cada domínio isolado em `src/features/<domínio>/` com componentes e chamadas de API próprios. Permite extrair para Module Federation no futuro sem reescrever o código.
 
 ---
 
@@ -79,35 +92,41 @@ network-atps/
 ├── frontend/
 │   ├── src/
 │   │   ├── features/
-│   │   │   ├── auth/       # Login, registro, esqueci/redefinir senha
-│   │   │   ├── perfil/     # Criação e edição de perfil
-│   │   │   ├── busca/      # Busca e descoberta (scroll infinito)
-│   │   │   └── admin/      # Painel Andeps (usuários, stats, exportação)
-│   │   ├── shared/
-│   │   │   ├── components/ # Button, Input, Card, Tag, Badge, Spinner, Layout
-│   │   │   ├── hooks/      # useAuth, useApi
-│   │   │   └── api/        # cliente axios + tipos TypeScript
-│   │   ├── index.css       # Design tokens globais (cores, tipografia, espaçamento)
+│   │   │   ├── auth/       # Login, cadastro, regularização, senha, documentos legais
+│   │   │   ├── perfil/     # Edição (dados, formação/temas, privacidade) e perfil público
+│   │   │   ├── busca/      # Busca, cards, favoritos, novidades da rede
+│   │   │   ├── unidades/   # Órgãos e unidades (SIORG)
+│   │   │   ├── sobre/      # Página pública
+│   │   │   └── admin/      # Usuários, estatísticas, cobertura, conflitos
+│   │   ├── shared/         # componentes, hooks (useAuth, useFavoritos), api/ e utils/
+│   │   ├── index.css       # Tokens globais
 │   │   └── App.tsx
+│   ├── mock-api/           # API simulada da Invicta (npm run mock)
 │   ├── Dockerfile
-│   ├── nginx.conf
-│   └── vite.config.ts
+│   └── nginx.conf
 │
 ├── backend/
 │   ├── routers/
-│   │   ├── auth.py         # Registro, login, refresh, esqueci/redefinir senha, JWT
-│   │   ├── perfil.py       # CRUD completo + foto upload
-│   │   ├── busca.py        # Busca multi-critério paginada
-│   │   └── admin.py        # Usuários, stats, exportação CSV
-│   ├── auth.py              # Hash de senha, tokens JWT, dependências de autenticação
-│   ├── email_utils.py       # Envio de e-mail de redefinição de senha (SMTP)
-│   ├── cpf_utils.py         # Validação, hash (HMAC-SHA256) e criptografia (Fernet) do CPF
-│   ├── portal_transparencia.py  # Consulta à API de Dados para confirmar vínculo ATPS
-│   ├── models.py
-│   ├── schemas.py
-│   ├── database.py
-│   ├── alembic/
-│   └── Dockerfile
+│   │   ├── auth.py         # Cadastro, login, sessão, senha
+│   │   ├── perfil.py       # Perfil, regularização, sugestões, lotações, temas, pessoas próximas, foto
+│   │   ├── busca.py        # Busca
+│   │   ├── favoritos.py    # Favoritos e novidades dos favoritos
+│   │   ├── unidades.py     # Páginas de órgãos e unidades
+│   │   ├── rede.py         # Novidades da rede e números públicos
+│   │   ├── documentos.py   # Documentos legais vigentes
+│   │   └── admin.py        # Usuários, estatísticas, cobertura, exportação
+│   ├── portal_transparencia.py  # Consulta de vínculo, exercício e função na API do Portal
+│   ├── base_local.py        # Cópia local dos dados abertos (reserva + universo); extrair/importar
+│   ├── siorg.py             # Cópia da estrutura oficial e detalhe das unidades
+│   ├── lotacao_auto.py      # Casamento SIAPE ↔ SIORG e preenchimento automático
+│   ├── lotacao_siorg.py     # Código SIORG no perfil e propagação de renomeações
+│   ├── atualizacao.py       # Perfil sempre atualizado (sugestões)
+│   ├── novidades.py         # Novidades dos favoritos
+│   ├── documentos_legais.py # Termo e Autorização, versionados
+│   ├── consentimentos.py, cpf_utils.py, email_utils.py, auth.py
+│   ├── tarefas.py           # Serviço atps-tarefas
+│   ├── models.py, schemas.py, database.py
+│   └── alembic/
 │
 ├── docker-compose.yml          # Desenvolvimento local
 ├── docker-compose.prod.yml     # Produção
@@ -116,27 +135,11 @@ network-atps/
 
 ---
 
-## Design e responsividade
+## Navegação
 
-O frontend usa **CSS Modules** com design tokens centralizados em `index.css` (paleta Andeps, tipografia Poppins, escala de espaçamento e sombras).
-
-### Breakpoints
-
-| Breakpoint | Comportamento |
-|---|---|
-| > 768px | Layout padrão desktop: sidebar de filtros visível, grid de cards multi-coluna |
-| ≤ 768px | Sidebar colapsável (botão "Filtros" na barra de busca); grid se adapta |
-| ≤ 640px | Header compacto: subtítulo e nome do usuário ocultos, botões menores, padding reduzido |
-| ≤ 600px | Perfil: header empilhado, formulários em coluna única, padding reduzido |
-| ≤ 480px | Cards de resultado em coluna única; padding dos formulários de auth reduzido |
-
-### Fluxo de navegação
-
-- Usuário não autenticado: redirecionado para `/login` ao tentar acessar qualquer rota da aplicação
-- Após login: redirecionado automaticamente para `/busca`
-- Após registro: redirecionado para `/login`
-- `/esqueci-senha` → `/redefinir-senha?token=...`: fluxo de recuperação de senha, público (fora do `Layout` autenticado)
-- Cadastro sem confirmação de vínculo ATPS pelo Portal da Transparência: fica pendente de revisão manual por um admin antes de poder logar
+- Não autenticado: `/login`, `/registrar`, `/esqueci-senha`, `/redefinir-senha`, `/sobre`
+- Após login: `/busca`. Quem tem pendência (CPF, termos novos, vínculo suspenso) vê a regularização em tela cheia antes de usar a Rede
+- `/analistas/:id` perfil, `/perfil` edição, `/unidades` e `/unidades/:id` órgãos e unidades, `/admin/*` painel
 
 ---
 
@@ -144,33 +147,25 @@ O frontend usa **CSS Modules** com design tokens centralizados em `index.css` (p
 
 ```
 analistas
-  id, nome, senha_hash, criado_em, atualizado_em
-  role: analista | andeps | admin
-  ativo: bool (soft delete — desativação sem perda de dados)
-  pendente_revisao: bool (vínculo ATPS não confirmado pelo Portal da Transparência)
-  cpf_hash (hash HMAC-SHA256 — impede cadastro duplicado)
-  cpf_cifrado (CPF criptografado com Fernet — usado só na reverificação do vínculo)
-  cpf_verificado_em, vinculo_manual, vinculo_suspenso_em (reverificação periódica)
-  termos_aceitos_em (legado — aceites agora ficam na tabela consentimentos)
-  email_pessoal (obrigatório — identificador de acesso, privado por padrão)
-  email_institucional (opcional)
-  visibilidade_email_pessoal
-  telefone_institucional (opcional)
-  celular, visibilidade_celular
-  ministerio, ministerio_sigla
-  secretaria, secretaria_sigla
-  departamento, departamento_sigla
-  coordenacao_geral, coordenacao
-  cargo_fce, portal_url, turma, foto_path
-  reset_token_hash, reset_token_expires_em (redefinição de senha)
-  login_tentativas_falhas, login_bloqueado_ate (bloqueio por tentativas)
+  identidade e acesso: nome, email_pessoal, senha_hash, role (analista | andeps | admin), ativo
+  CPF: cpf_hash (HMAC, impede duplicidade), cpf_cifrado (Fernet), cpf_verificado_em,
+       vinculo_manual, vinculo_suspenso_em, pendente_revisao, motivo_pendencia
+  lotação: ministerio/_sigla, secretaria/_sigla, departamento/_sigla, coordenacao_geral, coordenacao,
+           lotacao_siorg_id, lotacao_origem
+  perfil: cargo_fce, cargo_origem, turma, turma_origem, pode_ajudar, contatos e visibilidades,
+          portal_url, linkedin_url, lattes_url, foto_path, perfil_oculto
+  atualização: sugestao_atualizacao (JSON), sugestao_em, sugestao_descartada, conferido_portal_em
+  outros: novidades_rede_vistas_em, termo_versao_notificada, reset de senha, bloqueio de login
 
-formacoes  (N por analista)
-  nivel: graduacao | especializacao | mestrado | doutorado
-  curso, instituicao
-
-temas_atuacao  (N por analista)
-  tema, em_exercicio_atual
+formacoes, temas_atuacao        N por analista
+consentimentos                  aceites e revogações (tipo, versão, hash, IP, navegador)
+favoritos                       quem favoritou quem (+ visto_em)
+eventos_perfil                  novidades de perfil (90 dias)
+conflitos_cadastro              tentativas com CPF já cadastrado
+unidades_siorg                  estrutura oficial (órgãos até divisões), sincronizada diariamente
+unidades_siorg_detalhe          competência, contato e endereço (cache de 30 dias)
+base_atps                       cópia dos ATPS ativos dos dados abertos do Portal (CPF só como HMAC)
+envios_email                    tipo e hora de cada e-mail enviado (para o limite; sem destinatário)
 ```
 
 Migrations versionadas via Alembic, aplicadas automaticamente no deploy.
@@ -179,56 +174,70 @@ Migrations versionadas via Alembic, aplicadas automaticamente no deploy.
 
 ## LGPD
 
-A plataforma foi projetada com proteção de dados pessoais como requisito desde o início, seguindo os princípios da **Lei Geral de Proteção de Dados (Lei nº 13.709/2018)**.
-
-### Dados sensíveis e consentimento explícito
-
-Celular e e-mail pessoal são tratados como dados de acesso restrito. Para torná-los visíveis a outros usuários, o analista precisa ativar a visibilidade no seu perfil — e ao fazer isso, um modal de confirmação é exibido com linguagem clara:
-
-> *"Ao tornar seu celular visível, você autoriza a Rede ATPS a exibi-lo para os demais usuários cadastrados na plataforma, em conformidade com a LGPD. Você poderá revogar essa autorização a qualquer momento editando seu perfil."*
-
-Somente após confirmação explícita o dado é marcado como visível. A revogação é imediata e sem fricção — basta desmarcar o toggle no perfil e salvar.
+A plataforma foi projetada com proteção de dados pessoais como requisito desde o início (Lei nº 13.709/2018). O texto que vale é o dos documentos vigentes em `backend/documentos_legais.py`; o resumo abaixo é só orientação.
 
 ### O que é exibido e para quem
 
-| Dado | Sem autorização | Com autorização |
-|---|---|---|
-| E-mail pessoal | Oculto (usado só para acesso) | Visível a usuários autenticados |
-| E-mail institucional | Visível se preenchido (dado funcional) | — |
-| Telefone institucional | Visível se preenchido (dado funcional) | — |
-| Celular | Oculto | Visível a usuários autenticados (link WhatsApp) |
+| Dado | Quem vê |
+|---|---|
+| Nome, foto, lotação, cargo, turma, formação, temas, "em que posso ajudar", links | Usuários com conta verificada |
+| E-mail e telefone institucionais | Usuários com conta verificada, se preenchidos |
+| E-mail pessoal e celular | Ninguém, a menos que o titular autorize (revogável a qualquer momento) |
+| Favoritos | Só quem favoritou |
+| CPF | Ninguém, nem administradores |
 
-Nenhum dado de contato pessoal é exposto a visitantes não autenticados.
+Nenhum dado de perfil é acessível sem login. Perfis ocultos ou com vínculo suspenso somem da busca, das páginas de unidade e das novidades.
 
-### Base legal
+### Consentimento e bases legais
 
-O tratamento dos dados pessoais dos analistas cadastrados tem como base legal o **legítimo interesse** no contexto de uma rede profissional de servidores públicos da carreira ATPS, conforme art. 7º, IX da LGPD, e o **consentimento explícito** (art. 7º, I) para os dados de contato de acesso opcional.
+O cadastro exige dois aceites separados, versionados: o Termo de Consentimento e a Autorização de consulta do CPF. Exibição do perfil, contatos opcionais e consultas do CPF se baseiam no consentimento (art. 7º, I); conta e autenticação, na execução das regras de uso (art. 7º, V); segurança, prevenção de fraudes e a cópia dos dados abertos do Portal, no legítimo interesse (art. 7º, IX). Nunca editar uma versão publicada: publicar uma nova.
 
-### Termo de Consentimento no cadastro
+### CPF
 
-O registro exige dois aceites separados: o Termo de Consentimento e a Autorização de consulta do CPF. Os textos ficam versionados em `backend/documentos_legais.py` (nunca editar uma versão publicada — publicar uma nova) e são servidos por `GET /documentos`. Cada aceite é gravado em `consentimentos` com a versão e o hash SHA-256 do texto. Ao publicar uma nova versão, todos os usuários passam por reaceite no próximo acesso.
+Consultado no Portal da Transparência no cadastro, a cada 180 dias (vínculo) e a cada 30 dias (perfil atualizado). Guardado criptografado (`cpf_cifrado`, Fernet, chave em `CPF_ENCRYPTION_KEY`) e como HMAC (`cpf_hash`). Nunca exibido nem gravado em logs. Do Portal, só fica na conta o que for preenchido no perfil e uma sugestão pendente.
 
-### CPF — criptografado, usado só para verificar o vínculo
+### Exclusão de conta
 
-O CPF é consultado no Portal da Transparência no cadastro e periodicamente (a cada 180 dias). Ele fica guardado criptografado (`cpf_cifrado`, Fernet, chave em `CPF_ENCRYPTION_KEY`) e como hash HMAC-SHA256 (`cpf_hash`) para impedir cadastro duplicado. Não é exibido a nenhum usuário, nem no painel admin, e nunca é gravado em logs. Contas criadas antes da criptografia informam o CPF na atualização cadastral do próximo login.
-
-### Exclusão de conta (direito ao apagamento)
-
-Qualquer usuário pode excluir permanentemente sua conta na própria página de perfil ("Zona de risco"). A exclusão exige confirmação explícita (checkbox + senha), avisa que é irreversível, e apaga definitivamente todos os dados pessoais — perfil, formações, temas de atuação e foto.
+O titular pode excluir a conta no próprio perfil, com confirmação por senha. Perfil, formações, temas, favoritos (feitos e recebidos), novidades e foto são apagados na hora.
 
 ---
 
 ## Segurança
 
-- Senhas com hash `bcrypt`
-- Autenticação stateless com JWT (access 7d + refresh 30d)
-- Redefinição de senha por token de uso único (hash `sha256`, validade de 1h, invalidado após o uso)
-- Bloqueio de login após 5 tentativas incorretas (15 minutos)
-- Validação de identidade no cadastro por CPF, consultado ao Portal da Transparência (CPFs não confirmados exigem aprovação manual de um admin) — CPF guardado criptografado (Fernet) e como hash HMAC-SHA256
-- HTTPS automático via Cloudflare
-- Dados sensíveis (celular, e-mail pessoal) só exibidos após consentimento explícito e apenas para usuários autenticados
-- Variáveis de ambiente via `.env` (nunca vão ao repositório)
+- Senhas com `bcrypt`; bloqueio de login após 5 tentativas incorretas (15 minutos)
+- Sessão em cookies HttpOnly (flag Secure configurável), com refresh
+- Redefinição de senha por token de uso único (hash `sha256`, válido por 1h)
+- CPF criptografado (Fernet) e como HMAC; cópia local do Portal guarda só HMAC dos dígitos divulgados
+- Fotos servidas só a usuários logados, reencodadas em JPEG (sem EXIF)
+- Links externos aceitos só dos domínios esperados (gov.br, Lattes, LinkedIn)
+- CSP restritiva no nginx; HTTPS via Cloudflare
 - Validação de entrada com Pydantic (backend) e Zod (frontend)
+- Variáveis de ambiente via `.env` (nunca no repositório)
+
+---
+
+## Operação
+
+### Deploy
+
+Push em `main` → GitHub Actions no servidor → `.env` escrito a partir do secret `ENV_PROD` → build → `alembic upgrade head` → smoke test. Se o secret não trouxer `CPF_ENCRYPTION_KEY`, o workflow usa a cópia em `~/backup-chaves/` no servidor; se trouxer uma chave diferente da guardada, o deploy para (trocar a chave tornaria os CPFs ilegíveis). **Guarde essa chave também fora do servidor.**
+
+### Atualização mensal da cópia do Portal
+
+Com o download em massa do Portal ("Servidores — SIAPE", arquivo `AAAAMM_Cadastro.csv`):
+
+```bash
+# no computador (não precisa do app configurado)
+python backend/base_local.py extrair AAAAMM_Cadastro.csv > atps.csv
+# no servidor, dentro do container da API
+python base_local.py importar AAAAMM /tmp/atps.csv
+```
+
+Apague o `atps.csv` depois. Órgãos que o SIAPE ainda chama pelo nome antigo vão em `lotacao_auto.APELIDOS_ORGAO`.
+
+### SIORG
+
+Sincronizado pela tarefa diária. Para forçar: `python siorg.py` no container da API.
 
 ---
 
@@ -237,7 +246,7 @@ Qualquer usuário pode excluir permanentemente sua conta na própria página de 
 ### Pré-requisitos
 
 - Python 3.12+, Node 22+, Docker
-- Túnel SSH ativo para o banco (PostgreSQL no servidor `damaceno`):
+- Túnel SSH para o banco (PostgreSQL no servidor `damaceno`):
 
 ```bash
 ssh -i ~/.ssh/id_ed25519 -p 2222 -L 5432:localhost:5432 -N rodigozeus@localhost
@@ -249,11 +258,12 @@ ssh -i ~/.ssh/id_ed25519 -p 2222 -L 5432:localhost:5432 -N rodigozeus@localhost
 cd backend
 python -m venv .venv && source .venv/bin/activate  # ou .venv\Scripts\activate no Windows
 pip install -r requirements.txt
-cp ../.env.example .env  # preencher DATABASE_URL e JWT_SECRET_KEY (SMTP é opcional — sem ele, o link de redefinição de senha só é logado no console)
+cp ../.env.example .env  # preencher DATABASE_URL, JWT_SECRET_KEY, CPF_HASH_SECRET e CPF_ENCRYPTION_KEY
 uvicorn main:app --reload
-# API disponível em http://localhost:8000
-# Swagger UI em http://localhost:8000/docs
+# API em http://localhost:8000 (Swagger em /docs com ENABLE_DOCS=true)
 ```
+
+Sem `PORTAL_TRANSPARENCIA_TOKEN`, a verificação usa só a cópia local (e, sem ela, todo cadastro fica pendente). Sem SMTP, os e-mails só aparecem no log.
 
 ### Frontend
 
@@ -261,6 +271,6 @@ uvicorn main:app --reload
 cd frontend
 npm install
 cp .env.example .env  # VITE_API_BASE_URL=/api
-npm run dev
-# App disponível em http://localhost:5173
+npm run dev            # http://localhost:5173
+npm run mock           # opcional: API simulada da Invicta, sem backend
 ```

@@ -9,10 +9,7 @@ from auth import get_usuario_regular
 from database import get_db
 from models import Analista, Favorito, UnidadeSiorg, condicao_perfil_visivel
 from routers.busca import _aplicar_visibilidade
-from schemas import (
-    AnelOut, LigacaoRede, LugarVazio, MeuTemaOut, MinhaRedeOut, MinhaRedePaginaOut, NoRede,
-    NovidadesRedeOut, PessoaOrbita, ResumoPublico,
-)
+from schemas import AnelOut, MinhaRedePaginaOut, NovidadesRedeOut, PessoaOrbita, ResumoPublico
 
 router = APIRouter(tags=["rede"])
 
@@ -83,111 +80,16 @@ def resumo_publico(db: Session = Depends(get_db)):
     return ResumoPublico(analistas=analistas, orgaos=orgaos or None)
 
 
-# --- Minha rede: quem está logado no centro, as pessoas mais próximas ao redor ---
-
-NIVEL_ROTULO = {
-    "ministerio": "Mesmo ministério", "secretaria": "Mesma secretaria", "departamento": "Mesmo departamento",
-    "coordenacao_geral": "Mesma coordenação-geral", "coordenacao": "Mesma coordenação",
-}
-LIGACOES_POR_PESSOA = 1  # poucas linhas: só a ligação mais forte de cada pessoa
-
-
-@router.get("/rede/minha", response_model=MinhaRedeOut)
-def minha_rede(
-    limite: int = 18,
-    eu: Analista = Depends(get_usuario_regular),
-    db: Session = Depends(get_db),
-):
-    """Rede do topo da busca: você no centro; ao redor, quem está mais perto de você (lotação
-    em comum primeiro, temas desempatando), depois seus favoritos e, se faltar gente, outras
-    pessoas da Rede. As ligações entre as pessoas são reais: mesma unidade ou tema em comum."""
-    from routers.perfil import PONTOS_LOTACAO, _chave, _lotacao_comum
-
-    limite = max(4, min(limite, 24))
-    meus_temas = {_chave(t.tema): t.tema.strip() for t in eu.temas}
-    favoritos = set(db.scalars(select(Favorito.favorito_id).where(Favorito.analista_id == eu.id)))
-    outros = db.query(Analista).filter(condicao_perfil_visivel(), Analista.id != eu.id).all()
-
-    def relacao_comigo(c: Analista):
-        comuns = sorted({meus_temas[k] for k in (_chave(t.tema) for t in c.temas) if k in meus_temas})
-        lot = _lotacao_comum(eu, c)
-        return comuns, lot
-
-    pontuados = []
-    for c in outros:
-        comuns, lot = relacao_comigo(c)
-        nivel = PONTOS_LOTACAO[lot[0]] if lot else 0
-        fav = c.id in favoritos
-        if nivel or comuns or fav:
-            # lotação primeiro, temas desempatam, favorito no fim do critério; desempate estável
-            chave = (-nivel, -len(comuns), not fav, (c.id * 7919) % 10007)
-            pontuados.append((chave, c, comuns, lot, fav))
-    pontuados.sort(key=lambda x: x[0])
-    escolhidos = pontuados[:limite]
-
-    # completa com outras pessoas (com foto primeiro), para a rede não ficar vazia
-    if len(escolhidos) < limite:
-        ja = {c.id for _, c, *_ in escolhidos}
-        resto = sorted((c for c in outros if c.id not in ja),
-                       key=lambda c: (c.foto_path is None, (c.id * 7919) % 10007))
-        escolhidos += [((9, 0, True, 0), c, [], None, False) for c in resto[: limite - len(escolhidos)]]
-
-    pessoas = []
-    for i, (chave, c, comuns, lot, fav) in enumerate(escolhidos):
-        if lot:
-            relacao, motivo = "unidade", f"{NIVEL_ROTULO[lot[0]]}: {lot[1]}"
-            if comuns:
-                motivo += f" · Temas em comum: {', '.join(comuns)}"
-        elif comuns:
-            relacao, motivo = "tema", f"Temas em comum: {', '.join(comuns)}"
-        elif fav:
-            relacao, motivo = "favorito", "Nos seus favoritos"
-        else:
-            relacao, motivo = "rede", None
-        proximidade = 1 - i / max(1, len(escolhidos))
-        pessoas.append(NoRede(analista=_aplicar_visibilidade(c), relacao=relacao, motivo=motivo,
-                              proximidade=round(proximidade, 3)))
-
-    # ligações entre as pessoas: as mais fortes de cada uma
-    pares = []
-    lista = [c for _, c, *_ in escolhidos]
-    temas = {c.id: {_chave(t.tema): t.tema.strip() for t in c.temas} for c in lista}
-    for i, a in enumerate(lista):
-        for b in lista[i + 1:]:
-            lot = _lotacao_comum(a, b)
-            comuns = sorted(temas[a.id][k] for k in temas[a.id].keys() & temas[b.id].keys())
-            nivel = PONTOS_LOTACAO[lot[0]] if lot and lot[0] != "ministerio" else 0
-            if not nivel and not comuns:
-                continue
-            forca = nivel * 2 + len(comuns) * 3
-            if comuns and (len(comuns) * 3 >= nivel * 2):
-                tipo, rotulo = "tema", f"Tema em comum: {comuns[0]}"
-            else:
-                tipo, rotulo = "unidade", f"{NIVEL_ROTULO[lot[0]]}: {lot[1]}"
-            pares.append((forca, a.id, b.id, tipo, rotulo))
-    pares.sort(key=lambda p: -p[0])
-    grau: dict[int, int] = {}
-    ligacoes = []
-    for forca, a, b, tipo, rotulo in pares:
-        if grau.get(a, 0) >= LIGACOES_POR_PESSOA or grau.get(b, 0) >= LIGACOES_POR_PESSOA:
-            continue
-        grau[a] = grau.get(a, 0) + 1
-        grau[b] = grau.get(b, 0) + 1
-        ligacoes.append(LigacaoRede(a=a, b=b, tipo=tipo, rotulo=rotulo))
-
-    return MinhaRedeOut(eu=_aplicar_visibilidade(eu), pessoas=pessoas, ligacoes=ligacoes)
-
-
-# --- Página "Minha rede": anéis de proximidade em volta de quem está logado ---
+# --- Página "Minha rede": quem está mais perto de quem está logado ---
 
 ANEIS = [
-    ("coordenacao", "Na sua coordenação", "sua coordenação"),
-    ("coordenacao_geral", "Na sua coordenação-geral", "sua coordenação-geral"),
-    ("departamento", "No seu departamento", "seu departamento"),
-    ("secretaria", "Na sua secretaria", "sua secretaria"),
-    ("ministerio", "No seu ministério", "seu ministério"),
-    ("temas", "Temas em comum", None),
-    ("favoritos", "Seus favoritos", None),
+    ("coordenacao", "Na sua coordenação"),
+    ("coordenacao_geral", "Na sua coordenação-geral"),
+    ("departamento", "No seu departamento"),
+    ("secretaria", "Na sua secretaria"),
+    ("ministerio", "No seu ministério"),
+    ("temas", "Temas em comum"),
+    ("favoritos", "Seus favoritos"),
 ]
 NIVEIS_LOTACAO = ["ministerio", "secretaria", "departamento", "coordenacao_geral", "coordenacao"]
 SIGLA_DO_NIVEL = {"ministerio": "ministerio_sigla", "secretaria": "secretaria_sigla", "departamento": "departamento_sigla"}
@@ -206,22 +108,18 @@ def minha_rede_pagina(eu: Analista = Depends(get_usuario_regular), db: Session =
     favoritos = set(db.scalars(select(Favorito.favorito_id).where(Favorito.analista_id == eu.id)))
     outros = db.query(Analista).filter(condicao_perfil_visivel(), Analista.id != eu.id).all()
 
-    grupos: dict[str, list] = {chave: [] for chave, *_ in ANEIS}
-    alcance = {n: 0 for n in NIVEIS_LOTACAO}  # quantos compartilham ao menos até cada nível
+    grupos: dict[str, list] = {chave: [] for chave, _ in ANEIS}
     for c in outros:
         comuns = sorted({meus_temas[k] for k in (_chave(t.tema) for t in c.temas) if k in meus_temas})
         lot = _lotacao_comum(eu, c)
         fav = c.id in favoritos
-        if lot:
-            for n in NIVEIS_LOTACAO[: NIVEIS_LOTACAO.index(lot[0]) + 1]:
-                alcance[n] += 1
         anel = lot[0] if lot else ("temas" if comuns else ("favoritos" if fav else None))
         if anel:
             recente = _como_utc(c.criado_em) > agora - RECENTE if c.criado_em else False
             grupos[anel].append((-len(comuns), not fav, c.nome.casefold(), c, comuns, fav, recente))
 
     aneis = []
-    for chave, titulo, _ in ANEIS:
+    for chave, titulo in ANEIS:
         lista = sorted(grupos[chave], key=lambda x: x[:3])
         if not lista:
             continue
@@ -235,27 +133,11 @@ def minha_rede_pagina(eu: Analista = Depends(get_usuario_regular), db: Session =
                      for *_, c, comuns, fav, rec in lista[:POR_ANEL]],
         ))
 
-    # lugares da sua lotação onde ainda não há ninguém da Rede (do mais específico ao mais amplo)
-    vazios = []
-    for chave, _, rotulo in ANEIS[:5]:
-        nome = (getattr(eu, chave) or "").strip()
-        if nome and alcance[chave] == 0:
-            vazios.append(LugarVazio(nivel=chave, titulo=rotulo, nome=nome))
-
-    # seus temas: quantas pessoas da Rede trabalham com cada um
-    contagem: dict[str, int] = {}
-    for c in outros:
-        for k in {_chave(t.tema) for t in c.temas}:
-            if k in meus_temas:
-                contagem[k] = contagem.get(k, 0) + 1
-    temas = sorted((MeuTemaOut(tema=v, total=contagem.get(k, 0)) for k, v in meus_temas.items()),
-                   key=lambda t: (-t.total, t.tema.casefold()))
-
     recentes = sorted(
-        (x for chave, *_ in ANEIS for x in grupos[chave] if x[-1]),
+        (x for chave, _ in ANEIS for x in grupos[chave] if x[-1]),
         key=lambda x: _como_utc(x[3].criado_em), reverse=True,
     )
     return MinhaRedePaginaOut(
-        eu=_aplicar_visibilidade(eu), aneis=aneis, vazios=vazios, temas=temas,
+        eu=_aplicar_visibilidade(eu), aneis=aneis,
         recentes=[_aplicar_visibilidade(x[3]) for x in recentes[:12]],
     )
