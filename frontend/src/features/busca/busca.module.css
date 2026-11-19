@@ -1049,3 +1049,24 @@
     background: var(--btn-hover);
   }
 }
+
+/* Chips longos não invadem a coluna vizinha: o texto é cortado com reticências e o "+N" nunca encolhe */
+.chips > .chip {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.chips > .mais {
+  flex-shrink: 0;
+}
+
+.chipCorta,
+.chipTexto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chipTexto {
+  display: block;
+  white-space: nowrap;
+}

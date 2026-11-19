@@ -18,7 +18,7 @@ export function ChipsFormacao({ formacoes, max }: { formacoes: Formacao[]; max?:
     <>
       {lista.slice(0, n).map((f) => (
         <button key={f.id} type="button" className={[styles.chip, styles.tip, styles.inicio].join(' ')}>
-          {textoFormacao(f)}
+          <span className={styles.chipTexto}>{textoFormacao(f)}</span>
           <span className={styles.pop} role="tooltip">
             <b>{NIVEIS[f.nivel]} · {f.instituicao}</b>
             {f.curso}
@@ -51,8 +51,8 @@ export function ChipsTemas({ temas, max }: { temas: Tema[]; max?: number }) {
   return (
     <>
       {lista.slice(0, n).map((t) => (
-        <span key={t.id} className={[styles.chip, t.em_exercicio_atual ? '' : styles.anterior].join(' ')}
-          title={t.em_exercicio_atual ? undefined : 'Experiência anterior'}>
+        <span key={t.id} className={[styles.chip, styles.chipCorta, t.em_exercicio_atual ? '' : styles.anterior].join(' ')}
+          title={t.em_exercicio_atual ? t.tema : `${t.tema} (experiência anterior)`}>
           {t.tema}
         </span>
       ))}
