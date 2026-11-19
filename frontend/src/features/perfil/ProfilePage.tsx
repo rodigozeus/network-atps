@@ -16,6 +16,7 @@ import CamposLotacao, { NIVEIS_LOTACAO, type LotacaoValor } from './CamposLotaca
 import EditorTemas from './EditorTemas'
 import EditorFormacoes from './EditorFormacoes'
 import PrivacidadeCard from './PrivacidadeCard'
+import RecorteFoto from './RecorteFoto'
 import styles from './perfil.module.css'
 
 const telefone = z.string().refine((v) => !v || /^\(\d{2}\) \d{4,5}-\d{4}$/.test(v), 'Informe o DDD e o número completo.')
@@ -171,6 +172,7 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
   const [fotoPreview, setFotoPreview] = useState<string | null>(null)
   const [fotoRemovida, setFotoRemovida] = useState(false)
   const [erroFoto, setErroFoto] = useState('')
+  const [paraRecortar, setParaRecortar] = useState<File | null>(null)
   const [status, setStatus] = useState<{ texto: string; erro?: boolean } | null>(null)
   const arquivo = useRef<HTMLInputElement>(null)
   const salvo = useRef(false)
@@ -194,6 +196,11 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
     if (!f) return
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(f.type)) { setErroFoto('Escolha uma imagem JPG, PNG ou WEBP.'); return }
     if (f.size > 5 * 1024 * 1024) { setErroFoto('A imagem passa de 5 MB. Escolha uma menor.'); return }
+    setParaRecortar(f) // primeiro o enquadramento; a foto só entra depois de recortada
+  }
+
+  const usarRecorte = (f: File) => {
+    setParaRecortar(null)
     setFoto(f)
     setFotoRemovida(false)
     setFotoPreview(URL.createObjectURL(f))
@@ -302,7 +309,8 @@ function DadosPerfil({ perfil, primeiroAcesso, onSalvo, onCancelar }: {
               </button>
             )}
           </div>
-          <p className={styles.ajuda}>JPG, PNG ou WEBP, até 5 MB. A foto é enviada quando você salva.</p>
+          <p className={styles.ajuda}>JPG, PNG ou WEBP, até 5 MB. Você enquadra a foto depois de escolher; ela é enviada quando você salva.</p>
+          {paraRecortar && <RecorteFoto arquivo={paraRecortar} onPronto={usarRecorte} onCancelar={() => setParaRecortar(null)} />}
           {erroFoto && <p className={styles.erro} role="alert">{erroFoto}</p>}
         </div>
       </section>
