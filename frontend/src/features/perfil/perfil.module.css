@@ -1328,3 +1328,32 @@
   cursor: pointer;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }
+
+.celular b {
+  white-space: nowrap;
+}
+
+/* tela estreita: o ícone da esquerda sai (o botão "ligar" já está ali) */
+@media (max-width: 420px) {
+  .celularIcone {
+    display: none;
+  }
+
+  .contatos .celular {
+    gap: 10px;
+  }
+}
+
+/* foto ampliada centralizada, com o fechar dentro do canto da imagem */
+.fotoDialogo {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: fit-content;
+  height: fit-content;
+}
+
+.fotoFechar {
+  top: 10px;
+  right: 10px;
+}
