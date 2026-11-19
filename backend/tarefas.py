@@ -37,7 +37,7 @@ import base_local
 import lotacao_auto
 import lotacao_siorg
 import siorg
-from documentos_legais import VERSAO_AUTORIZACAO_AMPLIADA
+from documentos_legais import CONFERENCIA_PERFIL_DIAS, VERSAO_AUTORIZACAO_AMPLIADA
 from portal_transparencia import MOTIVOS, StatusVerificacao, consultar_situacao_atps
 from routers.perfil import remover_foto
 
@@ -149,7 +149,7 @@ def sincronizar_siorg(db: Session, agora: datetime) -> None:
     logger.info("SIORG nos perfis: %s", lotacao_siorg.propagar(db))
 
 
-CONFERENCIA_INTERVALO_DIAS = 30
+CONFERENCIA_INTERVALO_DIAS = CONFERENCIA_PERFIL_DIAS  # citado na Autorização de consulta do CPF
 CONFERENCIA_LOTE = 100
 
 

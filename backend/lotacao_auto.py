@@ -128,6 +128,13 @@ def pode_preencher(a: Analista) -> bool:
     return lotacao or ampliada
 
 
+# Nomes antigos que o SIAPE ainda usa para órgãos renomeados -> sigla atual no SIORG
+APELIDOS_ORGAO = {
+    "MINISTERIO DO MEIO AMBIENTE": "MMA",  # hoje: Ministério do Meio Ambiente e Mudança do Clima
+    "MINISTERIO DA CIENCIA TECNOLOGIA INOVACOES E COMUNICACOES": "MCTI",  # hoje: ... e Inovação
+}
+
+
 def casar_orgao(nome: str | None, sigla: str | None, orgaos: list[UnidadeSiorg]) -> UnidadeSiorg | None:
     """Órgão do SIORG pela sigla, pelo nome igual ou pelo nome abreviado do SIAPE
     ("MIN DESENV ASSIS SOCI FAMIL COMBATE FOME")."""
@@ -137,6 +144,11 @@ def casar_orgao(nome: str | None, sigla: str | None, orgaos: list[UnidadeSiorg])
             return s[0]
     if nome:
         n = normalizar(nome)
+        apelido = APELIDOS_ORGAO.get(n)
+        if apelido:
+            achados = [o for o in orgaos if (o.sigla or "").upper() == apelido]
+            if len(achados) == 1:
+                return achados[0]
         e = [o for o in orgaos if normalizar(o.nome) == n]
         if len(e) == 1:
             return e[0]
