@@ -677,6 +677,10 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-areas: 'p p a' 'o e t';
   }
+
+  .lAcoes {
+    justify-self: end;
+  }
 }
 
 @media (max-width: 760px) {
