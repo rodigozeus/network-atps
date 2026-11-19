@@ -231,9 +231,8 @@ def get_analista(
     return result
 
 
-# Pontos por nível de lotação em comum (vale o mais fundo) e por tema em comum.
+# Proximidade na lotação: vale o nível mais fundo em comum. Ordena antes dos temas.
 PONTOS_LOTACAO = {"ministerio": 1, "secretaria": 2, "departamento": 3, "coordenacao_geral": 4, "coordenacao": 5}
-PONTOS_TEMA = 3
 
 
 def _chave(texto: str | None) -> str:
@@ -258,7 +257,9 @@ def pessoas_proximas(
     db: Session = Depends(get_db),
     eu: Analista = Depends(get_usuario_regular),
 ):
-    """Pessoas próximas de um perfil: temas de atuação em comum e proximidade na lotação.
+    """Pessoas próximas de um perfil. Primeiro quem está mais perto na lotação (mesma
+    coordenação > coordenação-geral > departamento > secretaria > ministério); os temas de
+    atuação em comum desempatam e completam a lista com quem é de fora.
     Não inclui quem está olhando, não depende dos favoritos de ninguém e a ordem é estável."""
     from routers.busca import _aplicar_visibilidade
 
@@ -284,10 +285,10 @@ def pessoas_proximas(
     for c in candidatos:
         comuns = sorted({temas_alvo[k] for k in (_chave(t.tema) for t in c.temas) if k in temas_alvo})
         lot = _lotacao_comum(alvo, c)
-        pontos = PONTOS_TEMA * len(comuns) + (PONTOS_LOTACAO[lot[0]] if lot else 0)
-        if pontos:
-            # desempate fixo e sem favorecer contas antigas ou novas
-            pontuados.append((-pontos, -len(comuns), (c.id * 7919) % 10007, c, comuns, lot))
+        nivel = PONTOS_LOTACAO[lot[0]] if lot else 0
+        if nivel or comuns:
+            # desempate final fixo e sem favorecer contas antigas ou novas
+            pontuados.append((-nivel, -len(comuns), (c.id * 7919) % 10007, c, comuns, lot))
     pontuados.sort(key=lambda x: x[:3])
     return [
         ProximoOut(
