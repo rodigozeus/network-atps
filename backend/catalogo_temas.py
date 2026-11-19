@@ -130,13 +130,13 @@ def achar_exato(db: Session, nome: str) -> Tema | None:
         return None
     for t in db.scalars(select(Tema)):
         if chave(t.nome) == k or any(chave(a) == k for a in t.lista_apelidos):
-            return t
+            return t  # pode ser um reprovado: quem chama decide (bloquear)
     return None
 
 
 def parecidos(db: Session, nome: str, *, limite: int = 5, excluir: int | None = None) -> list[tuple[Tema, float]]:
     res = []
-    for t in db.scalars(select(Tema)):
+    for t in db.scalars(select(Tema).where(Tema.reprovado.is_(False))):
         if t.id == excluir:
             continue
         s = max([similaridade(nome, t.nome), *(similaridade(nome, a) for a in t.lista_apelidos)])
@@ -149,7 +149,7 @@ def parecidos(db: Session, nome: str, *, limite: int = 5, excluir: int | None = 
 def pares_parecidos(db: Session, *, so_a_revisar: bool = True, limite: int = 60) -> list[tuple[Tema, Tema, float]]:
     """Pares de temas parecidos para a curadoria. Por padrão, só os que envolvem um tema a revisar
     (mantém a conta leve e mostra o que importa)."""
-    temas = list(db.scalars(select(Tema)))
+    temas = list(db.scalars(select(Tema).where(Tema.reprovado.is_(False))))
     base = [t for t in temas if not t.revisado] if so_a_revisar else temas
     vistos, pares = set(), []
     for a in base:

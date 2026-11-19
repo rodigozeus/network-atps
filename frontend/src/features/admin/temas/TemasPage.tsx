@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { isAxiosError } from 'axios'
 import { Button } from '@shared/components'
 import type { TemaAdmin, TemasAdmin, TipoTema } from '../api/admin'
-import { criarTema, editarTema, excluirTema, getTemas, juntarTema } from '../api/admin'
+import { criarTema, editarTema, excluirTema, getTemas, juntarTema, reprovarTema } from '../api/admin'
 import styles from '../admin.module.css'
 import t from './temas.module.css'
 
@@ -15,7 +15,7 @@ function mensagem(err: unknown): string {
   return typeof d === 'string' ? d : 'Não foi possível concluir. Tente de novo.'
 }
 
-type Filtro = 'todos' | 'revisar' | TipoTema
+type Filtro = 'todos' | 'revisar' | 'reprovados' | TipoTema
 const GRUPOS = [['area', 'Áreas de política'], ['ferramenta', 'Ferramentas e métodos']] as const
 
 /** Curadoria do catálogo de temas: revisar os criados por pessoas, juntar duplicados, renomear,
@@ -27,6 +27,7 @@ export default function TemasPage() {
   const [filtro, setFiltro] = useState<Filtro>('todos')
   const [editando, setEditando] = useState<TemaAdmin | 'novo' | null>(null)
   const [juntando, setJuntando] = useState<TemaAdmin | null>(null)
+  const [reprovando, setReprovando] = useState<TemaAdmin | null>(null)
 
   const carregar = useCallback(() => {
     getTemas().then(setDados).catch(() => setErro('Não foi possível carregar os temas.'))
@@ -49,13 +50,16 @@ export default function TemasPage() {
     if (!dados) return []
     const q = semAcento(busca.trim())
     return dados.temas.filter((x) =>
-      (filtro === 'todos' || (filtro === 'revisar' ? !x.revisado : x.tipo === filtro))
+      (filtro === 'reprovados' ? x.reprovado : !x.reprovado)
+      && (filtro === 'todos' || filtro === 'reprovados' || (filtro === 'revisar' ? !x.revisado : x.tipo === filtro))
       && (!q || semAcento([x.nome, ...x.apelidos].join(' ')).includes(q)))
   }, [dados, busca, filtro])
 
   if (!dados) return <p className={styles.empty}>{erro || 'Carregando…'}</p>
 
-  const aRevisar = dados.temas.filter((x) => !x.revisado).length
+  const ativos = dados.temas.filter((x) => !x.reprovado)
+  const aRevisar = ativos.filter((x) => !x.revisado).length
+  const reprovados = dados.temas.length - ativos.length
 
   return (
     <div>
@@ -64,7 +68,7 @@ export default function TemasPage() {
         <Button size="sm" onClick={() => setEditando('novo')}>Novo tema</Button>
       </div>
       <p className={t.intro}>
-        {dados.temas.length} temas no catálogo, {aRevisar} a revisar. Temas criados por pessoas entram como “a revisar”.
+        {ativos.length} temas no catálogo, {aRevisar} a revisar. Temas criados por pessoas entram como “a revisar”.
         Junte os duplicados (todo mundo passa para o tema que fica, e o nome antigo vira apelido) e marque os bons como revisados.
       </p>
       {erro && <p className={t.erro} role="alert">{erro}</p>}
@@ -100,11 +104,34 @@ export default function TemasPage() {
           <option value="revisar">A revisar ({aRevisar})</option>
           <option value="area">Áreas de política</option>
           <option value="ferramenta">Ferramentas e métodos</option>
+          {reprovados > 0 && <option value="reprovados">Reprovados ({reprovados})</option>}
         </select>
       </div>
 
       {!lista.length && <p className={styles.empty}>Nenhum tema com esse filtro.</p>}
-      {GRUPOS.map(([tipo, titulo]) => {
+      {filtro === 'reprovados' && lista.length > 0 && (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead><tr><th>Tema reprovado</th><th>Ações</th></tr></thead>
+            <tbody>
+              {lista.map((x) => (
+                <tr key={x.id}>
+                  <td><strong>{x.nome}</strong><small className={t.apelidos}>{TIPOS[x.tipo]}. Ninguém consegue usar este nome enquanto estiver reprovado.</small></td>
+                  <td>
+                    <div className={styles.actions}>
+                      <Button size="sm" variant="outline" onClick={() => void agir(() => editarTema(x.id, { reprovado: false }))}>Desfazer</Button>
+                      <Button size="sm" variant="ghost" onClick={() => {
+                        if (window.confirm(`Apagar “${x.nome}” de vez? O nome deixa de ficar bloqueado.`)) void agir(() => excluirTema(x.id))
+                      }}>Apagar</Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {filtro !== 'reprovados' && GRUPOS.map(([tipo, titulo]) => {
         const itens = lista.filter((x) => x.tipo === tipo)
         if (!itens.length) return null
         const pendentes = itens.filter((x) => !x.revisado).length
@@ -148,6 +175,7 @@ export default function TemasPage() {
                         )}
                         <Button size="sm" variant="outline" onClick={() => setEditando(x)}>Editar</Button>
                         <Button size="sm" variant="outline" onClick={() => setJuntando(x)}>Juntar…</Button>
+                        <Button size="sm" variant="outline" onClick={() => setReprovando(x)}>Reprovar…</Button>
                         {x.total === 0 && (
                           <Button size="sm" variant="ghost" onClick={() => {
                             if (window.confirm(`Excluir o tema “${x.nome}”? Ninguém o usa.`)) void agir(() => excluirTema(x.id))
@@ -172,10 +200,17 @@ export default function TemasPage() {
           }} />
       )}
       {juntando && (
-        <JuntarTema origem={juntando} temas={dados.temas} onFechar={() => setJuntando(null)}
+        <JuntarTema origem={juntando} temas={ativos} onFechar={() => setJuntando(null)}
           onJuntar={async (destino) => {
             const ok = await agir(() => juntarTema(juntando.id, destino.id))
             if (ok) setJuntando(null)
+          }} />
+      )}
+      {reprovando && (
+        <ReprovarTema tema={reprovando} temas={ativos} onFechar={() => setReprovando(null)}
+          onReprovar={async (substituto) => {
+            const ok = await agir(() => reprovarTema(reprovando.id, substituto?.id ?? null))
+            if (ok) setReprovando(null)
           }} />
       )}
     </div>
@@ -294,6 +329,66 @@ function JuntarTema({ origem, temas, onFechar, onJuntar }: {
             await onJuntar(destino)
             setSalvando(false)
           }}>{destino ? `Juntar em “${destino.nome}”` : 'Escolha o tema'}</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ReprovarTema({ tema, temas, onFechar, onReprovar }: {
+  tema: TemaAdmin
+  temas: TemaAdmin[]
+  onFechar: () => void
+  onReprovar: (substituto: TemaAdmin | null) => Promise<void>
+}) {
+  const [q, setQ] = useState('')
+  const [substituto, setSubstituto] = useState<TemaAdmin | null>(null)
+  const [salvando, setSalvando] = useState(false)
+  const opcoes = useMemo(() => {
+    const k = semAcento(q.trim())
+    if (!k) return []
+    return temas
+      .filter((x) => x.id !== tema.id && semAcento([x.nome, ...x.apelidos].join(' ')).includes(k))
+      .sort((a, b) => Number(b.revisado) - Number(a.revisado) || b.total - a.total)
+      .slice(0, 6)
+  }, [q, temas, tema.id])
+
+  return (
+    <div className={styles.overlay} onClick={onFechar}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="titulo-reprovar">
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle} id="titulo-reprovar">Reprovar “{tema.nome}”</h2>
+          <button className={styles.closeBtn} onClick={onFechar} aria-label="Fechar">×</button>
+        </div>
+        <p className={t.intro}>
+          O tema sai do catálogo{tema.total ? ` e dos perfis (${pessoas(tema.total)})` : ''}, e o nome fica bloqueado: ninguém consegue criá-lo de novo.
+          Se for só outro jeito de dizer um tema que já existe, use Juntar.
+        </p>
+        {tema.total > 0 && (
+          <>
+            <label className={styles.formLabel} htmlFor="reprovar-busca">Colocar outro tema no lugar (opcional)</label>
+            <input id="reprovar-busca" className={styles.formInput} type="search" placeholder="Buscar tema substituto" value={q}
+              onChange={(e) => { setQ(e.target.value); setSubstituto(null) }} />
+            <ul className={t.escolha}>
+              {opcoes.map((x) => (
+                <li key={x.id}>
+                  <button type="button" aria-pressed={substituto?.id === x.id}
+                    onClick={() => setSubstituto(substituto?.id === x.id ? null : x)}><NomeTema x={x} /></button>
+                </li>
+              ))}
+            </ul>
+            <p className={t.apelidos}>
+              {substituto ? `Quem tinha “${tema.nome}” passa a ter “${substituto.nome}”.` : `Sem substituto, “${tema.nome}” só sai dos perfis.`}
+            </p>
+          </>
+        )}
+        <div className={styles.modalFooter}>
+          <Button type="button" variant="ghost" onClick={onFechar}>Cancelar</Button>
+          <Button variant="danger" loading={salvando} onClick={async () => {
+            setSalvando(true)
+            await onReprovar(substituto)
+            setSalvando(false)
+          }}>Reprovar</Button>
         </div>
       </div>
     </div>

@@ -413,13 +413,16 @@ def add_tema(
     sem ela, 409 com os temas parecidos (o atrito para não espalhar variações)."""
     if body.tema_id is not None:
         cat = db.get(Tema, body.tema_id)
-        if cat is None:
+        if cat is None or cat.reprovado:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tema não encontrado.")
     else:
         nome = catalogo_temas.normalizar(body.tema or "")
         if len(nome) < 2:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Digite o nome do tema.")
         cat = catalogo_temas.achar_exato(db, nome)
+        if cat is not None and cat.reprovado:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Esse tema foi retirado pela curadoria da Rede. Escolha outro da lista.")
         if cat is None:
             if not body.confirmar_novo:
                 totais = catalogo_temas.totais(db)
@@ -475,7 +478,7 @@ def sugestoes_temas(
     pela metade e erro de digitação), dos mais usados para os menos. Sem texto: os mais usados."""
     totais = catalogo_temas.totais(db)
     achados = []
-    for t in db.scalars(select(Tema)):
+    for t in db.scalars(select(Tema).where(Tema.reprovado.is_(False))):
         if tipo and t.tipo != tipo:
             continue
         nota = catalogo_temas.pontuacao_busca(q, t)

@@ -184,6 +184,7 @@ export interface TemaAdmin {
   tipo: TipoTema
   apelidos: string[]
   revisado: boolean
+  reprovado: boolean
   total: number
   criado_em: string | null
   criado_por: string | null
@@ -205,7 +206,7 @@ export async function criarTema(body: { nome: string; tipo: TipoTema; apelidos: 
 }
 
 export async function editarTema(
-  id: number, body: Partial<{ nome: string; tipo: TipoTema; apelidos: string[]; revisado: boolean }>,
+  id: number, body: Partial<{ nome: string; tipo: TipoTema; apelidos: string[]; revisado: boolean; reprovado: false }>,
 ): Promise<TemaAdmin> {
   const { data } = await api.patch<TemaAdmin>(`/admin/temas/${id}`, body)
   return data
@@ -213,6 +214,12 @@ export async function editarTema(
 
 export async function juntarTema(id: number, destinoId: number): Promise<TemaAdmin> {
   const { data } = await api.post<TemaAdmin>(`/admin/temas/${id}/juntar`, { destino_id: destinoId })
+  return data
+}
+
+/** Tira o tema do catálogo e dos perfis e bloqueia o nome; com substituto, quem tinha passa a ter ele */
+export async function reprovarTema(id: number, substitutoId: number | null): Promise<TemaAdmin> {
+  const { data } = await api.post<TemaAdmin>(`/admin/temas/${id}/reprovar`, { substituto_id: substitutoId })
   return data
 }
 

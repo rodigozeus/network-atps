@@ -327,6 +327,7 @@ class TemaAdminOut(BaseModel):
     tipo: str
     apelidos: list[str]
     revisado: bool
+    reprovado: bool = False
     total: int
     criado_em: datetime | None = None
     criado_por: str | None = None
@@ -354,6 +355,11 @@ class TemaAdminUpdate(BaseModel):
     tipo: Literal["area", "ferramenta"] | None = None
     apelidos: list[str] | None = None
     revisado: bool | None = None
+    reprovado: bool | None = None  # só para desfazer (False); reprovar é POST .../reprovar
+
+
+class TemaReprovarIn(BaseModel):
+    substituto_id: int | None = None  # quem tinha o tema passa a ter este; sem ele, o tema só sai dos perfis
 
 
 class TemaJuntarIn(BaseModel):

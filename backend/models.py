@@ -319,6 +319,8 @@ class Tema(Base):
     tipo: Mapped[str] = mapped_column(String(12), nullable=False, default="area")
     apelidos: Mapped[str] = mapped_column(Text, nullable=False, default="")  # um por linha
     revisado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # reprovado pela curadoria: some das sugestões e o nome fica bloqueado para novos perfis
+    reprovado: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
     criado_por_id: Mapped[int | None] = mapped_column(ForeignKey("analistas.id", ondelete="SET NULL"), nullable=True)
 
