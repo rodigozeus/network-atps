@@ -133,3 +133,19 @@ h1, h2, h3, h4, h5, h6 {
   white-space: nowrap;
   border: 0;
 }
+
+/* Celular: o Safari do iPhone dá zoom ao tocar num campo com letra menor que 16px,
+   e a página passa a rolar para os lados. Em telas de toque, campos sempre com 16px. */
+@media (max-width: 760px), (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Rede de segurança: nada empurra a página para os lados (clip não quebra position: sticky) */
+html,
+body {
+  overflow-x: clip;
+}
