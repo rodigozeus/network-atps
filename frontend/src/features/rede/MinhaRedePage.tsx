@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { IconBrandWhatsapp, IconCheck, IconCopy, IconSparkles, IconUserPlus } from '@tabler/icons-react'
+import { IconSparkles } from '@tabler/icons-react'
 import type { MinhaRedePagina } from '@shared/api/types'
 import { redeApi } from '@shared/api/unidades'
 import { Avatar, Spinner } from '@shared/components'
@@ -10,15 +10,11 @@ import busca from '@features/busca/busca.module.css'
 import Orbitas, { MOTIVO_DO_ANEL } from './Orbitas'
 import styles from './rede.module.css'
 
-const CONVITE = 'Oi! Estou na Rede ATPS, a rede dos Analistas Técnicos de Políticas Sociais. '
-  + 'Dá para encontrar colegas por tema e por órgão. Entra lá: https://redeatps.org/sobre'
-
 /** Minha rede: você no centro e, em anéis, quem está mais perto de você e por quê. */
 export default function MinhaRedePage() {
   const [d, setD] = useState<MinhaRedePagina | null>(null)
   const [erro, setErro] = useState(false)
   const [tema, setTema] = useState<string | null>(null)
-  const [copiado, setCopiado] = useState(false)
 
   useEffect(() => {
     redeApi.pagina().then(setD).catch(() => setErro(true))
@@ -29,13 +25,6 @@ export default function MinhaRedePage() {
   if (erro) return <p className={styles.vazio}>Não foi possível carregar sua rede. Tente de novo.</p>
   if (!d) return <div className={styles.carregando}><Spinner size="lg" /></div>
 
-  const copiar = async () => {
-    try {
-      await navigator.clipboard.writeText(CONVITE)
-      setCopiado(true)
-      window.setTimeout(() => setCopiado(false), 1800)
-    } catch { /* sem área de transferência */ }
-  }
   const temaInfo = d.temas.find((t) => t.tema === tema)
 
   return (
@@ -70,27 +59,6 @@ export default function MinhaRedePage() {
         <Orbitas eu={d.eu} aneis={d.aneis} tema={tema} />
       ) : (
         <p className={styles.vazio}>Ainda não há ninguém da Rede na sua lotação, nos seus temas ou nos seus favoritos.</p>
-      )}
-
-      {d.vazios.length > 0 && (
-        <section className={styles.convite}>
-          <IconUserPlus size={22} aria-hidden />
-          <div>
-            <p>
-              Ninguém da Rede ainda {d.vazios.slice(0, 2).map((v, i) => (
-                <span key={v.nivel}>{i > 0 ? ' nem ' : 'na '}{v.titulo.replace(/^sua |^seu /, (m) => m)} (<b>{v.nome}</b>)</span>
-              ))}. Convide colegas da carreira:
-            </p>
-            <div className={styles.conviteAcoes}>
-              <a href={`https://wa.me/?text=${encodeURIComponent(CONVITE)}`} target="_blank" rel="noopener noreferrer" className={styles.botao}>
-                <IconBrandWhatsapp size={18} aria-hidden />Convidar pelo WhatsApp
-              </a>
-              <button type="button" className={[styles.botao, styles.secundario].join(' ')} onClick={() => void copiar()}>
-                {copiado ? <IconCheck size={18} aria-hidden /> : <IconCopy size={18} aria-hidden />}{copiado ? 'Convite copiado' : 'Copiar convite'}
-              </button>
-            </div>
-          </div>
-        </section>
       )}
 
       {d.recentes.length > 0 && (
