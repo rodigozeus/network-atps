@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from auth import get_usuario_regular
+from auth import get_current_user, get_usuario_regular
 from database import get_db
-from models import Analista, Favorito, UnidadeSiorg, condicao_perfil_visivel
+from models import Acesso, Analista, Favorito, UnidadeSiorg, condicao_perfil_visivel
 from routers.busca import _aplicar_visibilidade
 from schemas import AnelOut, MinhaRedePaginaOut, NovidadesRedeOut, PessoaOrbita, ResumoPublico
 
@@ -141,3 +141,23 @@ def minha_rede_pagina(eu: Analista = Depends(get_usuario_regular), db: Session =
         eu=_aplicar_visibilidade(eu), aneis=aneis,
         recentes=[_aplicar_visibilidade(x[3]) for x in recentes[:12]],
     )
+
+
+# --- Visitas (só contagem, para o painel) ---
+
+def _hoje_brasilia():
+    return (datetime.now(timezone.utc) - timedelta(hours=3)).date()
+
+
+@router.post("/rede/visita", status_code=status.HTTP_204_NO_CONTENT)
+def registrar_visita(eu: Analista = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Chamada uma vez por sessão do navegador quando a pessoa abre a Rede logada."""
+    db.add(Acesso(dia=_hoje_brasilia(), tipo="rede", analista_id=eu.id))
+    db.commit()
+
+
+@router.post("/publico/visita", status_code=status.HTTP_204_NO_CONTENT)
+def registrar_visita_publica(db: Session = Depends(get_db)):
+    """Página pública /sobre (sem conta): conta a visita, sem guardar nada de quem visitou."""
+    db.add(Acesso(dia=_hoje_brasilia(), tipo="sobre"))
+    db.commit()

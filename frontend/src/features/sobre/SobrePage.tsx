@@ -4,6 +4,7 @@ import {
   IconBuildingCommunity, IconCircleCheck, IconHeartHandshake, IconLock, IconSearch, IconStar,
 } from '@tabler/icons-react'
 import type { ResumoPublico } from '@shared/api/types'
+import { api } from '@shared/api/client'
 import { redeApi } from '@shared/api/unidades'
 import { Andeps, LogoHorizontal, Rodape } from '@shared/components'
 import auth from '@features/auth/auth.module.css'
@@ -15,6 +16,12 @@ export default function SobrePage() {
 
   useEffect(() => {
     redeApi.resumo().then(setResumo).catch(() => {})
+    try {
+      if (!sessionStorage.getItem('visita-sobre')) {
+        sessionStorage.setItem('visita-sobre', '1')
+        void api.post('/publico/visita').catch(() => {})
+      }
+    } catch { /* sem sessionStorage */ }
     document.title = 'Conheça a Rede ATPS'
     return () => { document.title = 'Rede ATPS' }
   }, [])

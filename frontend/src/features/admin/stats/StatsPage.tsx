@@ -67,6 +67,49 @@ export default function StatsPage() {
         </div>
       </div>
 
+      <h2 className={styles.chartTitle} style={{ margin: 'var(--sp-6) 0 var(--sp-3)' }}>Visitas à Rede</h2>
+      <div className={styles.statsGrid}>
+        <div className={styles.statCard}>
+          <p className={styles.statLabel}>Hoje</p>
+          <p className={styles.statValue}>{stats.visitas.hoje}</p>
+        </div>
+        <div className={styles.statCard}>
+          <p className={styles.statLabel}>Últimos 7 dias</p>
+          <p className={styles.statValue}>{stats.visitas.ultimos_7}</p>
+        </div>
+        <div className={styles.statCard}>
+          <p className={styles.statLabel}>Últimos 30 dias</p>
+          <p className={styles.statValue}>{stats.visitas.ultimos_30}</p>
+        </div>
+        <div className={styles.statCard}>
+          <p className={styles.statLabel}>Pessoas diferentes (30 dias)</p>
+          <p className={`${styles.statValue} ${styles.statValueGreen}`}>{stats.visitas.pessoas_30}</p>
+        </div>
+        <div className={styles.statCard}>
+          <p className={styles.statLabel}>Página pública (30 dias)</p>
+          <p className={styles.statValue}>{stats.visitas.publica_30}</p>
+        </div>
+        <div className={styles.statCard}>
+          <p className={styles.statLabel}>Total desde o início</p>
+          <p className={styles.statValue}>{stats.visitas.total}</p>
+        </div>
+      </div>
+      <div className={styles.chartCardFull}>
+        <p className={styles.chartTitle}>Visitas por dia (últimos 30 dias)</p>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={stats.visitas.por_dia.map((d) => ({ dia: `${d.dia.slice(8, 10)}/${d.dia.slice(5, 7)}`, visitas: d.visitas, pessoas: d.pessoas }))}
+            margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+            <XAxis dataKey="dia" tick={{ fontSize: 11 }} interval={2} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} width={32} />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="visitas" name="Visitas" fill="#f15e23" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="pessoas" name="Pessoas" fill="#6366f1" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
       <div className={styles.chartsGrid}>
         <div className={styles.chartCardFull}>
           <p className={styles.chartTitle}>Analistas por ministério (top 10)</p>

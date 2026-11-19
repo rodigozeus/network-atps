@@ -1,7 +1,7 @@
 import enum
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import (
-    Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, and_
+    Boolean, Date, DateTime, Enum, ForeignKey, Integer, String, Text, and_
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
@@ -292,6 +292,21 @@ class EnvioEmail(Base):
     tipo: Mapped[str] = mapped_column(String(40), nullable=False)
     essencial: Mapped[bool] = mapped_column(Boolean, nullable=False)
     enviado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc, index=True)
+
+
+class Acesso(Base):
+    """Uma visita: a primeira abertura da Rede numa sessão do navegador (tipo "rede", com a
+    conta) ou da página pública (tipo "sobre", sem conta). Só para contagens no painel."""
+    __tablename__ = "acessos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    dia: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    tipo: Mapped[str] = mapped_column(String(10), nullable=False)
+    # conta excluída: a visita continua contando, sem a ligação com a pessoa
+    analista_id: Mapped[int | None] = mapped_column(
+        ForeignKey("analistas.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    criado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
 
 
 class TemaAtuacao(Base):

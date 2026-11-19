@@ -25,6 +25,8 @@ from schemas import (
     MinistrioStat,
     PaginatedAdminUsers,
     TemaStat,
+    VisitasDia,
+    VisitasStats,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -257,7 +259,30 @@ def get_stats(
         .all()
     )
 
+    # visitas (uma por sessão do navegador), no horário de Brasília
+    from datetime import timedelta as _td
+    from models import Acesso
+    hoje = (datetime.now(timezone.utc) - _td(hours=3)).date()
+    desde30 = hoje - _td(days=29)
+    rede = db.query(Acesso).filter(Acesso.tipo == "rede")
+    por_dia = {
+        d: (v, p) for d, v, p in db.query(Acesso.dia, func.count(), func.count(func.distinct(Acesso.analista_id)))
+        .filter(Acesso.tipo == "rede", Acesso.dia >= desde30).group_by(Acesso.dia)
+    }
+    visitas = VisitasStats(
+        hoje=por_dia.get(hoje, (0, 0))[0],
+        ultimos_7=sum(v for d, (v, _) in por_dia.items() if d > hoje - _td(days=7)),
+        ultimos_30=sum(v for v, _ in por_dia.values()),
+        total=rede.count(),
+        pessoas_30=rede.filter(Acesso.dia >= desde30).with_entities(func.count(func.distinct(Acesso.analista_id))).scalar() or 0,
+        publica_30=db.query(Acesso).filter(Acesso.tipo == "sobre", Acesso.dia >= desde30).count(),
+        por_dia=[VisitasDia(dia=(desde30 + _td(days=i)).isoformat(),
+                            visitas=por_dia.get(desde30 + _td(days=i), (0, 0))[0],
+                            pessoas=por_dia.get(desde30 + _td(days=i), (0, 0))[1]) for i in range(30)],
+    )
+
     return AdminStats(
+        visitas=visitas,
         total_analistas=total,
         total_ativos=total_ativos,
         total_inativos=total - total_ativos,

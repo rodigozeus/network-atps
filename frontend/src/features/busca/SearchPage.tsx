@@ -24,7 +24,6 @@ const ORDENS: Record<OrdemBusca, string> = {
   recentes: 'Chegaram há pouco',
 }
 const lerOrdem = (v: string | null): OrdemBusca => (v && v in ORDENS ? (v as OrdemBusca) : 'relevancia')
-const BUSCA_MIN = 260 // abaixo disso, os filtros vão para o painel do botão "Filtros"
 type Vista = 'cards' | 'linhas'
 
 // Resultados já carregados (com as páginas da rolagem infinita), para o "voltar" de um perfil
@@ -181,12 +180,13 @@ export default function SearchPage() {
 
   // Modo compacto: mede se a busca ficaria estreita demais com todos os filtros na linha
   const toolbar = useRef<HTMLDivElement>(null)
-  const busca = useRef<HTMLLabelElement>(null)
   const medirToolbar = useCallback(() => {
     const tb = toolbar.current
     if (!tb) return
     tb.dataset.medindo = 'true'
-    const cabe = (busca.current?.getBoundingClientRect().width ?? 0) >= BUSCA_MIN
+    // a busca tem largura mínima e os filtros encolhem até um limite; se mesmo assim a linha
+    // transborda, os filtros vão para o painel
+    const cabe = tb.scrollWidth <= tb.clientWidth + 1
     delete tb.dataset.medindo
     setCompacto(!cabe)
   }, [])
@@ -235,7 +235,7 @@ export default function SearchPage() {
         <NovidadesRede />
         <div className={styles.listaHead}>
           <div ref={toolbar} className={[styles.toolbar, compacto ? styles.compacto : '', painelAberto ? styles.abertos : ''].join(' ')}>
-            <label className={styles.search} ref={busca}>
+            <label className={styles.search}>
               <IconSearch size={20} aria-hidden />
               <input type="search" value={texto} onChange={(e) => setTexto(e.target.value)}
                 placeholder="Buscar por nome, ministério, secretaria ou tema" aria-label="Buscar pessoas" />

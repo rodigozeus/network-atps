@@ -429,6 +429,22 @@ class TemaStat(BaseModel):
     total: int
 
 
+class VisitasDia(BaseModel):
+    dia: str
+    visitas: int
+    pessoas: int
+
+
+class VisitasStats(BaseModel):
+    hoje: int
+    ultimos_7: int
+    ultimos_30: int
+    total: int
+    pessoas_30: int  # pessoas diferentes que acessaram nos últimos 30 dias
+    publica_30: int  # visitas à página pública /sobre nos últimos 30 dias
+    por_dia: list[VisitasDia]  # últimos 30 dias
+
+
 class AdminStats(BaseModel):
     total_analistas: int
     total_ativos: int
@@ -436,6 +452,7 @@ class AdminStats(BaseModel):
     por_ministerio: list[MinistrioStat]
     por_nivel_formacao: list[FormacaoStat]
     por_tema: list[TemaStat]
+    visitas: VisitasStats
 
 
 class ConflitoCadastroOut(BaseModel):

@@ -71,6 +71,16 @@ export interface AdminStats {
   por_ministerio: { ministerio_sigla: string | null; total: number }[]
   por_nivel_formacao: { nivel: string; total: number }[]
   por_tema: { tema: string; total: number }[]
+  /** Uma visita = a Rede aberta numa sessão do navegador */
+  visitas: {
+    hoje: number
+    ultimos_7: number
+    ultimos_30: number
+    total: number
+    pessoas_30: number
+    publica_30: number
+    por_dia: { dia: string; visitas: number; pessoas: number }[]
+  }
 }
 
 export interface ListUsuariosParams {

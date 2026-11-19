@@ -35,6 +35,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false))
   }, [])
 
+  // Conta uma visita por sessão do navegador (por pessoa), para o painel de estatísticas
+  useEffect(() => {
+    if (!user) return
+    const chave = `visita-${user.id}`
+    try {
+      if (sessionStorage.getItem(chave)) return
+      sessionStorage.setItem(chave, '1')
+    } catch { /* sem sessionStorage: conta mesmo assim */ }
+    void api.post('/rede/visita').catch(() => {})
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const login = useCallback(async (email: string, senha: string) => {
     // /auth/login uses OAuth2PasswordRequestForm → form-urlencoded
     const form = new URLSearchParams({ username: email, password: senha })

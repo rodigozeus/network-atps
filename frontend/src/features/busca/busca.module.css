@@ -19,7 +19,8 @@
 
 .search {
   position: relative;
-  flex: 1 1 0;
+  /* nunca menos que isso na linha cheia; os filtros encolhem antes de irem para o painel */
+  flex: 1 0 280px;
   min-width: 0;
 }
 
@@ -52,13 +53,13 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
 }
 
 .select {
   position: relative;
-  flex: 0 0 190px;
-  min-width: 0;
+  flex: 0 1 190px;
+  min-width: 130px;
 }
 
 .select select {
@@ -163,6 +164,10 @@
 
 .compacto.abertos:not([data-medindo]) .painelFiltros {
   display: flex;
+}
+
+.compacto:not([data-medindo]) .search {
+  flex: 1 1 0;
 }
 
 .compacto:not([data-medindo]) .select {
@@ -878,6 +883,7 @@
 
 .ordem {
   flex-basis: 210px;
+  min-width: 150px;
 }
 
 /* Novidades da rede (quem chegou na sua unidade/turma) e aviso de perfil desatualizado */
