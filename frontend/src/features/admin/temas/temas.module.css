@@ -104,3 +104,20 @@
   border-color: var(--color-primary);
   box-shadow: inset 0 0 0 1px var(--color-primary);
 }
+
+.grupo {
+  margin-top: var(--sp-6, 24px);
+}
+
+.grupoTitulo {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--font-lg, 18px);
+  font-weight: 700;
+}
+
+.grupoTitulo small {
+  margin-left: 6px;
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--color-text-muted, #6b7280);
+}

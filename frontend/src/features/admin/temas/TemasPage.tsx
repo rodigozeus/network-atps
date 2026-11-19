@@ -16,6 +16,7 @@ function mensagem(err: unknown): string {
 }
 
 type Filtro = 'todos' | 'revisar' | TipoTema
+const GRUPOS = [['area', 'Áreas de política'], ['ferramenta', 'Ferramentas e métodos']] as const
 
 /** Curadoria do catálogo de temas: revisar os criados por pessoas, juntar duplicados, renomear,
  *  mudar o tipo e cuidar dos apelidos (siglas e grafias que levam ao tema oficial). */
@@ -102,54 +103,66 @@ export default function TemasPage() {
         </select>
       </div>
 
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Tema</th>
-              <th>Tipo</th>
-              <th style={{ textAlign: 'right' }}>Pessoas</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lista.map((x) => (
-              <tr key={x.id} className={x.revisado ? '' : styles.rowPendente}>
-                <td>
-                  <NomeTema x={x} />
-                  {x.apelidos.length > 0 && <small className={t.apelidos}>Apelidos: {x.apelidos.join(' · ')}</small>}
-                  {!x.revisado && x.criado_por && (
-                    <small className={t.apelidos}>Criado por {x.criado_por}{x.criado_em ? ` em ${new Date(x.criado_em).toLocaleDateString('pt-BR')}` : ''}</small>
-                  )}
-                </td>
-                <td>
-                  <select className={styles.filterSelect} value={x.tipo} aria-label={`Tipo de ${x.nome}`}
-                    onChange={(e) => void agir(() => editarTema(x.id, { tipo: e.target.value as TipoTema }))}>
-                    <option value="area">{TIPOS.area}</option>
-                    <option value="ferramenta">{TIPOS.ferramenta}</option>
-                  </select>
-                </td>
-                <td style={{ textAlign: 'right' }}>{x.total}</td>
-                <td>
-                  <div className={styles.actions}>
-                    {!x.revisado && (
-                      <Button size="sm" onClick={() => void agir(() => editarTema(x.id, { revisado: true }))}>Aprovar</Button>
-                    )}
-                    <Button size="sm" variant="outline" onClick={() => setEditando(x)}>Editar</Button>
-                    <Button size="sm" variant="outline" onClick={() => setJuntando(x)}>Juntar…</Button>
-                    {x.total === 0 && (
-                      <Button size="sm" variant="ghost" onClick={() => {
-                        if (window.confirm(`Excluir o tema “${x.nome}”? Ninguém o usa.`)) void agir(() => excluirTema(x.id))
-                      }}>Excluir</Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!lista.length && <tr><td colSpan={4} className={styles.empty}>Nenhum tema com esse filtro.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      {!lista.length && <p className={styles.empty}>Nenhum tema com esse filtro.</p>}
+      {GRUPOS.map(([tipo, titulo]) => {
+        const itens = lista.filter((x) => x.tipo === tipo)
+        if (!itens.length) return null
+        const pendentes = itens.filter((x) => !x.revisado).length
+        return (
+          <section key={tipo} className={t.grupo} aria-labelledby={`grupo-${tipo}`}>
+            <h2 id={`grupo-${tipo}`} className={t.grupoTitulo}>
+              {titulo} <small>{itens.length} {itens.length === 1 ? 'tema' : 'temas'}{pendentes ? `, ${pendentes} a revisar` : ''}</small>
+            </h2>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Tema</th>
+                    <th>Tipo</th>
+                    <th style={{ textAlign: 'right' }}>Pessoas</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {itens.map((x) => (
+                  <tr key={x.id} className={x.revisado ? '' : styles.rowPendente}>
+                    <td>
+                      <NomeTema x={x} />
+                      {x.apelidos.length > 0 && <small className={t.apelidos}>Apelidos: {x.apelidos.join(' · ')}</small>}
+                      {!x.revisado && x.criado_por && (
+                        <small className={t.apelidos}>Criado por {x.criado_por}{x.criado_em ? ` em ${new Date(x.criado_em).toLocaleDateString('pt-BR')}` : ''}</small>
+                      )}
+                    </td>
+                    <td>
+                      <select className={styles.filterSelect} value={x.tipo} aria-label={`Tipo de ${x.nome}`}
+                        onChange={(e) => void agir(() => editarTema(x.id, { tipo: e.target.value as TipoTema }))}>
+                        <option value="area">{TIPOS.area}</option>
+                        <option value="ferramenta">{TIPOS.ferramenta}</option>
+                      </select>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>{x.total}</td>
+                    <td>
+                      <div className={styles.actions}>
+                        {!x.revisado && (
+                          <Button size="sm" onClick={() => void agir(() => editarTema(x.id, { revisado: true }))}>Aprovar</Button>
+                        )}
+                        <Button size="sm" variant="outline" onClick={() => setEditando(x)}>Editar</Button>
+                        <Button size="sm" variant="outline" onClick={() => setJuntando(x)}>Juntar…</Button>
+                        {x.total === 0 && (
+                          <Button size="sm" variant="ghost" onClick={() => {
+                            if (window.confirm(`Excluir o tema “${x.nome}”? Ninguém o usa.`)) void agir(() => excluirTema(x.id))
+                          }}>Excluir</Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )
+      })}
 
       {editando && (
         <EditarTema tema={editando === 'novo' ? null : editando} onFechar={() => setEditando(null)}
