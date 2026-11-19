@@ -641,7 +641,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  justify-self: end;
+  justify-self: start; /* a estrela fica sempre na mesma posição, com qualquer número de botões */
 }
 
 .lAcoes a,

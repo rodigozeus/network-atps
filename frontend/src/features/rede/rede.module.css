@@ -212,8 +212,8 @@
 .motivo {
   margin: 0 0 0 4px;
   font-size: 12px;
-  font-weight: 600;
-  color: #b8330c;
+  font-weight: 500;
+  color: var(--muted);
 }
 
 .mais {
