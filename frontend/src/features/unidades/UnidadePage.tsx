@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
-  IconAt, IconBriefcase, IconBuilding, IconChevronRight, IconMapPin, IconPhone, IconUsers, IconWorld,
+  IconAt, IconBriefcase, IconBuilding, IconChevronDown, IconChevronRight, IconMapPin, IconPhone, IconUsers, IconWorld,
 } from '@tabler/icons-react'
 import type { Unidade } from '@shared/api/types'
 import { unidadesApi } from '@shared/api/unidades'
@@ -35,6 +35,17 @@ export default function UnidadePage() {
   const [carregando, setCarregando] = useState(true)
   const [tudo, setTudo] = useState(false)
   const [verSub, setVerSub] = useState(false)
+  const suspensa = useRef<HTMLDivElement>(null)
+
+  // lista suspensa: fecha com Esc ou clicando fora
+  useEffect(() => {
+    if (!verSub) return
+    const fora = (e: MouseEvent) => { if (!suspensa.current?.contains(e.target as Node)) setVerSub(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setVerSub(false) }
+    document.addEventListener('mousedown', fora)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', fora); document.removeEventListener('keydown', esc) }
+  }, [verSub])
 
   useEffect(() => {
     if (!id) return
@@ -114,16 +125,6 @@ export default function UnidadePage() {
             </p>
           </header>
 
-          {u.membros.length > 0 && (
-            <section className={[styles.pessoas, styles.pessoasTopo].join(' ')} aria-labelledby="titulo-pessoas">
-              <h2 id="titulo-pessoas"><IconUsers size={16} aria-hidden />Quem está aqui</h2>
-              <div className={busca.linhas}>{u.membros.map((a) => <AnalistaLinha key={a.id} a={a} />)}</div>
-              {u.membros_total > u.membros.length && (
-                <p className={styles.fonte}>Mostrando {u.membros.length} de {u.membros_total}. Use a busca para filtrar.</p>
-              )}
-            </section>
-          )}
-
           <div className={styles.colunas}>
             <div>
               {competencia && (
@@ -176,11 +177,12 @@ export default function UnidadePage() {
               {u.subunidades.length > 0 && (
                 <section className={styles.bloco}>
                   <h2><IconChevronRight size={16} aria-hidden />Unidades</h2>
-                  <button type="button" className={styles.verMais} onClick={() => setVerSub((v) => !v)}
+                  <div className={styles.suspensa} ref={suspensa}>
+                  <button type="button" className={styles.suspensaBotao} onClick={() => setVerSub((v) => !v)}
                     aria-expanded={verSub} aria-controls="lista-subunidades">
-                    {verSub ? 'Recolher' : `Ver as ${u.subunidades.length} unidades`}
+                    Ver as {u.subunidades.length} unidades <IconChevronDown size={16} aria-hidden />
                   </button>
-                  <ul className={styles.subunidades} id="lista-subunidades" hidden={!verSub}>
+                  <ul className={[styles.subunidades, styles.suspensaLista].join(' ')} id="lista-subunidades" hidden={!verSub}>
                     {u.subunidades.map((s) => (
                       <li key={s.id}>
                         <Link to={`/unidades/${s.id}`}>
@@ -190,11 +192,21 @@ export default function UnidadePage() {
                       </li>
                     ))}
                   </ul>
+                  </div>
                 </section>
               )}
             </aside>
           </div>
 
+          {u.membros.length > 0 && (
+            <section className={styles.pessoas} aria-labelledby="titulo-pessoas">
+              <h2 id="titulo-pessoas"><IconUsers size={16} aria-hidden />Quem está aqui</h2>
+              <div className={busca.linhas}>{u.membros.map((a) => <AnalistaLinha key={a.id} a={a} />)}</div>
+              {u.membros_total > u.membros.length && (
+                <p className={styles.fonte}>Mostrando {u.membros.length} de {u.membros_total}. Use a busca para filtrar.</p>
+              )}
+            </section>
+          )}
         </article>
       </div>
     </>
