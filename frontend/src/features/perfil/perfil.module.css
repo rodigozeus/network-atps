@@ -1333,14 +1333,23 @@
   white-space: nowrap;
 }
 
-/* tela estreita: o ícone da esquerda sai (o botão "ligar" já está ali) */
-@media (max-width: 420px) {
-  .celularIcone {
-    display: none;
+/* celular: número inteiro numa linha e os três botões embaixo, alinhados ao texto */
+@media (max-width: 600px) {
+  .contatos .celular {
+    flex-wrap: wrap;
+    row-gap: 10px;
   }
 
-  .contatos .celular {
+  .celularAcoes {
+    flex-basis: 100%;
+    padding-left: 54px;
     gap: 10px;
+  }
+
+  .contatos .celularAcoes a,
+  .celularAcoes button {
+    width: 44px;
+    height: 44px;
   }
 }
 
