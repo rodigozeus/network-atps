@@ -685,3 +685,18 @@ class MinhaRedePaginaOut(BaseModel):
     eu: AnalistaPublico
     aneis: list[AnelOut]
     recentes: list[AnalistaPublico]
+
+
+class AcessoOut(BaseModel):
+    id: int
+    quando: datetime | None
+    tipo: str  # rede | sobre
+    analista_id: int | None = None
+    nome: str | None = None
+    orgao: str | None = None
+    excluida: bool = False  # acesso de uma conta que já foi excluída
+
+
+class AcessosOut(BaseModel):
+    total: int
+    itens: list[AcessoOut]

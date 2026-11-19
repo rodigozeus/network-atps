@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { api } from '@shared/api/client'
+import { useAuth } from '@shared/hooks/useAuth'
 import styles from './admin.module.css'
 
 export default function AdminLayout() {
   const [pendingCount, setPendingCount] = useState(0)
+  const { user } = useAuth()
 
   useEffect(() => {
     api
@@ -50,6 +52,16 @@ export default function AdminLayout() {
           >
             Temas
           </NavLink>
+          {user?.role === 'admin' && (
+            <NavLink
+              to="/admin/acessos"
+              className={({ isActive }) =>
+                [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
+              }
+            >
+              Acessos
+            </NavLink>
+          )}
           <NavLink
             to="/admin/conflitos"
             className={({ isActive }) =>

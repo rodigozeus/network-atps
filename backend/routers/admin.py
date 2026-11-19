@@ -24,6 +24,8 @@ from schemas import (
     FormacaoStat,
     MinistrioStat,
     PaginatedAdminUsers,
+    AcessoOut,
+    AcessosOut,
     TemaStat,
     VisitasDia,
     VisitasStats,
@@ -441,3 +443,41 @@ def cobertura(db: Session = Depends(get_db), _: Analista = Depends(get_current_a
         sem_orgao_rede=rede.get(None, 0),
         cadastros_por_dia=[{"dia": d, "total": n} for d, n in sorted(dias.items())],
     )
+
+
+# --- Log de acessos (só admin; a ANDEPS não vê) ---
+
+def get_admin_estrito(analista: Analista = Depends(get_current_admin)) -> Analista:
+    if analista.role != Role.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Acesso restrito à administração")
+    return analista
+
+
+@router.get("/acessos", response_model=AcessosOut)
+def log_acessos(
+    limite: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    q: str | None = Query(None, description="Filtra pelo nome da pessoa"),
+    tipo: str | None = Query(None, pattern="^(rede|sobre)$"),
+    db: Session = Depends(get_db),
+    _: Analista = Depends(get_admin_estrito),
+):
+    """Últimos acessos, do mais recente ao mais antigo: uma linha por sessão do navegador em que a
+    pessoa abriu a Rede logada (tipo rede) ou por visita à página pública (tipo sobre, sem pessoa)."""
+    from models import Acesso
+    consulta = db.query(Acesso, Analista).outerjoin(Analista, Analista.id == Acesso.analista_id)
+    if tipo:
+        consulta = consulta.filter(Acesso.tipo == tipo)
+    if q and q.strip():
+        consulta = consulta.filter(func.f_unaccent(func.lower(Analista.nome)).like(func.f_unaccent(func.lower(f"%{q.strip()}%"))))
+    total = consulta.count()
+    linhas = consulta.order_by(Acesso.criado_em.desc(), Acesso.id.desc()).offset(offset).limit(limite).all()
+    return AcessosOut(total=total, itens=[
+        AcessoOut(
+            id=ac.id, quando=ac.criado_em, tipo=ac.tipo,
+            analista_id=a.id if a else None, nome=a.nome if a else None,
+            orgao=(a.ministerio_sigla or a.ministerio) if a else None,
+            excluida=a is None and ac.tipo == "rede",
+        )
+        for ac, a in linhas
+    ])

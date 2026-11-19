@@ -226,3 +226,20 @@ export async function reprovarTema(id: number, substitutoId: number | null): Pro
 export async function excluirTema(id: number): Promise<void> {
   await api.delete(`/admin/temas/${id}`)
 }
+
+// --- Log de acessos (só admin) ---
+
+export interface Acesso {
+  id: number
+  quando: string | null
+  tipo: 'rede' | 'sobre'
+  analista_id: number | null
+  nome: string | null
+  orgao: string | null
+  excluida: boolean
+}
+
+export async function getAcessos(params: { q?: string; tipo?: 'rede' | 'sobre'; limite?: number; offset?: number }) {
+  const { data } = await api.get<{ total: number; itens: Acesso[] }>('/admin/acessos', { params })
+  return data
+}
