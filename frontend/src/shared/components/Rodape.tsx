@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import Andeps from './Andeps'
 import { LogoHorizontal } from './Logo'
 import styles from './Rodape.module.css'
@@ -13,8 +14,8 @@ export default function Rodape({ transparente = false }: { transparente?: boolea
         </div>
         <div className={styles.creditos}>
           <p>
-            Criado com carinho por{' '}
-            <a href="https://damaceno.org/" target="_blank" rel="noopener noreferrer">Rodrigo Damaceno</a>
+            Criado por{' '}
+            <Link to="/analistas/3">Rodrigo Damaceno</Link>
           </p>
           <span className={styles.sep} aria-hidden>·</span>
           <p>
