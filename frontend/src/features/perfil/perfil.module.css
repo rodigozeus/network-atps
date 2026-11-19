@@ -1407,3 +1407,17 @@
   flex: 1;
   accent-color: var(--color-primary);
 }
+
+.recorte {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+}
+
+.recorte h2 {
+  padding: 0;
+  border: 0;
+}
