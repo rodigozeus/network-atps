@@ -7,8 +7,7 @@ import { buscaApi } from '@shared/api/busca'
 import { favoritosApi } from '@shared/api/favoritos'
 import { lotacoesApi } from '@shared/api/lotacoes'
 import { temasApi } from '@shared/api/temas'
-import type { AnalistaPublico, BuscaParams, MinhaRede, NivelFormacao, OrdemBusca } from '@shared/api/types'
-import { redeApi } from '@shared/api/unidades'
+import type { AnalistaPublico, BuscaParams, NivelFormacao, OrdemBusca } from '@shared/api/types'
 import { Spinner } from '@shared/components'
 import { useFavoritos } from '@shared/hooks/useFavoritos'
 import { NIVEIS, ORDEM_NIVEIS } from '@shared/utils/analista'
@@ -66,7 +65,6 @@ export default function SearchPage() {
   const [carregandoMais, setCarregandoMais] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [rede, setRede] = useState<AnalistaPublico[]>([])
-  const [minhaRede, setMinhaRede] = useState<MinhaRede | null>(null)
   const [ministerios, setMinisterios] = useState<string[]>([])
   const [temas, setTemas] = useState<string[]>([])
   const [vista, setVista] = useState<Vista>(lerVista)
@@ -166,8 +164,6 @@ export default function SearchPage() {
 
   // rede do topo e opções dos filtros: uma vez ao abrir
   useEffect(() => {
-    // você no centro: menos pessoas em tela estreita
-    redeApi.minha(window.innerWidth < 760 ? 10 : 18).then(setMinhaRede).catch(() => {})
     buscaApi.buscar({ page: 1, page_size: 20 }).then((r) => {
       setRede(r.items)
       // sem GET /lotacoes no back-end, os ministérios do filtro saem das pessoas carregadas
@@ -226,7 +222,7 @@ export default function SearchPage() {
 
   return (
     <>
-      <RedeHero rede={minhaRede} analistas={rede} onEscolher={escolher} />
+      <RedeHero analistas={rede} onEscolher={escolher} />
 
       <section className={styles.lista} data-barra-limite>
         <NovidadesRede />
