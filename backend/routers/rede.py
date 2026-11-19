@@ -86,7 +86,7 @@ NIVEL_ROTULO = {
     "ministerio": "Mesmo ministério", "secretaria": "Mesma secretaria", "departamento": "Mesmo departamento",
     "coordenacao_geral": "Mesma coordenação-geral", "coordenacao": "Mesma coordenação",
 }
-LIGACOES_POR_PESSOA = 3
+LIGACOES_POR_PESSOA = 1  # poucas linhas: só a ligação mais forte de cada pessoa
 
 
 @router.get("/rede/minha", response_model=MinhaRedeOut)
