@@ -27,6 +27,11 @@ const lerOrdem = (v: string | null): OrdemBusca => (v && v in ORDENS ? (v as Ord
 const BUSCA_MIN = 260 // abaixo disso, os filtros vão para o painel do botão "Filtros"
 type Vista = 'cards' | 'linhas'
 
+// Resultados já carregados (com as páginas da rolagem infinita), para o "voltar" de um perfil
+// mostrar a mesma lista na mesma posição, sem recarregar
+const CACHE_VALIDADE_MS = 10 * 60 * 1000
+let cacheLista: { chave: string; itens: AnalistaPublico[]; pagina: number; paginas: number; em: number } | null = null
+
 const lerVista = (): Vista => {
   try {
     return localStorage.getItem('vista') === 'linhas' ? 'linhas' : 'cards'
@@ -94,9 +99,17 @@ export default function SearchPage() {
     page_size: PAGE_SIZE,
   }), [filtros])
 
-  // primeira página sempre que os filtros mudam
+  // primeira página sempre que os filtros mudam (ou a lista guardada, se for a mesma busca)
   useEffect(() => {
     let vivo = true
+    const chave = JSON.stringify(paramsApi(1))
+    if (cacheLista && cacheLista.chave === chave && Date.now() - cacheLista.em < CACHE_VALIDADE_MS) {
+      setItens(cacheLista.itens)
+      setPagina(cacheLista.pagina)
+      setPaginas(cacheLista.paginas)
+      setCarregando(false)
+      return () => { vivo = false }
+    }
     setCarregando(true)
     setErro(null)
     buscaApi.buscar(paramsApi(1))
@@ -110,6 +123,13 @@ export default function SearchPage() {
       .finally(() => vivo && setCarregando(false))
     return () => { vivo = false }
   }, [paramsApi])
+
+  // guarda a lista atual para o "voltar"
+  useEffect(() => {
+    if (carregando || !itens.length) return
+    const chave = JSON.stringify(paramsApi(1))
+    cacheLista = { chave, itens, pagina, paginas, em: cacheLista?.chave === chave ? cacheLista.em : Date.now() }
+  }, [itens, pagina, paginas, carregando, paramsApi])
 
   const carregarMais = useCallback(() => {
     if (carregandoMais || pagina >= paginas) return
