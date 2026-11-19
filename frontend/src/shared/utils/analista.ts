@@ -56,20 +56,23 @@ export function miniaturaUrl(path: string | null, tamanho: 'p' | 'm' = 'p'): str
   return url ? url.replace(/\.[a-z]+$/i, `_${tamanho}.jpg`) : null
 }
 
-// Gradiente da capa por órgão: o mesmo órgão sempre recebe a mesma cor
+// Gradiente da capa por órgão: o mesmo órgão sempre recebe a mesma cor.
+// O roxo é exclusivo do Ministério das Mulheres; a paleta dos demais não tem roxo.
+const ROXO_MULHERES = 'linear-gradient(135deg, #e2b6f7 0%, #b487ec 50%, #8a5ed9 100%)'
 const GRADIENTES = [
   'linear-gradient(135deg, #f5b97a 0%, #ee8fa6 48%, #7fa3f0 100%)',
-  'linear-gradient(135deg, #e39ef0 0%, #f08aa8 50%, #f4b583 100%)',
+  'linear-gradient(135deg, #f7a8a0 0%, #f4b583 50%, #f2d27a 100%)',
   'linear-gradient(135deg, #f2c95a 0%, #8fcf73 50%, #5fb8a6 100%)',
-  'linear-gradient(135deg, #82dccb 0%, #6fbcf0 50%, #9f98f0 100%)',
+  'linear-gradient(135deg, #82dccb 0%, #6fbcf0 50%, #6f9ff0 100%)',
   'linear-gradient(135deg, #f4a473 0%, #f2cb68 50%, #a3d77c 100%)',
-  'linear-gradient(135deg, #7fb8f4 0%, #9ca1f4 50%, #dc9df0 100%)',
+  'linear-gradient(135deg, #7fd3e8 0%, #7fb8f4 50%, #5f8fe8 100%)',
   'linear-gradient(135deg, #f39090 0%, #f4b07c 50%, #f0d873 100%)',
   'linear-gradient(135deg, #a4dd98 0%, #7fc8d2 50%, #8fa6f2 100%)',
 ]
 export function gradienteOrgao(chave: string | null | undefined): string {
   const texto = (chave ?? '').trim().toUpperCase()
   if (!texto) return 'linear-gradient(135deg, #ffcf9f 0%, #f6a3a8 50%, #b9b2f2 100%)'
+  if (texto === 'MMULHERES' || texto.includes('MULHERES')) return ROXO_MULHERES
   let h = 0
   for (const c of texto) h = (h * 31 + c.charCodeAt(0)) | 0
   return GRADIENTES[Math.abs(h) % GRADIENTES.length]
