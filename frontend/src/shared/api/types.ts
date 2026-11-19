@@ -195,6 +195,13 @@ export interface ApiError {
   detail: string | Array<{ loc: string[]; msg: string; type: string }>
 }
 
+/** Pessoa próxima de um perfil (GET /analistas/{id}/proximos) */
+export interface Proximo {
+  analista: AnalistaPublico
+  temas_comuns: string[]
+  lotacao_comum: { nivel: NivelLotacao; nome: string } | null
+}
+
 export type OrdemBusca = 'relevancia' | 'nome' | 'recentes'
 
 /** Mudança no perfil de um favorito: lotação, novo tema ou nova formação */

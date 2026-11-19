@@ -5,8 +5,7 @@ import {
   IconBuildingCommunity, IconCertificate, IconCircleCheck, IconFileCv, IconMail, IconPencil, IconPhone, IconSchool, IconSparkles, IconStar,
   IconStarFilled, IconTrash,
 } from '@tabler/icons-react'
-import type { AnalistaPublico, EventoPerfil } from '@shared/api/types'
-import { buscaApi } from '@shared/api/busca'
+import type { AnalistaPublico, EventoPerfil, NivelLotacao, Proximo } from '@shared/api/types'
 import { perfilApi } from '@shared/api/perfil'
 import { Avatar, Spinner } from '@shared/components'
 import { useAuth } from '@shared/hooks/useAuth'
@@ -17,9 +16,20 @@ import styles from './perfil.module.css'
 import { isLinkGovBr, isLinkLattes, isLinkLinkedin } from '@shared/utils/url'
 import { dataEvento, rotuloEvento } from '@shared/utils/novidades'
 
-interface Proximo {
-  p: AnalistaPublico
-  comuns: string[]
+// Legenda de quem está próximo: o nível mais fundo da lotação em comum
+const MESMA: Record<NivelLotacao, string> = {
+  ministerio: 'Também no',
+  secretaria: 'Mesma secretaria:',
+  departamento: 'Mesmo departamento:',
+  coordenacao_geral: 'Mesma coordenação-geral:',
+  coordenacao: 'Mesma coordenação:',
+}
+
+function motivo({ temas_comuns, lotacao_comum }: Proximo) {
+  const partes = []
+  if (temas_comuns.length) partes.push(`Temas em comum: ${temas_comuns.join(', ')}`)
+  if (lotacao_comum) partes.push(`${MESMA[lotacao_comum.nivel]} ${lotacao_comum.nome}`)
+  return partes.join(' · ')
 }
 
 /** Perfil completo de uma pessoa, sem abreviações. No próprio perfil: editar e excluir. */
@@ -60,27 +70,13 @@ export default function PublicProfilePage() {
     return () => { document.title = 'Rede ATPS' }
   }, [perfil])
 
-  // Pessoas próximas: temas em comum pesam mais que o mesmo ministério
+  // Pessoas próximas: temas em comum e proximidade na lotação, calculadas no servidor
   useEffect(() => {
     if (!perfil) return
-    const temas = [...perfil.temas].sort((a, b) => Number(b.em_exercicio_atual) - Number(a.em_exercicio_atual)).slice(0, 3)
-    const buscas = [
-      ...temas.map((t) => buscaApi.buscar({ tema: t.tema, page_size: 12 })),
-      ...(perfil.ministerio ? [buscaApi.buscar({ ministerio: perfil.ministerio, page_size: 12 })] : []),
-    ]
-    Promise.allSettled(buscas).then((res) => {
-      const vistos = new Map<number, AnalistaPublico>()
-      res.forEach((r) => r.status === 'fulfilled' && r.value.items.forEach((p) => p.id !== perfil.id && vistos.set(p.id, p)))
-      const meus = perfil.temas.map((t) => t.tema.toLowerCase())
-      setProximos([...vistos.values()]
-        .map((p) => {
-          const comuns = p.temas.filter((t) => meus.includes(t.tema.toLowerCase())).map((t) => t.tema)
-          return { p, comuns, pontos: comuns.length * 2 + (p.ministerio && p.ministerio === perfil.ministerio ? 1 : 0) }
-        })
-        .filter((x) => x.pontos > 0)
-        .sort((a, b) => b.pontos - a.pontos)
-        .slice(0, 4))
-    })
+    let vivo = true
+    setProximos([])
+    perfilApi.getProximos(perfil.id).then((l) => vivo && setProximos(l)).catch(() => {})
+    return () => { vivo = false }
   }, [perfil])
 
   // Volta da edição com ?salvo=1: avisa e limpa o parâmetro
@@ -233,17 +229,17 @@ export default function PublicProfilePage() {
                 <section className={styles.bloco}>
                   <h2 className={styles.blocoTitulo}><span className={[styles.ico, styles.icoRede].join(' ')}><IconAffiliate size={16} aria-hidden /></span>Pessoas próximas na rede</h2>
                   <ul className={styles.parecidos}>
-                    {proximos.map(({ p, comuns }) => (
+                    {proximos.map((x) => { const p = x.analista; return (
                       <li key={p.id}>
                         <Link to={`/analistas/${p.id}`}>
                           <Avatar id={p.id} nome={p.nome} fotoPath={p.foto_path} tamanho={48} />
                           <span>
                             <b>{p.nome}</b>
-                            <small>{comuns.length ? `Temas em comum: ${comuns.join(', ')}` : `Também no ${p.ministerio}`}</small>
+                            <small>{motivo(x)}</small>
                           </span>
                         </Link>
                       </li>
-                    ))}
+                    ) })}
                   </ul>
                 </section>
               )}

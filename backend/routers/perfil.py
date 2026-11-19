@@ -6,7 +6,7 @@ from typing import Literal
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile, File, status
 from fastapi.responses import FileResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
-from sqlalchemy import func, null, select
+from sqlalchemy import func, null, or_, select
 from sqlalchemy.orm import Session
 from database import get_db
 from models import (
@@ -18,7 +18,7 @@ from schemas import (
     ConsentimentoOut,
     ExcluirContaIn,
     FormacaoBase, FormacaoOut,
-    LotacaoOut,
+    LotacaoComumOut, LotacaoOut, ProximoOut,
     RegularizarIn,
     TemaBase, TemaCatalogoOut, TemaOut,
 )
@@ -229,6 +229,74 @@ def get_analista(
     if not analista.visibilidade_celular:
         result = result.model_copy(update={"celular": None})
     return result
+
+
+# Pontos por nível de lotação em comum (vale o mais fundo) e por tema em comum.
+PONTOS_LOTACAO = {"ministerio": 1, "secretaria": 2, "departamento": 3, "coordenacao_geral": 4, "coordenacao": 5}
+PONTOS_TEMA = 3
+
+
+def _chave(texto: str | None) -> str:
+    return " ".join((texto or "").casefold().split())
+
+
+def _lotacao_comum(a: Analista, b: Analista) -> tuple[str, str] | None:
+    """Nível mais fundo em que as lotações coincidem, descendo do ministério."""
+    comum = None
+    for nivel in PONTOS_LOTACAO:
+        va, vb = _chave(getattr(a, nivel)), _chave(getattr(b, nivel))
+        if not va or va != vb:
+            break
+        comum = (nivel, getattr(a, nivel).strip())
+    return comum
+
+
+@router.get("/analistas/{analista_id}/proximos", response_model=list[ProximoOut])
+def pessoas_proximas(
+    analista_id: int,
+    limite: int = 4,
+    db: Session = Depends(get_db),
+    eu: Analista = Depends(get_usuario_regular),
+):
+    """Pessoas próximas de um perfil: temas de atuação em comum e proximidade na lotação.
+    Não inclui quem está olhando, não depende dos favoritos de ninguém e a ordem é estável."""
+    from routers.busca import _aplicar_visibilidade
+
+    alvo = db.get(Analista, analista_id)
+    if alvo is None or not alvo.perfil_visivel:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analista não encontrado")
+    temas_alvo = {_chave(t.tema): t.tema.strip() for t in alvo.temas}
+
+    filtros = []
+    if temas_alvo:
+        filtros.append(Analista.temas.any(func.lower(func.trim(TemaAtuacao.tema)).in_(list(temas_alvo))))
+    if _chave(alvo.ministerio):
+        filtros.append(func.lower(func.trim(Analista.ministerio)) == _chave(alvo.ministerio))
+    if not filtros:
+        return []
+    candidatos = (
+        db.query(Analista)
+        .filter(condicao_perfil_visivel(), Analista.id.notin_([alvo.id, eu.id]), or_(*filtros))
+        .all()
+    )
+
+    pontuados = []
+    for c in candidatos:
+        comuns = sorted({temas_alvo[k] for k in (_chave(t.tema) for t in c.temas) if k in temas_alvo})
+        lot = _lotacao_comum(alvo, c)
+        pontos = PONTOS_TEMA * len(comuns) + (PONTOS_LOTACAO[lot[0]] if lot else 0)
+        if pontos:
+            # desempate fixo e sem favorecer contas antigas ou novas
+            pontuados.append((-pontos, -len(comuns), (c.id * 7919) % 10007, c, comuns, lot))
+    pontuados.sort(key=lambda x: x[:3])
+    return [
+        ProximoOut(
+            analista=_aplicar_visibilidade(c),
+            temas_comuns=comuns,
+            lotacao_comum=LotacaoComumOut(nivel=lot[0], nome=lot[1]) if lot else None,
+        )
+        for *_, c, comuns, lot in pontuados[: max(1, min(limite, 12))]
+    ]
 
 
 # --- Formações ---

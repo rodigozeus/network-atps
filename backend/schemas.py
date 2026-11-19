@@ -253,6 +253,17 @@ class TemaCatalogoOut(BaseModel):
     total: int
 
 
+class LotacaoComumOut(BaseModel):
+    nivel: str  # ministerio | secretaria | departamento | coordenacao_geral | coordenacao
+    nome: str
+
+
+class ProximoOut(BaseModel):
+    analista: AnalistaPublico
+    temas_comuns: list[str]
+    lotacao_comum: LotacaoComumOut | None
+
+
 class EventoPerfilOut(BaseModel):
     tipo: str
     descricao: str

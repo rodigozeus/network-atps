@@ -1,7 +1,7 @@
 import { api } from './client'
 import type {
   AnalistaOut, AnalistaPublico, AnalistaUpdate, Consentimento, DocumentoLegal, Formacao,
-  NivelFormacao, RegularizarIn, Tema,
+  NivelFormacao, Proximo, RegularizarIn, Tema,
 } from './types'
 
 export interface FormacaoInput {
@@ -32,6 +32,8 @@ export const perfilApi = {
   },
   getAnalista: (id: number | string) =>
     api.get<AnalistaPublico>(`/analistas/${id}`).then((r) => r.data),
+  getProximos: (id: number | string) =>
+    api.get<Proximo[]>(`/analistas/${id}/proximos`).then((r) => r.data),
   deleteMe: (senha: string) => api.delete('/perfil/me', { data: { senha } }),
   regularizar: (data: RegularizarIn) =>
     api.post<AnalistaOut>('/perfil/regularizar', data).then((r) => r.data),
