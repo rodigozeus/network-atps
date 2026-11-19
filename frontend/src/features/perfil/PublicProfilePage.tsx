@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   IconAddressBook, IconAffiliate, IconAlertTriangle, IconAt, IconBrandLinkedin, IconBrandWhatsapp, IconBriefcase, IconBuilding,
-  IconBuildingCommunity, IconCertificate, IconCircleCheck, IconFileCv, IconHeartHandshake, IconMail, IconPencil, IconPhone, IconSchool, IconSparkles, IconStar,
-  IconStarFilled, IconTrash,
+  IconBuildingCommunity, IconCertificate, IconCheck, IconCircleCheck, IconCopy, IconFileCv, IconHeartHandshake, IconMail, IconPencil, IconPhone, IconSchool, IconSparkles, IconStar,
+  IconStarFilled, IconTrash, IconX,
 } from '@tabler/icons-react'
 import type { AnalistaPublico, EventoPerfil, NivelLotacao, Proximo } from '@shared/api/types'
 import { perfilApi } from '@shared/api/perfil'
@@ -11,7 +11,7 @@ import { Avatar, Spinner } from '@shared/components'
 import { useAuth } from '@shared/hooks/useAuth'
 import { useFavoritos, limparFavoritos } from '@shared/hooks/useFavoritos'
 import { formatPhone } from '@shared/utils/phone'
-import { NIVEIS, TURMAS, gradienteOrgao, lotacao, ordenarFormacoes, telLink } from '@shared/utils/analista'
+import { NIVEIS, TURMAS, fotoUrl, gradienteOrgao, lotacao, ordenarFormacoes, telLink } from '@shared/utils/analista'
 import styles from './perfil.module.css'
 import { isLinkGovBr, isLinkLattes, isLinkLinkedin } from '@shared/utils/url'
 import { dataEvento, rotuloEvento } from '@shared/utils/novidades'
@@ -127,7 +127,13 @@ export default function PublicProfilePage() {
       <div className={styles.perfil}>
         <article className={styles.ficha} data-barra-limite>
           <div className={styles.fichaTopo}>
-            <Avatar id={perfil.id} nome={perfil.nome} fotoPath={perfil.foto_path} tamanho={200} className={styles.avatar} alt={`Foto de ${perfil.nome}`} />
+            {perfil.foto_path ? (
+              <FotoAmpliavel nome={perfil.nome} url={fotoUrl(perfil.foto_path) ?? ''}>
+                <Avatar id={perfil.id} nome={perfil.nome} fotoPath={perfil.foto_path} tamanho={200} className={styles.avatar} alt={`Foto de ${perfil.nome}`} />
+              </FotoAmpliavel>
+            ) : (
+              <Avatar id={perfil.id} nome={perfil.nome} fotoPath={perfil.foto_path} tamanho={200} className={styles.avatar} alt={`Foto de ${perfil.nome}`} />
+            )}
             <div className={styles.ident}>
               {perfil.ministerio && <span className={styles.orgTag}>{perfil.ministerio}</span>}
               <h1>{perfil.nome}</h1>
@@ -272,11 +278,62 @@ export default function PublicProfilePage() {
   )
 }
 
+/** Celular numa linha só: o número e três ações (copiar, WhatsApp, ligar) */
+function Celular({ numero }: { numero: string }) {
+  const [copiado, setCopiado] = useState(false)
+  const formatado = formatPhone(numero)
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(formatado)
+      setCopiado(true)
+      window.setTimeout(() => setCopiado(false), 1800)
+    } catch {
+      // sem permissão de área de transferência: o número continua visível para copiar à mão
+    }
+  }
+  return (
+    <li className={styles.celular}>
+      <IconPhone size={20} aria-hidden className={styles.celularIcone} />
+      <span><small>Celular e WhatsApp</small><b>{formatado}</b></span>
+      <span className={styles.celularAcoes}>
+        <button type="button" onClick={() => void copiar()} aria-label={copiado ? 'Número copiado' : 'Copiar número'} title={copiado ? 'Copiado' : 'Copiar'}>
+          {copiado ? <IconCheck size={19} aria-hidden /> : <IconCopy size={19} aria-hidden />}
+        </button>
+        <a href={`https://wa.me/${telLink(numero).slice(1)}`} target="_blank" rel="noopener noreferrer" aria-label="Conversar no WhatsApp" title="WhatsApp">
+          <IconBrandWhatsapp size={19} aria-hidden />
+        </a>
+        <a href={`tel:${telLink(numero)}`} aria-label="Ligar" title="Ligar">
+          <IconPhone size={19} aria-hidden />
+        </a>
+      </span>
+      <span className="sr-only" role="status">{copiado ? 'Número copiado' : ''}</span>
+    </li>
+  )
+}
+
+/** Clique na foto: abre a imagem inteira, sem o corte redondo, no tamanho guardado */
+function FotoAmpliavel({ nome, url, children }: { nome: string; url: string; children: JSX.Element }) {
+  const dialogo = useRef<HTMLDialogElement>(null)
+  return (
+    <>
+      <button type="button" className={styles.fotoBotao} onClick={() => dialogo.current?.showModal()}
+        aria-label={`Ver a foto de ${nome} inteira`}>
+        {children}
+      </button>
+      <dialog ref={dialogo} className={styles.fotoDialogo} aria-label={`Foto de ${nome}`}
+        onClick={(e) => { if (e.target === e.currentTarget) dialogo.current?.close() }}>
+        <img src={url} alt={`Foto de ${nome}`} />
+        <button type="button" className={styles.fotoFechar} onClick={() => dialogo.current?.close()} aria-label="Fechar" autoFocus>
+          <IconX size={22} aria-hidden />
+        </button>
+      </dialog>
+    </>
+  )
+}
+
 function Contatos({ a }: { a: AnalistaPublico }) {
   const itens = [
     a.telefone_institucional && { href: `tel:${telLink(a.telefone_institucional)}`, icone: <IconBuildingCommunity size={20} aria-hidden />, rotulo: 'Telefone institucional', valor: formatPhone(a.telefone_institucional) },
-    a.celular && { href: `tel:${telLink(a.celular)}`, icone: <IconPhone size={20} aria-hidden />, rotulo: 'Celular', valor: formatPhone(a.celular) },
-    a.celular && { href: `https://wa.me/${telLink(a.celular).slice(1)}`, externo: true, icone: <IconBrandWhatsapp size={20} aria-hidden />, rotulo: 'WhatsApp', valor: formatPhone(a.celular) },
     a.email_institucional && { href: `mailto:${a.email_institucional}`, icone: <IconMail size={20} aria-hidden />, rotulo: 'E-mail institucional', valor: a.email_institucional },
     a.email_pessoal && { href: `mailto:${a.email_pessoal}`, icone: <IconAt size={20} aria-hidden />, rotulo: 'E-mail pessoal', valor: a.email_pessoal },
     a.portal_url && isLinkGovBr(a.portal_url) && { href: a.portal_url, externo: true, icone: <IconFileCv size={20} aria-hidden />, rotulo: 'Currículo SouGov.br', valor: 'Abrir currículo' },
@@ -284,9 +341,10 @@ function Contatos({ a }: { a: AnalistaPublico }) {
     a.linkedin_url && isLinkLinkedin(a.linkedin_url) && { href: a.linkedin_url, externo: true, icone: <IconBrandLinkedin size={20} aria-hidden />, rotulo: 'LinkedIn', valor: 'Abrir perfil' },
   ].filter(Boolean) as Array<{ href: string; externo?: boolean; icone: JSX.Element; rotulo: string; valor: string }>
 
-  if (!itens.length) return <p className={styles.vazio}>Nenhum contato público.</p>
+  if (!itens.length && !a.celular) return <p className={styles.vazio}>Nenhum contato público.</p>
   return (
     <ul className={styles.contatos}>
+      {a.celular && <Celular numero={a.celular} />}
       {itens.map((c) => (
         <li key={c.rotulo}>
           <a href={c.href} {...(c.externo ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>

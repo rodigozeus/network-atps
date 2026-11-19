@@ -90,7 +90,7 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
       const sb = simbolo!.getBoundingClientRect()
       centro = {
         x: W / 2, y: H / 2,
-        a: sb.width / 2 + (mobile ? 22 : 60), b: sb.height / 2 + (mobile ? 18 : 34),
+        a: sb.width / 2 + (mobile ? 30 : 60), b: sb.height / 2 + (mobile ? 28 : 34),
         ra: sb.width / 2 + 16, rb: sb.height / 2 + 16,
       }
       const foraDoCentro = (p: { x: number; y: number }) => {
