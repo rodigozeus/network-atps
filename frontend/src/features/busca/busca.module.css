@@ -1027,3 +1027,20 @@
   color: #7a5200;
   font-size: 14px;
 }
+
+/* Celular, visualização em lista: a estrela fica entre os botões de contato
+   (o contêiner dos botões agora é posicionado, por causa do card clicável) */
+@media (max-width: 760px) {
+  .lFav {
+    position: static;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    background: var(--btn);
+    box-shadow: none;
+  }
+
+  .lFav:hover {
+    background: var(--btn-hover);
+  }
+}
