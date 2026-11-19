@@ -1016,3 +1016,14 @@
 .lNovidade {
   z-index: 2;
 }
+
+/* Busca por semelhança (nenhuma correspondência exata) */
+.aproximado {
+  max-width: var(--conteudo);
+  margin: 0 auto 20px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: #fff8e6;
+  color: #7a5200;
+  font-size: 14px;
+}

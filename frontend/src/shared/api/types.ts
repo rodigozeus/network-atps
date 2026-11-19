@@ -96,6 +96,8 @@ export interface BuscaResponse {
   page: number
   page_size: number
   pages: number
+  /** Ninguém correspondeu às palavras; resultados por semelhança (erro de digitação) */
+  aproximado?: boolean
 }
 
 export interface RegistroOut {

@@ -30,7 +30,7 @@ type Vista = 'cards' | 'linhas'
 // Resultados já carregados (com as páginas da rolagem infinita), para o "voltar" de um perfil
 // mostrar a mesma lista na mesma posição, sem recarregar
 const CACHE_VALIDADE_MS = 10 * 60 * 1000
-let cacheLista: { chave: string; itens: AnalistaPublico[]; pagina: number; paginas: number; em: number } | null = null
+let cacheLista: { chave: string; itens: AnalistaPublico[]; pagina: number; paginas: number; aproximado: boolean; em: number } | null = null
 
 const lerVista = (): Vista => {
   try {
@@ -60,6 +60,7 @@ export default function SearchPage() {
   const [itens, setItens] = useState<AnalistaPublico[]>([])
   const [pagina, setPagina] = useState(1)
   const [paginas, setPaginas] = useState(1)
+  const [aproximado, setAproximado] = useState(false)
   const [carregando, setCarregando] = useState(true)
   const [carregandoMais, setCarregandoMais] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -107,6 +108,7 @@ export default function SearchPage() {
       setItens(cacheLista.itens)
       setPagina(cacheLista.pagina)
       setPaginas(cacheLista.paginas)
+      setAproximado(cacheLista.aproximado)
       setCarregando(false)
       return () => { vivo = false }
     }
@@ -118,6 +120,7 @@ export default function SearchPage() {
         setItens(r.items)
         setPagina(r.page)
         setPaginas(r.pages)
+        setAproximado(!!r.aproximado)
       })
       .catch(() => vivo && setErro('Não foi possível carregar as pessoas. Tente de novo.'))
       .finally(() => vivo && setCarregando(false))
@@ -128,8 +131,8 @@ export default function SearchPage() {
   useEffect(() => {
     if (carregando || !itens.length) return
     const chave = JSON.stringify(paramsApi(1))
-    cacheLista = { chave, itens, pagina, paginas, em: cacheLista?.chave === chave ? cacheLista.em : Date.now() }
-  }, [itens, pagina, paginas, carregando, paramsApi])
+    cacheLista = { chave, itens, pagina, paginas, aproximado, em: cacheLista?.chave === chave ? cacheLista.em : Date.now() }
+  }, [itens, pagina, paginas, aproximado, carregando, paramsApi])
 
   const carregarMais = useCallback(() => {
     if (carregandoMais || pagina >= paginas) return
@@ -293,10 +296,19 @@ export default function SearchPage() {
           <p className={styles.empty}>{erro}</p>
         ) : !visiveis.length ? (
           <p className={styles.empty}>{filtros.soNovidades ? 'Nenhum favorito com novidades no momento.' : 'Nenhuma pessoa encontrada para essa busca.'}</p>
-        ) : vista === 'cards' ? (
+        ) : (
+          <>
+          {aproximado && (
+            <p className={styles.aproximado} role="status">
+              Ninguém com “{filtros.q}”. Mostrando resultados parecidos.
+            </p>
+          )}
+          {vista === 'cards' ? (
           <div className={styles.grid}>{visiveis.map((a) => <AnalistaCard key={a.id} a={a} />)}</div>
         ) : (
           <div className={styles.linhas}>{visiveis.map((a) => <AnalistaLinha key={a.id} a={a} />)}</div>
+          )}
+          </>
         )}
 
         <div ref={sentinela} />

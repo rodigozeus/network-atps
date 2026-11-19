@@ -92,11 +92,8 @@ def buscar(
     eu: Analista = Depends(get_usuario_regular),
 ):
     query = db.query(Analista).filter(condicao_perfil_visivel())
-    aproximado = db.get_bind().dialect.name == "postgresql"
-
+    pode_aproximar = db.get_bind().dialect.name == "postgresql"
     termos = _termos(q or "")
-    for termo in termos:
-        query = query.filter(_casa_termo(termo, aproximado))
 
     if ministerio:
         query = query.filter(or_(_contem(Analista.ministerio, ministerio), _contem(Analista.ministerio_sigla, ministerio)))
@@ -137,6 +134,18 @@ def buscar(
                 *condicao_novidade(),
             )
         )
+
+    # Palavras-chave: primeiro só correspondência de verdade. A tolerância a erro de digitação
+    # é plano B, quando ninguém corresponde ("transferegov" não pode trazer "Transferência").
+    base = query
+    for termo in termos:
+        query = query.filter(_casa_termo(termo, False))
+    aproximado = False
+    if termos and pode_aproximar and query.count() == 0:
+        query = base
+        for termo in termos:
+            query = query.filter(_casa_termo(termo, True))
+        aproximado = True
 
     eh_favorito = exists().where(Favorito.analista_id == eu.id, Favorito.favorito_id == Analista.id)
     favoritos_primeiro = case((eh_favorito, 0), else_=1)
@@ -196,4 +205,5 @@ def buscar(
         page=page,
         page_size=page_size,
         pages=pages,
+        aproximado=aproximado,
     )

@@ -325,6 +325,8 @@ class BuscaResponse(BaseModel):
     page: int
     page_size: int
     pages: int
+    # True quando nada correspondeu às palavras e os resultados são por semelhança
+    aproximado: bool = False
 
 
 # --- Admin ---
