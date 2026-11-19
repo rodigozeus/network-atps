@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useRef } from 'react'
 import type { AnalistaPublico } from '@shared/api/types'
 import { Andeps, Avatar, LogoEmpilhado } from '@shared/components'
@@ -403,7 +404,10 @@ export default function RedeHero({ analistas, onEscolher }: RedeHeroProps) {
         <span />
       </div>
       <h1 className={styles.simbolo} ref={simboloRef}>
-        <LogoEmpilhado />
+        {/* volta à tela inicial: busca sem filtros */}
+        <Link to="/busca" className={styles.simboloLink} aria-label="Rede ATPS, limpar a busca e os filtros">
+          <LogoEmpilhado />
+        </Link>
       </h1>
       <Andeps className={styles.andeps} altura={30} />
 

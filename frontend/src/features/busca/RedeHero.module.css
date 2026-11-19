@@ -143,3 +143,17 @@
     bottom: 12px;
   }
 }
+
+/* O símbolo central leva à busca sem filtros */
+.simboloLink {
+  display: block;
+  color: inherit;
+  pointer-events: auto;
+  cursor: pointer;
+  border-radius: 16px;
+}
+
+.simboloLink:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 6px;
+}

@@ -81,6 +81,11 @@ export default function SearchPage() {
     }, { replace: true })
   }, [setParams])
 
+  // filtros limpos por fora (clique em "Rede ATPS"): o campo de texto acompanha
+  useEffect(() => {
+    setTexto((t) => (t.trim() === filtros.q ? t : filtros.q))
+  }, [filtros.q])
+
   // busca por texto: espera a pessoa parar de digitar
   useEffect(() => {
     if (texto === filtros.q) return
