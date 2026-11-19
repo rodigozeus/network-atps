@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@features/auth/AuthContext'
 import Layout from '@shared/components/Layout'
+import RolarParaTopo from '@shared/components/RolarParaTopo'
 import LoginPage from '@features/auth/LoginPage'
 import RegisterPage from '@features/auth/RegisterPage'
 import ForgotPasswordPage from '@features/auth/ForgotPasswordPage'
@@ -33,6 +34,7 @@ function PlaceholderPage({ title, desc }: { title: string; desc?: string }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <RolarParaTopo />
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
