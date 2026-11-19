@@ -182,20 +182,27 @@ export default function SearchPage() {
   // Modo compacto: mede se a busca ficaria estreita demais com todos os filtros na linha
   const toolbar = useRef<HTMLDivElement>(null)
   const busca = useRef<HTMLLabelElement>(null)
+  const medirToolbar = useCallback(() => {
+    const tb = toolbar.current
+    if (!tb) return
+    tb.dataset.medindo = 'true'
+    const cabe = (busca.current?.getBoundingClientRect().width ?? 0) >= BUSCA_MIN
+    delete tb.dataset.medindo
+    setCompacto(!cabe)
+  }, [])
+  // mede quando a largura da tela muda...
   useLayoutEffect(() => {
     const tb = toolbar.current
     if (!tb?.parentElement) return
-    const medir = () => {
-      tb.dataset.medindo = 'true'
-      const cabe = (busca.current?.getBoundingClientRect().width ?? 0) >= BUSCA_MIN
-      delete tb.dataset.medindo
-      setCompacto(!cabe)
-    }
-    const ro = new ResizeObserver(medir)
+    const ro = new ResizeObserver(medirToolbar)
     ro.observe(tb.parentElement)
-    medir()
     return () => ro.disconnect()
-  }, [])
+  }, [medirToolbar])
+  // ...e quando muda o que está na barra (botão "Novidades" que aparece, filtro escolhido,
+  // ordenação): sem isso, a linha passava do espaço e o campo de busca era espremido
+  useLayoutEffect(() => {
+    medirToolbar()
+  }, [medirToolbar, novidades.size, filtros.ministerio, filtros.tema, filtros.nivel, filtros.soFavoritos, filtros.soNovidades, filtros.ordem, ministerios.length, temas.length])
 
   const ativos = [filtros.ministerio, filtros.tema, filtros.nivel].filter(Boolean).length
     + (filtros.soFavoritos ? 1 : 0) + (filtros.soNovidades ? 1 : 0)
