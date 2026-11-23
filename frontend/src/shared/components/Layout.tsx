@@ -71,7 +71,10 @@ export default function Layout() {
   useEffect(() => {
     const atual = local.pathname + local.search
     const veioDe = anterior.current
-    if (tipoNavegacao === 'PUSH' && veioDe && veioDe.split('?')[0] !== local.pathname) {
+    // subir pelo botão do topo não cria origem: senão a página de cima apontaria de volta para a de
+    // baixo, e as duas ficariam se apontando (unidade -> lista -> unidade...)
+    const viaVoltar = (local.state as { viaVoltar?: boolean } | null)?.viaVoltar
+    if (tipoNavegacao === 'PUSH' && !viaVoltar && veioDe && veioDe.split('?')[0] !== local.pathname) {
       const origens = lerMapa(CHAVE_ORIGENS)
       origens[local.key] = veioDe
       gravarMapa(CHAVE_ORIGENS, origens)

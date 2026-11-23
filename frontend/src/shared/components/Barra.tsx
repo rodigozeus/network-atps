@@ -54,7 +54,7 @@ export default function Barra({ voltar }: { voltar: Voltar | null }) {
       <div className={styles.inner}>
         <div className={styles.esquerda}>
           {voltar && (
-            <Link to={voltar.para} className={styles.voltar} aria-label={`Voltar para ${voltar.rotulo}`}
+            <Link to={voltar.para} state={{ viaVoltar: true }} className={styles.voltar} aria-label={`Voltar para ${voltar.rotulo}`}
               onClick={(e) => {
                 if (!voltar.historico || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
                 e.preventDefault()
