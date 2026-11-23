@@ -1,5 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { IconArrowLeft } from '@tabler/icons-react'
 import { useAuth } from '@shared/hooks/useAuth'
 import { LogoHorizontal } from './Logo'
@@ -10,6 +10,8 @@ import styles from './Barra.module.css'
 export interface Voltar {
   para: string
   rotulo: string
+  /** a página anterior no histórico é `para`: voltar pelo histórico (mantém a rolagem e o estado) */
+  historico?: boolean
 }
 
 /**
@@ -19,6 +21,7 @@ export interface Voltar {
 export default function Barra({ voltar }: { voltar: Voltar | null }) {
   const { isAuthenticated, isLoading } = useAuth()
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   // 0 = transparente sobre o topo colorido, 1 = barra laranja completa. Cresce aos poucos com a
   // rolagem para a cor não trocar de uma vez (no perfil o topo tem a cor do órgão, não laranja).
   const [progresso, setProgresso] = useState(1)
@@ -51,7 +54,12 @@ export default function Barra({ voltar }: { voltar: Voltar | null }) {
       <div className={styles.inner}>
         <div className={styles.esquerda}>
           {voltar && (
-            <Link to={voltar.para} className={styles.voltar} aria-label={`Voltar para ${voltar.rotulo}`}>
+            <Link to={voltar.para} className={styles.voltar} aria-label={`Voltar para ${voltar.rotulo}`}
+              onClick={(e) => {
+                if (!voltar.historico || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+                e.preventDefault()
+                navigate(-1)
+              }}>
               <IconArrowLeft size={18} aria-hidden />
               <span>{voltar.rotulo}</span>
             </Link>
