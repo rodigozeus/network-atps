@@ -159,6 +159,16 @@
 }
 
 /* ── Status badges ────────────────────────────────────── */
+/* sempre numa linha só, mesmo em coluna estreita ("Alerta de vínculo" quebrava em três) */
+.badgeAtivo,
+.badgeInativo,
+.badgeAdmin,
+.badgeAnalista,
+.badgePendente {
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
 .badgeAtivo {
   display: inline-block;
   padding: 2px 10px;
