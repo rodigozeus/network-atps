@@ -9,6 +9,10 @@
 4. Cópia da estrutura organizacional oficial (SIORG), usada nas listas de lotação.
 5. Conferência dos perfis no Portal (perfil sempre atualizado).
 6. Limpeza das novidades de perfil mais antigas que a retenção (novidades.RETENCAO_DIAS).
+7. Competência e contato de todas as unidades (SIORG), para as páginas de unidade abrirem
+   só do cache, sem esperar o SIORG.
+
+Roda de madrugada (HORA_EXECUCAO, horário de Brasília), quando quase ninguém usa a Rede.
 
 Os logs nunca incluem CPF, nome ou e-mail — só contagens e ids internos.
 """
@@ -45,8 +49,8 @@ logger = logging.getLogger("tarefas")
 
 LOTE_MAXIMO = 200
 PAUSA_ENTRE_CONSULTAS_S = 1.0  # respeita o limite de requisições da API do Portal
-INTERVALO_LOOP_S = 24 * 3600
-ATRASO_INICIAL_S = 600  # após o deploy, dá tempo de as migrações rodarem
+HORA_EXECUCAO = 3  # 3h da manhã, horário de Brasília
+FUSO_BRASILIA = timezone(timedelta(hours=-3))
 
 
 def reverificar_vinculos(db: Session, agora: datetime) -> None:
@@ -188,13 +192,19 @@ def conferir_perfis(db: Session, agora: datetime) -> None:
     logger.info("Conferência de perfis: %s", contagem)
 
 
+def atualizar_detalhes_siorg(db: Session, agora: datetime) -> None:
+    logger.info("SIORG, detalhe das unidades: %s", siorg.atualizar_detalhes(db, agora))
+
+
 def limpar_novidades(db: Session, agora: datetime) -> None:
     logger.info("Novidades com mais de %d dias apagadas: %d", RETENCAO_DIAS, apagar_antigas(db, agora))
 
 
 def executar() -> None:
     agora = datetime.now(timezone.utc)
-    for tarefa in (sincronizar_siorg, reverificar_vinculos, conferir_perfis, excluir_suspensos_vencidos, avisar_novos_termos, limpar_novidades):
+    # a mais demorada (detalhe das unidades) fica por último
+    for tarefa in (sincronizar_siorg, reverificar_vinculos, conferir_perfis, excluir_suspensos_vencidos,
+                   avisar_novos_termos, limpar_novidades, atualizar_detalhes_siorg):
         db = SessionLocal()
         try:
             tarefa(db, agora)
@@ -203,6 +213,14 @@ def executar() -> None:
             db.rollback()
         finally:
             db.close()
+
+
+def segundos_ate_a_proxima_execucao(agora: datetime) -> float:
+    """Até a próxima HORA_EXECUCAO (hoje, se ainda não passou; senão amanhã)."""
+    alvo = agora.replace(hour=HORA_EXECUCAO, minute=0, second=0, microsecond=0)
+    if alvo <= agora:
+        alvo += timedelta(days=1)
+    return (alvo - agora).total_seconds()
 
 
 if __name__ == "__main__":
@@ -214,7 +232,6 @@ if __name__ == "__main__":
     if not args.loop:
         executar()
     else:
-        time.sleep(ATRASO_INICIAL_S)
         while True:
+            time.sleep(segundos_ate_a_proxima_execucao(datetime.now(FUSO_BRASILIA)))
             executar()
-            time.sleep(INTERVALO_LOOP_S)

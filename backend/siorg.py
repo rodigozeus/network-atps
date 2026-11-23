@@ -4,7 +4,8 @@ Fonte pública, sem chave: https://estruturaorganizacional.dados.gov.br
 Usada nas listas encadeadas de lotação (nomes e siglas oficiais) e no preenchimento
 automático da lotação (lotacao_auto.py).
 
-    python siorg.py   # sincroniza agora (também roda na tarefa diária)
+    python siorg.py              # sincroniza a estrutura agora (também roda de madrugada)
+    python siorg.py --detalhes   # busca competência/contato das unidades sem cache ou vencidas
 """
 import logging
 import time
@@ -96,8 +97,14 @@ def sincronizar(db: Session) -> int:
     return len(linhas)
 
 
+# Competência, contato e endereço das unidades: buscados de madrugada (tarefas.py) para TODAS as
+# unidades com página (até CAMPOS_ATE) e guardados em unidades_siorg_detalhe. A página da unidade
+# só lê esse cache — nunca espera o SIORG, que às vezes demora ou fica fora do ar.
 DETALHE_VALIDADE_DIAS = 30
-DETALHE_TIMEOUT_S = 8
+DETALHE_TIMEOUT_S = 15
+DETALHE_PAUSA_S = 0.3
+DETALHE_TEMPO_MAXIMO_S = 3 * 3600  # por noite; o que faltar continua na noite seguinte
+DETALHE_FALHAS_SEGUIDAS = 10  # SIORG fora do ar: para e tenta de novo amanhã
 
 
 def _endereco(lista) -> str | None:
@@ -113,44 +120,81 @@ def _endereco(lista) -> str | None:
 
 
 def detalhe(db: Session, unidade_id: int):
-    """Competência, contato e endereço da unidade (SIORG), com cache. None se indisponível."""
+    """Competência, contato e endereço da unidade, do cache (None se ainda não buscado)."""
+    from models import UnidadeSiorgDetalhe
+    return db.get(UnidadeSiorgDetalhe, unidade_id)
+
+
+def _baixar_detalhe(unidade_id: int) -> dict:
+    r = requests.get(f"{BASE}/unidade-organizacional/{unidade_id}/completa",
+                     headers={"Accept": "application/json"}, timeout=DETALHE_TIMEOUT_S)
+    r.raise_for_status()
+    dados = r.json()
+    return (dados.get("unidade") or (dados.get("unidades") or [None])[0]) or {}
+
+
+def atualizar_detalhes(db: Session, agora=None, tempo_maximo_s: float = DETALHE_TEMPO_MAXIMO_S) -> dict:
+    """Busca o detalhe das unidades sem cache (primeiro) e das com cache vencido (das mais antigas
+    para as mais novas). Um cache vencido continua valendo até a nova busca dar certo."""
     import json
     from datetime import datetime, timedelta, timezone
+    from sqlalchemy import select
     from models import UnidadeSiorgDetalhe
 
-    cache = db.get(UnidadeSiorgDetalhe, unidade_id)
-    agora = datetime.now(timezone.utc)
-    if cache is not None:
-        atualizado = cache.atualizado_em if cache.atualizado_em.tzinfo else cache.atualizado_em.replace(tzinfo=timezone.utc)
-        if agora - atualizado < timedelta(days=DETALHE_VALIDADE_DIAS):
-            return cache
-    try:
-        r = requests.get(f"{BASE}/unidade-organizacional/{unidade_id}/completa",
-                         headers={"Accept": "application/json"}, timeout=DETALHE_TIMEOUT_S)
-        r.raise_for_status()
-        dados = r.json()
-        u = (dados.get("unidade") or (dados.get("unidades") or [None])[0]) or {}
-    except (requests.RequestException, ValueError):
-        logger.warning("SIORG: detalhe da unidade %s indisponível", unidade_id)
-        return cache
-    contato = (u.get("contato") or [{}])[0] or {}
-    if cache is None:
-        cache = UnidadeSiorgDetalhe(id=unidade_id)
-        db.add(cache)
-    cache.competencia = (u.get("competencia") or u.get("finalidade") or "").strip() or None
-    cache.contato = json.dumps({
-        "telefones": [t for t in contato.get("telefone") or [] if t],
-        "emails": [e for e in contato.get("email") or [] if e],
-        "sites": [s for s in contato.get("site") or [] if s],
-    }, ensure_ascii=False)
-    cache.endereco = _endereco(u.get("endereco"))
-    cache.atualizado_em = agora
-    db.commit()
-    return cache
+    agora = agora or datetime.now(timezone.utc)
+    limite = agora - timedelta(days=DETALHE_VALIDADE_DIAS)
+    ids = db.scalars(select(UnidadeSiorg.id).where(UnidadeSiorg.profundidade <= CAMPOS_ATE)).all()
+    caches = {c.id: c for c in db.scalars(select(UnidadeSiorgDetalhe))}
+
+    def quando(c):
+        return c.atualizado_em if c.atualizado_em.tzinfo else c.atualizado_em.replace(tzinfo=timezone.utc)
+
+    sem_cache = [i for i in ids if i not in caches]
+    vencidas = sorted((i for i in ids if i in caches and quando(caches[i]) < limite), key=lambda i: quando(caches[i]))
+    fila = sem_cache + vencidas
+
+    inicio = time.monotonic()
+    contagem = {"atualizadas": 0, "falhas": 0, "pendentes": len(fila)}
+    seguidas = 0
+    for unidade_id in fila:
+        if time.monotonic() - inicio > tempo_maximo_s:
+            break
+        try:
+            u = _baixar_detalhe(unidade_id)
+        except (requests.RequestException, ValueError):
+            contagem["falhas"] += 1
+            seguidas += 1
+            if seguidas >= DETALHE_FALHAS_SEGUIDAS:
+                logger.warning("SIORG: %d falhas seguidas no detalhe das unidades; para até amanhã", seguidas)
+                break
+            continue
+        seguidas = 0
+        contato = (u.get("contato") or [{}])[0] or {}
+        cache = caches.get(unidade_id)
+        if cache is None:
+            cache = UnidadeSiorgDetalhe(id=unidade_id)
+            db.add(cache)
+        cache.competencia = (u.get("competencia") or u.get("finalidade") or "").strip() or None
+        cache.contato = json.dumps({
+            "telefones": [t for t in contato.get("telefone") or [] if t],
+            "emails": [e for e in contato.get("email") or [] if e],
+            "sites": [x for x in contato.get("site") or [] if x],
+        }, ensure_ascii=False)
+        cache.endereco = _endereco(u.get("endereco"))
+        cache.atualizado_em = datetime.now(timezone.utc)
+        db.commit()
+        contagem["atualizadas"] += 1
+        time.sleep(DETALHE_PAUSA_S)
+    contagem["pendentes"] -= contagem["atualizadas"]
+    return contagem
 
 
 if __name__ == "__main__":
+    import sys
     logging.basicConfig(level=logging.INFO)
     from database import SessionLocal
     with SessionLocal() as sessao:
-        print(f"{sincronizar(sessao)} unidades sincronizadas")
+        if "--detalhes" in sys.argv:
+            print(atualizar_detalhes(sessao))
+        else:
+            print(f"{sincronizar(sessao)} unidades sincronizadas")
