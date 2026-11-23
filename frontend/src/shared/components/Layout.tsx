@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import Barra, { type Voltar } from './Barra'
 import Rodape from './Rodape'
@@ -50,6 +50,7 @@ export default function Layout() {
   const { pathname } = local
   const isAdmin = pathname.startsWith('/admin')
   const anterior = useRef<string | null>(null)
+  const [, redesenhar] = useState(0)
 
   // Guarda o título de cada página (perfis e unidades definem o título quando os dados chegam)
   useEffect(() => {
@@ -74,6 +75,7 @@ export default function Layout() {
       const origens = lerMapa(CHAVE_ORIGENS)
       origens[local.key] = veioDe
       gravarMapa(CHAVE_ORIGENS, origens)
+      redesenhar((n) => n + 1)  // o botão do topo passa a mostrar a origem
     }
     anterior.current = atual
   }, [local.key]) // eslint-disable-line react-hooks/exhaustive-deps
