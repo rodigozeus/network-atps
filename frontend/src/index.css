@@ -75,6 +75,15 @@
   --conteudo: 1320px;
   --r-card: 36px;
   --sombra-card: 0 1px 2px rgba(16, 24, 40, .05), 0 24px 48px -16px rgba(16, 24, 40, .18);
+
+  /* Gráficos (painel admin): paleta categórica validada para daltonismo, sempre nesta ordem.
+     Cada série tem cor fixa (a cor segue a série, nunca a posição). */
+  --serie-1: #2a78d6; --serie-2: #eb6834; --serie-3: #1baf7a; --serie-4: #eda100;
+  --serie-5: #e87ba4; --serie-6: #008300; --serie-7: #6250d6; --serie-8: #e34948;
+  --grafico-grade: #e1e0d9;
+  --grafico-eixo: #898781;
+  --delta-sobe: #006300;
+  --delta-desce: #b42318;
 }
 
 [hidden] { display: none !important; }

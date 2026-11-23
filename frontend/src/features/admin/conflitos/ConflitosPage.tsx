@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { getConflitos, resolverConflito, type ConflitoCadastro } from '../api/admin'
 import styles from '../admin.module.css'
+import { useAdmin } from '../AdminLayout'
 
 export default function ConflitosPage() {
   const [items, setItems] = useState<ConflitoCadastro[]>([])
   const [loading, setLoading] = useState(true)
+  const { recarregarPendencias } = useAdmin()
 
   useEffect(() => {
     getConflitos()
@@ -17,6 +19,7 @@ export default function ConflitosPage() {
     try {
       await resolverConflito(c.id)
       setItems((prev) => prev.filter((i) => i.id !== c.id))
+      recarregarPendencias()
     } catch {
       // silencioso — mantém o item na lista
     }

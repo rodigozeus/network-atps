@@ -5,6 +5,7 @@ import type { TemaAdmin, TemasAdmin, TipoTema } from '../api/admin'
 import { criarTema, editarTema, excluirTema, getTemas, juntarTema, reprovarTema } from '../api/admin'
 import styles from '../admin.module.css'
 import t from './temas.module.css'
+import { useAdmin } from '../AdminLayout'
 
 const TIPOS: Record<TipoTema, string> = { area: 'Área de política', ferramenta: 'Ferramenta ou método' }
 const pessoas = (n: number) => (n === 1 ? '1 pessoa' : `${n} pessoas`)
@@ -28,6 +29,7 @@ export default function TemasPage() {
   const [editando, setEditando] = useState<TemaAdmin | 'novo' | null>(null)
   const [juntando, setJuntando] = useState<TemaAdmin | null>(null)
   const [reprovando, setReprovando] = useState<TemaAdmin | null>(null)
+  const { recarregarPendencias } = useAdmin()
 
   const carregar = useCallback(() => {
     getTemas().then(setDados).catch(() => setErro('Não foi possível carregar os temas.'))
@@ -39,6 +41,7 @@ export default function TemasPage() {
     try {
       await acao()
       carregar()
+      recarregarPendencias()
       return true
     } catch (err) {
       setErro(mensagem(err))

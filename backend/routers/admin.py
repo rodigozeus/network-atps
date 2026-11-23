@@ -3,32 +3,26 @@ import io
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
-from sqlalchemy import and_, case, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.orm import Session, selectinload
 
 from auth import get_current_admin
 from database import get_db
 from email_utils import enviar_email_conta_ativada
-from models import Analista, ConflitoCadastro, Formacao, NivelFormacao, Role, TemaAtuacao
+from models import Analista, BaseAtps, ConflitoCadastro, NivelFormacao, Role, TemaAtuacao
+import estatisticas
 import lotacao_siorg
 import novidades
-from lotacao_auto import normalizar
-from models import BaseAtps, UnidadeSiorg, condicao_perfil_visivel
 from routers.perfil import remover_foto
 from schemas import (
-    AdminStats,
     AnalistaAdminOut,
     AnalistaAdminUpdate,
     ConflitoCadastroOut,
     CoberturaOut,
-    FormacaoStat,
-    MinistrioStat,
     PaginatedAdminUsers,
     AcessoOut,
     AcessosOut,
-    TemaStat,
-    VisitasDia,
-    VisitasStats,
+    PendenciasAdminOut,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -50,6 +44,12 @@ def listar_usuarios(
     ativo: bool | None = Query(None, description="Filtra por status da conta"),
     pendente_revisao: bool | None = Query(None, description="Filtra por cadastros pendentes de revisão"),
     alerta_vinculo: bool = Query(False, description="Só contas com vínculo suspenso ou não confirmado"),
+    bloqueado: bool = Query(False, description="Só contas com login bloqueado agora"),
+    orgao_id: int | None = Query(None, description="Órgão (SIORG), resolvido como nas estatísticas"),
+    tema_id: int | None = Query(None, description="Tem este tema do catálogo"),
+    nivel: NivelFormacao | None = Query(None, description="Formação mais alta neste nível"),
+    turma: str | None = Query(None, description="Turma de ingresso; 'nenhuma' = não informada"),
+    sem: str | None = Query(None, description="Perfil sem este item (foto, tema, formacao, pode_ajudar, links, lotacao, contato)"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -75,6 +75,34 @@ def listar_usuarios(
             Analista.vinculo_suspenso_em.isnot(None),
             and_(Analista.ativo.is_(True), Analista.motivo_pendencia.isnot(None)),
         ))
+
+    if bloqueado:
+        query = query.filter(Analista.login_bloqueado_ate > datetime.now(timezone.utc))
+
+    if tema_id is not None:
+        query = query.filter(Analista.temas.any(TemaAtuacao.tema_id == tema_id))
+
+    if turma == "nenhuma":
+        query = query.filter(Analista.turma.is_(None))
+    elif turma:
+        query = query.filter(Analista.turma == turma)
+
+    # Os filtros que vêm dos gráficos das estatísticas usam as mesmas funções de lá (estatisticas.py),
+    # para a lista aberta pelo clique ter exatamente o número mostrado no gráfico.
+    testes = []
+    if sem:
+        if sem not in estatisticas.ITENS_PERFIL:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Item de perfil inválido")
+        testes.append(lambda a: not estatisticas.tem_item(a, sem))
+    if nivel is not None:
+        rotulo = dict(estatisticas.NIVEIS)[nivel]
+        testes.append(lambda a: estatisticas.nivel_mais_alto(a) == rotulo)
+    if orgao_id is not None:
+        resolvedor = estatisticas.ResolvedorOrgao(db)
+        testes.append(lambda a: resolvedor.orgao_id(a) == orgao_id)
+    if testes:
+        candidatos = query.options(selectinload(Analista.temas), selectinload(Analista.formacoes)).all()
+        query = db.query(Analista).filter(Analista.id.in_([a.id for a in candidatos if all(t(a) for t in testes)]))
 
     total = query.count()
     analistas = (
@@ -208,89 +236,22 @@ def reativar_usuario(
     return analista
 
 
-@router.get("/stats", response_model=AdminStats)
+@router.get("/stats")
 def get_stats(
+    dias: int = Query(30, description="Tamanho do período: 7, 30 ou 90 dias; 0 = desde o início"),
     db: Session = Depends(get_db),
     _: Analista = Depends(get_current_admin),
 ):
-    total = db.query(func.count(Analista.id)).scalar() or 0
-    total_ativos = db.query(func.count(Analista.id)).filter(Analista.ativo == True).scalar() or 0
+    """Estatísticas do painel (só contas ativas). Ver estatisticas.py para as regras."""
+    if dias not in (0, 7, 30, 90):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Período inválido")
+    return estatisticas.estatisticas(db, dias)
 
-    por_ministerio_rows = (
-        db.query(Analista.ministerio_sigla, func.count(Analista.id).label("total"))
-        .filter(Analista.ativo == True)
-        .group_by(Analista.ministerio_sigla)
-        .order_by(func.count(Analista.id).desc())
-        .limit(10)
-        .all()
-    )
 
-    nivel_priority = case(
-        (Formacao.nivel == NivelFormacao.graduacao, 1),
-        (Formacao.nivel == NivelFormacao.especializacao, 2),
-        (Formacao.nivel == NivelFormacao.mestrado, 3),
-        (Formacao.nivel == NivelFormacao.doutorado, 4),
-        (Formacao.nivel == NivelFormacao.pos_doutorado, 5),
-        else_=0,
-    )
-    highest_subq = (
-        select(Formacao.analista_id, func.max(nivel_priority).label("max_priority"))
-        .group_by(Formacao.analista_id)
-        .subquery()
-    )
-    priority_to_label = case(
-        (highest_subq.c.max_priority == 1, "Graduação"),
-        (highest_subq.c.max_priority == 2, "Especialização"),
-        (highest_subq.c.max_priority == 3, "Mestrado"),
-        (highest_subq.c.max_priority == 4, "Doutorado"),
-        (highest_subq.c.max_priority == 5, "Pós-doutorado"),
-    )
-    por_formacao_rows = (
-        db.query(priority_to_label.label("nivel"), func.count().label("total"))
-        .select_from(highest_subq)
-        .group_by(priority_to_label)
-        .order_by(func.count().desc())
-        .all()
-    )
-
-    por_tema_rows = (
-        db.query(TemaAtuacao.tema, func.count(TemaAtuacao.id).label("total"))
-        .group_by(TemaAtuacao.tema)
-        .order_by(func.count(TemaAtuacao.id).desc())
-        .limit(10)
-        .all()
-    )
-
-    # visitas (uma por sessão do navegador), no horário de Brasília
-    from datetime import timedelta as _td
-    from models import Acesso
-    hoje = (datetime.now(timezone.utc) - _td(hours=3)).date()
-    desde30 = hoje - _td(days=29)
-    rede = db.query(Acesso).filter(Acesso.tipo == "rede")
-    por_dia = {
-        d: (v, p) for d, v, p in db.query(Acesso.dia, func.count(), func.count(func.distinct(Acesso.analista_id)))
-        .filter(Acesso.tipo == "rede", Acesso.dia >= desde30).group_by(Acesso.dia)
-    }
-    visitas = VisitasStats(
-        hoje=por_dia.get(hoje, (0, 0))[0],
-        ultimos_7=sum(v for d, (v, _) in por_dia.items() if d > hoje - _td(days=7)),
-        ultimos_30=sum(v for v, _ in por_dia.values()),
-        total=rede.count(),
-        pessoas_30=rede.filter(Acesso.dia >= desde30).with_entities(func.count(func.distinct(Acesso.analista_id))).scalar() or 0,
-        por_dia=[VisitasDia(dia=(desde30 + _td(days=i)).isoformat(),
-                            visitas=por_dia.get(desde30 + _td(days=i), (0, 0))[0],
-                            pessoas=por_dia.get(desde30 + _td(days=i), (0, 0))[1]) for i in range(30)],
-    )
-
-    return AdminStats(
-        visitas=visitas,
-        total_analistas=total,
-        total_ativos=total_ativos,
-        total_inativos=total - total_ativos,
-        por_ministerio=[MinistrioStat(ministerio_sigla=r[0], total=r[1]) for r in por_ministerio_rows],
-        por_nivel_formacao=[FormacaoStat(nivel=r[0], total=r[1]) for r in por_formacao_rows],
-        por_tema=[TemaStat(tema=r[0], total=r[1]) for r in por_tema_rows],
-    )
+@router.get("/pendencias", response_model=PendenciasAdminOut)
+def get_pendencias(db: Session = Depends(get_db), _: Analista = Depends(get_current_admin)):
+    """O que espera uma ação do admin (contadores do menu e do topo das estatísticas)."""
+    return estatisticas.pendencias(db)
 
 
 @router.get("/export")
@@ -398,40 +359,28 @@ def confirmar_vinculo(
 
 @router.get("/cobertura", response_model=CoberturaOut)
 def cobertura(db: Session = Depends(get_db), _: Analista = Depends(get_current_admin)):
-    """Quantos ATPS de cada órgão estão na Rede, comparado ao universo da cópia local da
-    base do Portal (ATPS ativos por órgão de exercício), e cadastros por dia."""
-    orgaos = {o.id: o for o in db.scalars(select(UnidadeSiorg).where(UnidadeSiorg.profundidade == 0))}
-    por_nome = {normalizar(o.nome): o.id for o in orgaos.values()}
-    orgao_da_unidade = dict(db.execute(select(UnidadeSiorg.id, UnidadeSiorg.orgao_id)).all())
+    """Quantos ATPS de cada órgão têm conta ativa na Rede, comparado ao universo da cópia local
+    da base do Portal (ATPS ativos por órgão de exercício)."""
+    resolvedor = estatisticas.ResolvedorOrgao(db)
 
     universo: dict[int | None, int] = {}
     for orgao_id, n in db.execute(select(BaseAtps.orgao_siorg_id, func.count()).group_by(BaseAtps.orgao_siorg_id)):
-        universo[orgao_id] = n
+        chave = orgao_id if orgao_id in resolvedor.orgaos else None
+        universo[chave] = universo.get(chave, 0) + n
     referencia = db.scalar(select(func.max(BaseAtps.referencia)))
 
     rede: dict[int | None, int] = {}
-    membros = db.query(Analista).filter(condicao_perfil_visivel()).all()
+    membros = db.query(Analista).filter(Analista.ativo.is_(True)).all()
     for a in membros:
-        orgao_id = orgao_da_unidade.get(a.lotacao_siorg_id) if a.lotacao_siorg_id else None
-        if orgao_id is None and a.ministerio:
-            orgao_id = por_nome.get(normalizar(a.ministerio))
+        orgao_id = resolvedor.orgao_id(a)
         rede[orgao_id] = rede.get(orgao_id, 0) + 1
 
     linhas = []
     for orgao_id in (set(universo) | set(rede)) - {None}:
-        o = orgaos.get(orgao_id)
-        if o is None:
-            continue
+        o = resolvedor.orgaos[orgao_id]
         linhas.append({"orgao_id": o.id, "nome": o.nome, "sigla": o.sigla,
                        "universo": universo.get(orgao_id, 0), "rede": rede.get(orgao_id, 0)})
     linhas.sort(key=lambda l: (-l["universo"], -l["rede"], l["nome"]))
-
-    desde = datetime.now(timezone.utc).date().toordinal() - 29
-    dias: dict[str, int] = {}
-    for a in db.query(Analista).all():
-        if a.criado_em and a.criado_em.date().toordinal() >= desde:
-            dia = a.criado_em.date().isoformat()
-            dias[dia] = dias.get(dia, 0) + 1
 
     return CoberturaOut(
         referencia=referencia,
@@ -440,7 +389,6 @@ def cobertura(db: Session = Depends(get_db), _: Analista = Depends(get_current_a
         orgaos=linhas,
         sem_orgao_universo=universo.get(None, 0),
         sem_orgao_rede=rede.get(None, 0),
-        cadastros_por_dia=[{"dia": d, "total": n} for d, n in sorted(dias.items())],
     )
 
 

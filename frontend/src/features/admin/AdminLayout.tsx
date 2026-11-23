@@ -1,90 +1,91 @@
-import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet } from 'react-router-dom'
-import { api } from '@shared/api/client'
+import { useCallback, useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom'
 import { useAuth } from '@shared/hooks/useAuth'
+import type { PendenciasAdmin } from './api/admin'
+import { getPendencias } from './api/admin'
 import styles from './admin.module.css'
 
-export default function AdminLayout() {
-  const [pendingCount, setPendingCount] = useState(0)
-  const { user } = useAuth()
+export interface AdminContexto {
+  pendencias: PendenciasAdmin | null
+  recarregarPendencias: () => void
+}
 
-  useEffect(() => {
-    api
-      .get<{ total: number }>('/admin/usuarios', { params: { pendente_revisao: true, page_size: 1 } })
-      .then(({ data }) => setPendingCount(data.total))
-      .catch(() => {})
+/** Pendências do admin (contadores do menu), compartilhadas com as páginas. */
+export function useAdmin() {
+  return useOutletContext<AdminContexto>()
+}
+
+interface Item {
+  to: string
+  rotulo: string
+  contador?: number
+  soAdmin?: boolean
+}
+
+export default function AdminLayout() {
+  const { user } = useAuth()
+  const { pathname } = useLocation()
+  const [pendencias, setPendencias] = useState<PendenciasAdmin | null>(null)
+
+  const recarregarPendencias = useCallback(() => {
+    getPendencias().then(setPendencias).catch(() => {})
   }, [])
+
+  // ao trocar de página: o admin pode ter acabado de aprovar, resolver ou revisar algo
+  useEffect(recarregarPendencias, [pathname, recarregarPendencias])
+
+  const p = pendencias
+  const grupos: { titulo: string; itens: Item[] }[] = [
+    {
+      titulo: 'Acompanhar',
+      itens: [
+        { to: '/admin/stats', rotulo: 'Estatísticas' },
+        { to: '/admin/cobertura', rotulo: 'Cobertura' },
+        { to: '/admin/acessos', rotulo: 'Acessos', soAdmin: true },
+      ],
+    },
+    {
+      titulo: 'Gerenciar',
+      itens: [
+        { to: '/admin/usuarios', rotulo: 'Usuários', contador: p ? p.revisao + p.vinculo : 0 },
+        { to: '/admin/conflitos', rotulo: 'Conflitos de CPF', contador: p?.conflitos },
+        { to: '/admin/temas', rotulo: 'Temas', contador: p?.temas },
+      ],
+    },
+  ]
 
   return (
     <div className={styles.adminPage}>
       <aside className={styles.sidebar}>
         <p className={styles.sidebarTitle}>Painel Admin</p>
-        <nav className={styles.sidebarNav}>
-          <NavLink
-            to="/admin/usuarios"
-            className={({ isActive }) =>
-              [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
-            }
-          >
-            Usuários
-          </NavLink>
-          <NavLink
-            to="/admin/stats"
-            className={({ isActive }) =>
-              [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
-            }
-          >
-            Estatísticas
-          </NavLink>
-          <NavLink
-            to="/admin/cobertura"
-            className={({ isActive }) =>
-              [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
-            }
-          >
-            Cobertura
-          </NavLink>
-          <NavLink
-            to="/admin/temas"
-            className={({ isActive }) =>
-              [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
-            }
-          >
-            Temas
-          </NavLink>
-          {user?.role === 'admin' && (
-            <NavLink
-              to="/admin/acessos"
-              className={({ isActive }) =>
-                [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
-              }
-            >
-              Acessos
-            </NavLink>
-          )}
-          <NavLink
-            to="/admin/conflitos"
-            className={({ isActive }) =>
-              [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
-            }
-          >
-            Conflitos de CPF
-          </NavLink>
-        </nav>
+        {grupos.map((g) => (
+          <nav key={g.titulo} className={styles.sidebarGrupo} aria-label={g.titulo}>
+            <p className={styles.sidebarGrupoTitulo}>{g.titulo}</p>
+            <div className={styles.sidebarNav}>
+              {g.itens
+                .filter((i) => !i.soAdmin || user?.role === 'admin')
+                .map((i) => (
+                  <NavLink
+                    key={i.to}
+                    to={i.to}
+                    className={({ isActive }) =>
+                      [styles.sidebarLink, isActive ? styles.sidebarLinkActive : ''].filter(Boolean).join(' ')
+                    }
+                  >
+                    <span>{i.rotulo}</span>
+                    {!!i.contador && (
+                      <span className={styles.sidebarContador} aria-label={`${i.contador} pendente(s)`}>
+                        {i.contador}
+                      </span>
+                    )}
+                  </NavLink>
+                ))}
+            </div>
+          </nav>
+        ))}
       </aside>
       <div className={styles.adminContent}>
-        {pendingCount > 0 && (
-          <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 'var(--r)', padding: 'var(--sp-3) var(--sp-5)', color: '#92400e', fontSize: 'var(--font-sm)', marginBottom: 'var(--sp-5)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--sp-4)' }}>
-            <span>
-              <strong>{pendingCount}</strong>{' '}
-              {pendingCount === 1 ? 'cadastro aguarda' : 'cadastros aguardam'} revisão manual.
-            </span>
-            <Link to="/admin/usuarios" style={{ color: '#92400e', fontWeight: 700, textDecoration: 'underline', whiteSpace: 'nowrap' }}>
-              Ver agora
-            </Link>
-          </div>
-        )}
-        <Outlet />
+        <Outlet context={{ pendencias, recarregarPendencias } satisfies AdminContexto} />
       </div>
     </div>
   )

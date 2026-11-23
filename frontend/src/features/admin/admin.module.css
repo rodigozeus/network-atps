@@ -6,7 +6,7 @@
 }
 
 .sidebar {
-  width: 180px;
+  width: 216px;
   flex-shrink: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -25,14 +25,44 @@
   margin: 0 0 var(--sp-3) 0;
 }
 
+.sidebarGrupo + .sidebarGrupo {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.sidebarGrupoTitulo {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--sp-1) var(--sp-3);
+}
+
 .sidebarNav {
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
 }
 
+.sidebarLink > span:first-child { white-space: nowrap; }
+
+.sidebarContador {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
 .sidebarLink {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
   font-size: var(--font-sm);
   font-weight: 500;
   color: var(--color-text-secondary);
@@ -109,6 +139,31 @@
   color: var(--color-text);
   cursor: pointer;
   outline: none;
+}
+
+/* filtro vindo das estatísticas (gráfico ou pendência) */
+.filtroExtra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r);
+  background: var(--color-primary-bg);
+  border: 1px solid #fcd5c4;
+  font-size: var(--font-sm);
+  color: var(--color-text);
+}
+
+.filtroExtra button {
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
 }
 
 /* ── Table ────────────────────────────────────────────── */
@@ -437,6 +492,12 @@
 
   .sidebarNav {
     flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .sidebarGrupo + .sidebarGrupo {
+    margin-top: var(--sp-2);
+    padding-top: var(--sp-2);
   }
 
   .statsGrid {

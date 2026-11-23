@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Cobertura } from '../api/admin'
 import { getCobertura } from '../api/admin'
 import styles from '../admin.module.css'
@@ -7,7 +6,7 @@ import styles from '../admin.module.css'
 const pct = (parte: number, todo: number) => (todo ? Math.round((parte / todo) * 100) : 0)
 const mesAno = (ref: string | null) => (ref ? `${ref.slice(4)}/${ref.slice(0, 4)}` : '—')
 
-/** Quantos ATPS de cada órgão já estão na Rede, comparado ao total do órgão (base do Portal). */
+/** Quantos ATPS de cada órgão já têm conta ativa na Rede, comparado ao total do órgão (base do Portal). */
 export default function CoberturaPage() {
   const [c, setC] = useState<Cobertura | null>(null)
   const [loading, setLoading] = useState(true)
@@ -19,8 +18,6 @@ export default function CoberturaPage() {
   if (loading) return <p className={styles.empty}>Carregando…</p>
   if (!c) return <p className={styles.empty}>Não foi possível carregar a cobertura.</p>
 
-  const dias = c.cadastros_por_dia.map((d) => ({ dia: d.dia.slice(8, 10) + '/' + d.dia.slice(5, 7), total: d.total }))
-
   return (
     <div>
       <div className={styles.sectionHeader}>
@@ -29,7 +26,7 @@ export default function CoberturaPage() {
 
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
-          <p className={styles.statLabel}>Na Rede</p>
+          <p className={styles.statLabel}>Contas ativas na Rede</p>
           <p className={styles.statValue}>{c.total_rede}</p>
         </div>
         <div className={styles.statCard}>
@@ -43,21 +40,6 @@ export default function CoberturaPage() {
           </p>
         </div>
       </div>
-
-      {dias.length > 0 && (
-        <div className={styles.chartCardFull}>
-          <p className={styles.chartTitle}>Cadastros por dia (últimos 30 dias)</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={dias}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="dia" tick={{ fontSize: 12 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} width={32} />
-              <Tooltip formatter={(v) => [String(v), 'cadastros']} />
-              <Bar dataKey="total" fill="#f15e23" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
@@ -81,7 +63,7 @@ export default function CoberturaPage() {
                     {o.universo ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={{ flex: 1, height: 8, borderRadius: 99, background: '#eef0f3' }}>
-                          <div style={{ width: `${Math.min(p, 100)}%`, height: '100%', borderRadius: 99, background: '#f15e23' }} />
+                          <div style={{ width: `${Math.min(p, 100)}%`, height: '100%', borderRadius: 99, background: 'var(--serie-1)' }} />
                         </div>
                         <span style={{ minWidth: 40, textAlign: 'right' }}>{p}%</span>
                       </div>
@@ -104,7 +86,7 @@ export default function CoberturaPage() {
       </div>
       <p className={styles.empty} style={{ textAlign: 'left' }}>
         O total de ATPS vem da cópia local do download em massa do Portal da Transparência (ATPS ativos, por órgão de
-        exercício). Aposentados não entram nesse total.
+        exercício). Aposentados não entram nesse total. A evolução dos cadastros está em Estatísticas › Adesão.
       </p>
     </div>
   )

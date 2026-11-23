@@ -1,172 +1,173 @@
-import { useEffect, useState } from 'react'
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
-import type { AdminStats } from '../api/admin'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { IconCheck, IconDownload, IconRefresh } from '@tabler/icons-react'
+import type { AdminStats, PendenciasAdmin, Periodo } from '../api/admin'
 import { getStats } from '../api/admin'
-import styles from '../admin.module.css'
+import { useAdmin } from '../AdminLayout'
+import AbaAdesao from './AbaAdesao'
+import AbaPerfis from './AbaPerfis'
+import AbaUso from './AbaUso'
+import { PERIODOS, baixarCsv, numero } from './formato'
+import s from './stats.module.css'
 
-const COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe']
+const ABAS = [
+  { chave: 'adesao', rotulo: 'Adesão' },
+  { chave: 'uso', rotulo: 'Uso' },
+  { chave: 'perfis', rotulo: 'Perfis' },
+] as const
+type Aba = (typeof ABAS)[number]['chave']
+
+function lerPeriodo(v: string | null): Periodo {
+  const n = Number(v)
+  return v !== null && [0, 7, 30, 90].includes(n) ? (n as Periodo) : 30
+}
 
 export default function StatsPage() {
-  const [stats, setStats] = useState<AdminStats | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [params, setParams] = useSearchParams()
+  const aba: Aba = ABAS.some((a) => a.chave === params.get('aba')) ? (params.get('aba') as Aba) : 'adesao'
+  const dias = lerPeriodo(params.get('dias'))
+  const { pendencias, recarregarPendencias } = useAdmin()
 
-  useEffect(() => {
-    getStats()
-      .then(setStats)
-      .finally(() => setLoading(false))
+  const [stats, setStats] = useState<AdminStats | null>(null)
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
+  const pedido = useRef(0)
+
+  const carregar = useCallback((d: Periodo) => {
+    const meu = ++pedido.current
+    setCarregando(true)
+    setErro(null)
+    getStats(d)
+      .then((r) => { if (meu === pedido.current) setStats(r) })
+      .catch((e: { response?: { status?: number; data?: { detail?: string } }; message?: string }) => {
+        if (meu !== pedido.current) return
+        const status = e.response?.status
+        setErro(e.response?.data?.detail ?? (status ? `Erro ${status} no servidor.` : e.message ?? 'Sem conexão.'))
+      })
+      .finally(() => { if (meu === pedido.current) setCarregando(false) })
   }, [])
 
-  if (loading) return <p className={styles.empty}>Carregando…</p>
-  if (!stats) return <p className={styles.empty}>Não foi possível carregar as estatísticas.</p>
+  useEffect(() => carregar(dias), [dias, carregar])
 
-  const ministerioData = stats.por_ministerio.map((d) => ({
-    name: d.ministerio_sigla ?? 'Sem ministério',
-    total: d.total,
-  }))
+  function mudar(chave: string, valor: string) {
+    const novo = new URLSearchParams(params)
+    novo.set(chave, valor)
+    setParams(novo, { replace: true })
+  }
 
-  const formacaoData = stats.por_nivel_formacao.map((d) => ({
-    name: d.nivel,
-    value: d.total,
-  }))
+  function recarregar() {
+    carregar(dias)
+    recarregarPendencias()
+  }
 
-  const temaData = stats.por_tema.map((d) => ({
-    name: d.tema,
-    total: d.total,
-  }))
+  const gerado = stats ? new Date(stats.gerado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null
 
   return (
     <div>
-      <div className={styles.sectionHeader}>
-        <h1 className={styles.sectionTitle}>Estatísticas</h1>
+      <header className={s.topo}>
+        <div>
+          <h1 className={s.titulo}>Estatísticas</h1>
+          <p className={s.subtitulo}>Só contas ativas · horário de Brasília{gerado && ` · atualizado às ${gerado}`}</p>
+        </div>
+        <div className={s.acoes}>
+          <button type="button" className={s.botao} onClick={recarregar} disabled={carregando}>
+            <IconRefresh size={16} aria-hidden className={carregando ? s.girando : undefined} />
+            Recarregar
+          </button>
+          <button type="button" className={s.botao} onClick={() => stats && baixarCsv(stats)} disabled={!stats}>
+            <IconDownload size={16} aria-hidden />
+            Exportar CSV
+          </button>
+        </div>
+      </header>
+
+      <Pendencias p={pendencias} />
+
+      <div className={s.barraAbas}>
+        <div className={s.abas} role="tablist" aria-label="Seções">
+          {ABAS.map((a) => (
+            <button key={a.chave} type="button" role="tab" aria-selected={aba === a.chave}
+              className={`${s.aba} ${aba === a.chave ? s.abaAtiva : ''}`} onClick={() => mudar('aba', a.chave)}>
+              {a.rotulo}
+            </button>
+          ))}
+        </div>
+        {aba === 'perfis' ? (
+          <p className={s.retrato}>Retrato de hoje</p>
+        ) : (
+          <div className={s.periodos} role="group" aria-label="Período">
+            {PERIODOS.map((p) => (
+              <button key={p.valor} type="button" aria-pressed={dias === p.valor}
+                className={`${s.periodo} ${dias === p.valor ? s.periodoAtivo : ''}`}
+                onClick={() => mudar('dias', String(p.valor))}>
+                {p.rotulo}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <p className={styles.statLabel}>Total de analistas</p>
-          <p className={styles.statValue}>{stats.total_analistas}</p>
+      {erro && (
+        <div className={s.erro} role="alert">
+          <span>Não foi possível carregar as estatísticas. {erro}</span>
+          <button type="button" className={s.botao} onClick={recarregar}>Tentar de novo</button>
         </div>
-        <div className={styles.statCard}>
-          <p className={styles.statLabel}>Ativos</p>
-          <p className={`${styles.statValue} ${styles.statValueGreen}`}>{stats.total_ativos}</p>
-        </div>
-        <div className={styles.statCard}>
-          <p className={styles.statLabel}>Inativos</p>
-          <p className={`${styles.statValue} ${styles.statValueRed}`}>{stats.total_inativos}</p>
-        </div>
-      </div>
+      )}
 
-      <h2 className={styles.chartTitle} style={{ margin: 'var(--sp-6) 0 var(--sp-3)' }}>Visitas à Rede</h2>
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <p className={styles.statLabel}>Hoje</p>
-          <p className={styles.statValue}>{stats.visitas.hoje}</p>
-        </div>
-        <div className={styles.statCard}>
-          <p className={styles.statLabel}>Últimos 7 dias</p>
-          <p className={styles.statValue}>{stats.visitas.ultimos_7}</p>
-        </div>
-        <div className={styles.statCard}>
-          <p className={styles.statLabel}>Últimos 30 dias</p>
-          <p className={styles.statValue}>{stats.visitas.ultimos_30}</p>
-        </div>
-        <div className={styles.statCard}>
-          <p className={styles.statLabel}>Pessoas diferentes (30 dias)</p>
-          <p className={`${styles.statValue} ${styles.statValueGreen}`}>{stats.visitas.pessoas_30}</p>
-        </div>
-        <div className={styles.statCard}>
-          <p className={styles.statLabel}>Total desde o início</p>
-          <p className={styles.statValue}>{stats.visitas.total}</p>
-        </div>
-      </div>
-      <div className={styles.chartCardFull}>
-        <p className={styles.chartTitle}>Visitas por dia (últimos 30 dias)</p>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={stats.visitas.por_dia.map((d) => ({ dia: `${d.dia.slice(8, 10)}/${d.dia.slice(5, 7)}`, visitas: d.visitas, pessoas: d.pessoas }))}
-            margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-            <XAxis dataKey="dia" tick={{ fontSize: 11 }} interval={2} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} width={32} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="visitas" name="Visitas" fill="#f15e23" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="pessoas" name="Pessoas" fill="#6366f1" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {!stats && carregando && <p className={s.vazio}>Carregando…</p>}
 
-      <div className={styles.chartsGrid}>
-        <div className={styles.chartCardFull}>
-          <p className={styles.chartTitle}>Analistas por ministério (top 10)</p>
-          {ministerioData.length === 0 ? (
-            <p className={styles.empty}>Sem dados</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={ministerioData} margin={{ top: 4, right: 16, left: 0, bottom: 32 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} angle={-30} textAnchor="end" interval={0} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+      {stats && (
+        <div className={carregando ? s.atualizando : undefined} aria-busy={carregando}>
+          {aba === 'adesao' && <AbaAdesao stats={stats} />}
+          {aba === 'uso' && <AbaUso stats={stats} />}
+          {aba === 'perfis' && <AbaPerfis stats={stats} />}
         </div>
-
-        <div className={styles.chartCard}>
-          <p className={styles.chartTitle}>Nível de formação</p>
-          {formacaoData.length === 0 ? (
-            <p className={styles.empty}>Sem dados</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={formacaoData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="45%"
-                  outerRadius={80}
-                >
-                  {formacaoData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`${value} analistas`]} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        <div className={styles.chartCard}>
-          <p className={styles.chartTitle}>Temas mais frequentes (top 10)</p>
-          {temaData.length === 0 ? (
-            <p className={styles.empty}>Sem dados</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={temaData} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
-                <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="total" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
+      )}
     </div>
+  )
+}
+
+/** O que espera ação do admin; some quando não há nada. */
+function Pendencias({ p }: { p: PendenciasAdmin | null }) {
+  if (!p) return null
+  const motivo = p.revisao_motivos[0]
+  const itens = [
+    {
+      n: p.revisao, para: '/admin/usuarios?filtro=pendentes',
+      rotulo: p.revisao === 1 ? 'cadastro aguarda revisão' : 'cadastros aguardam revisão',
+      detalhe: motivo ? `${p.revisao_motivos.length > 1 ? 'Mais comum: ' : ''}${motivo.motivo}` : undefined,
+    },
+    { n: p.vinculo, para: '/admin/usuarios?filtro=vinculo', rotulo: p.vinculo === 1 ? 'alerta de vínculo' : 'alertas de vínculo' },
+    { n: p.conflitos, para: '/admin/conflitos', rotulo: p.conflitos === 1 ? 'conflito de CPF' : 'conflitos de CPF' },
+    { n: p.temas, para: '/admin/temas', rotulo: p.temas === 1 ? 'tema novo para revisar' : 'temas novos para revisar' },
+    {
+      n: p.bloqueadas, para: '/admin/usuarios?filtro=todos&bloqueado=1&titulo=Login%20bloqueado',
+      rotulo: p.bloqueadas === 1 ? 'conta com login bloqueado' : 'contas com login bloqueado',
+      detalhe: 'Por senha errada; libera sozinho',
+      info: true,
+    },
+  ].filter((i) => i.n > 0)
+
+  if (itens.length === 0) {
+    return (
+      <p className={s.semPendencias}>
+        <IconCheck size={16} aria-hidden /> Nada esperando ação do admin.
+      </p>
+    )
+  }
+  return (
+    <ul className={s.pendencias} aria-label="Pendências">
+      {itens.map((i) => (
+        <li key={i.para}>
+          <Link to={i.para} className={`${s.pendencia} ${'info' in i ? s.pendenciaInfo : ''}`} title={i.detalhe}>
+            <strong className={s.pendenciaNumero}>{numero(i.n)}</strong>
+            <span>
+              {i.rotulo}
+              {i.detalhe && <small className={s.pendenciaDetalhe}>{i.detalhe}</small>}
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   )
 }

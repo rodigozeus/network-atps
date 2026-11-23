@@ -64,22 +64,74 @@ export interface PaginatedAdminUsers {
   pages: number
 }
 
+/** Um número do período e o do período anterior de mesmo tamanho (null em "desde o início") */
+export interface Comparado {
+  atual: number
+  anterior: number | null
+}
+
+/** Barra de uma distribuição. Grupos com menos de `minimo_grupo` pessoas vêm juntos em "Outros".
+ * `filtro` é a query string da lista de usuários com essas pessoas (null: não dá para abrir). */
+export interface Grupo {
+  rotulo: string
+  total: number
+  filtro: string | null
+}
+
+export type Periodo = 0 | 7 | 30 | 90
+
+/** Estatísticas do painel: só contas ativas, datas no horário de Brasília (backend/estatisticas.py). */
 export interface AdminStats {
-  total_analistas: number
-  total_ativos: number
-  total_inativos: number
-  por_ministerio: { ministerio_sigla: string | null; total: number }[]
-  por_nivel_formacao: { nivel: string; total: number }[]
-  por_tema: { tema: string; total: number }[]
-  /** Uma visita = a Rede aberta numa sessão do navegador */
-  visitas: {
-    hoje: number
-    ultimos_7: number
-    ultimos_30: number
-    total: number
-    pessoas_30: number
-    por_dia: { dia: string; visitas: number; pessoas: number }[]
+  gerado_em: string
+  dias: Periodo
+  inicio: string
+  fim: string
+  minimo_grupo: number
+  adesao: {
+    ativos: number
+    novos: Comparado
+    /** ATPS ativos na cópia local da base do Portal */
+    universo: number
+    funil: { chave: string; rotulo: string; total: number }[]
+    cadastros_por_dia: { dia: string; novos: number; acumulado: number }[]
   }
+  uso: {
+    /** Uma visita = a Rede aberta numa sessão do navegador */
+    visitas: Comparado
+    pessoas: Comparado
+    /** Pessoas diferentes nos últimos 7 e 30 dias (independem do período) */
+    semana: number
+    mes: number
+    /** De quem abriu a Rede pela 1ª vez há 7+ dias, quantos voltaram em até 7 dias */
+    retorno: { voltaram: number; elegiveis: number }
+    visitas_por_dia: { dia: string; visitas: number; pessoas: number }[]
+    favoritos: { total: number; pessoas: number; novos: Comparado }
+    /** Últimas 12 semanas (segunda-feira de cada uma) */
+    atualizacoes_por_semana: { semana: string; lotacao: number; tema: number; formacao: number }[]
+    emails_limite_dia: number
+    emails_tipos: string[]
+    emails_por_dia: Array<{ dia: string } & Record<string, number | string>>
+  }
+  perfis: {
+    ativos: number
+    ocultos: number
+    com_funcao: number
+    completos: number
+    completude: { chave: string; rotulo: string; total: number }[]
+    por_orgao: Grupo[]
+    por_formacao: Grupo[]
+    por_tema: Grupo[]
+    por_turma: Grupo[]
+  }
+}
+
+export interface PendenciasAdmin {
+  revisao: number
+  revisao_motivos: { motivo: string; total: number }[]
+  vinculo: number
+  conflitos: number
+  temas: number
+  bloqueadas: number
 }
 
 export interface ListUsuariosParams {
@@ -87,6 +139,12 @@ export interface ListUsuariosParams {
   ativo?: boolean
   pendente_revisao?: boolean
   alerta_vinculo?: boolean
+  bloqueado?: boolean
+  orgao_id?: number
+  tema_id?: number
+  nivel?: string
+  turma?: string
+  sem?: string
   page?: number
   page_size?: number
 }
@@ -119,8 +177,13 @@ export async function confirmarVinculo(id: number): Promise<AnalistaAdminOut> {
   return data
 }
 
-export async function getStats(): Promise<AdminStats> {
-  const { data } = await api.get<AdminStats>('/admin/stats')
+export async function getStats(dias: Periodo): Promise<AdminStats> {
+  const { data } = await api.get<AdminStats>('/admin/stats', { params: { dias } })
+  return data
+}
+
+export async function getPendencias(): Promise<PendenciasAdmin> {
+  const { data } = await api.get<PendenciasAdmin>('/admin/pendencias')
   return data
 }
 
@@ -165,7 +228,6 @@ export interface Cobertura {
   orgaos: Array<{ orgao_id: number; nome: string; sigla: string | null; universo: number; rede: number }>
   sem_orgao_universo: number
   sem_orgao_rede: number
-  cadastros_por_dia: Array<{ dia: string; total: number }>
 }
 
 export async function getCobertura(): Promise<Cobertura> {

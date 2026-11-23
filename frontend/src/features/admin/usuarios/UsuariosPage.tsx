@@ -1,32 +1,59 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { AnalistaAdminOut } from '../api/admin'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import type { AnalistaAdminOut, ListUsuariosParams } from '../api/admin'
 import { confirmarVinculo, desativarUsuario, downloadCSV, excluirUsuario, getUsuarios, reativarUsuario } from '../api/admin'
 import EditarUsuarioModal from './EditarUsuarioModal'
 import styles from '../admin.module.css'
 import { useAuth } from '@shared/hooks/useAuth'
+import { useAdmin } from '../AdminLayout'
 
 const PAGE_SIZE = 20
 
 type FiltroAtivo = 'todos' | 'ativos' | 'inativos' | 'pendentes' | 'vinculo'
+const FILTROS: FiltroAtivo[] = ['todos', 'ativos', 'inativos', 'pendentes', 'vinculo']
+
+/** Filtros que chegam pela URL, vindos dos gráficos e das pendências das estatísticas */
+type FiltroExtra = Pick<ListUsuariosParams, 'orgao_id' | 'tema_id' | 'nivel' | 'turma' | 'sem' | 'bloqueado'>
+
+function lerFiltroExtra(p: URLSearchParams): FiltroExtra | null {
+  const f: FiltroExtra = {}
+  if (p.get('orgao_id')) f.orgao_id = Number(p.get('orgao_id'))
+  if (p.get('tema_id')) f.tema_id = Number(p.get('tema_id'))
+  if (p.get('nivel')) f.nivel = p.get('nivel')!
+  if (p.get('turma')) f.turma = p.get('turma')!
+  if (p.get('sem')) f.sem = p.get('sem')!
+  if (p.get('bloqueado')) f.bloqueado = true
+  return Object.keys(f).length ? f : null
+}
 
 export default function UsuariosPage() {
   const { user } = useAuth()
+  const { recarregarPendencias } = useAdmin()
   const isAdmin = user?.role === 'admin'
+  const [params, setParams] = useSearchParams()
+  const chaveParams = params.toString()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const extra = useMemo(() => lerFiltroExtra(params), [chaveParams])
+  const tituloExtra = params.get('titulo')
+  const filtroUrl = params.get('filtro') as FiltroAtivo | null
   const [items, setItems] = useState<AnalistaAdminOut[]>([])
   const [total, setTotal] = useState(0)
   const [pages, setPages] = useState(1)
   const [page, setPage] = useState(1)
   const [q, setQ] = useState('')
-  const [filtroAtivo, setFiltroAtivo] = useState<FiltroAtivo>('pendentes')
+  const [filtroAtivo, setFiltroAtivo] = useState<FiltroAtivo>(
+    filtroUrl && FILTROS.includes(filtroUrl) ? filtroUrl : extra ? 'ativos' : 'pendentes',
+  )
   const [loading, setLoading] = useState(false)
   const [editando, setEditando] = useState<AnalistaAdminOut | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const autoSwitchDone = useRef(false)
+  // só troca sozinho de "Ag. revisão" para "Ativos" quando ninguém pediu um filtro pela URL
+  const autoSwitchDone = useRef(!!filtroUrl || !!extra)
 
   const fetch = useCallback(async (currentPage: number, query: string, filtro: FiltroAtivo) => {
     setLoading(true)
     try {
-      const base = { q: query || undefined, page: currentPage, page_size: PAGE_SIZE }
+      const base = { ...extra, q: query || undefined, page: currentPage, page_size: PAGE_SIZE }
       const params =
         filtro === 'pendentes'
           ? { ...base, pendente_revisao: true }
@@ -46,7 +73,11 @@ export default function UsuariosPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [extra])
+
+  function limparFiltroExtra() {
+    setParams({}, { replace: true })
+  }
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -68,6 +99,7 @@ export default function UsuariosPage() {
         await desativarUsuario(analista.id)
       } else {
         const updated = await reativarUsuario(analista.id)
+        recarregarPendencias()
         setItems((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
         return
       }
@@ -97,6 +129,7 @@ export default function UsuariosPage() {
     if (!window.confirm(`Confirmar manualmente o vínculo de "${analista.nome}" com a carreira? A reverificação automática não suspenderá mais esta conta.`)) return
     try {
       const updated = await confirmarVinculo(analista.id)
+      recarregarPendencias()
       setItems((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
     } catch {
       // silencioso — mantém o item como está
@@ -166,6 +199,13 @@ export default function UsuariosPage() {
           </button>
         </div>
       </div>
+
+      {extra && (
+        <div className={styles.filtroExtra}>
+          <span>Filtro das estatísticas: <strong>{tituloExtra ?? 'personalizado'}</strong></span>
+          <button type="button" onClick={limparFiltroExtra} aria-label="Remover filtro">Remover filtro ✕</button>
+        </div>
+      )}
 
       {loading ? (
         <p className={styles.empty}>Carregando…</p>

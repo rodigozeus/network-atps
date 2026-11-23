@@ -1,0 +1,489 @@
+/* Painel admin > Estatísticas */
+
+.topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-5);
+}
+
+.titulo {
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.subtitulo {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+}
+
+.acoes {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.botao:hover:not(:disabled) { background: var(--color-background); }
+.botao:disabled { opacity: 0.6; cursor: default; }
+
+.girando { animation: girar 0.8s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+
+/* ── Pendências ── */
+.pendencias {
+  list-style: none;
+  margin: 0 0 var(--sp-6);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--sp-3);
+}
+
+.pendencia {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-lg);
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #78350f;
+  font-size: var(--font-sm);
+  text-decoration: none;
+  transition: border-color var(--t), box-shadow var(--t);
+}
+
+.pendencia:hover {
+  text-decoration: none;
+  border-color: #f59e0b;
+  box-shadow: var(--shadow-sm);
+}
+
+/* só informa (não pede ação) */
+.pendenciaInfo {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.pendenciaInfo:hover { border-color: var(--color-text-muted); }
+.pendenciaInfo .pendenciaDetalhe { color: var(--color-text-secondary); }
+
+.pendenciaNumero {
+  font-size: var(--font-2xl);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.pendenciaDetalhe {
+  margin-top: 2px;
+  font-size: var(--font-xs);
+  color: #92400e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.semPendencias {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-6);
+  font-size: var(--font-sm);
+  color: var(--color-success);
+}
+
+/* ── Abas e período ── */
+.barraAbas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.abas { display: flex; gap: var(--sp-1); }
+
+.aba {
+  padding: var(--sp-3) var(--sp-4);
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  font: inherit;
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.aba:hover { color: var(--color-text); }
+
+.abaAtiva {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.periodos {
+  display: inline-flex;
+  padding: 3px;
+  margin-bottom: var(--sp-2);
+  border-radius: var(--r);
+  background: var(--color-background);
+}
+
+.periodo {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.periodoAtivo {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+.retrato {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.erro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-5);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-lg);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: var(--font-sm);
+}
+
+.atualizando {
+  opacity: 0.55;
+  transition: opacity var(--t);
+}
+
+.vazio {
+  margin: 0;
+  padding: var(--sp-8) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-sm);
+}
+
+.nota {
+  margin: var(--sp-3) 0 0;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+}
+
+/* ── Números de destaque ── */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+
+.kpi {
+  display: block;
+  min-width: 0;
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--r-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: inherit;
+}
+
+.kpiLink { text-decoration: none; transition: border-color var(--t); }
+.kpiLink:hover { text-decoration: none; border-color: var(--color-primary); }
+
+.kpiRotulo {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.kpiValor {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpiValorSecundario {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.kpiDetalhe {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+}
+
+.delta {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.deltaSobe { color: var(--delta-sobe); }
+.deltaDesce { color: var(--delta-desce); }
+.deltaIgual { color: var(--color-text-secondary); }
+.deltaContexto { font-weight: 400; color: var(--color-text-secondary); }
+
+.miniKpis {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.miniKpis .kpi {
+  padding: 0;
+  border: none;
+}
+
+.miniKpis .kpi + .kpi {
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+}
+
+.miniKpis .kpiValor { font-size: var(--font-2xl); }
+
+/* ── Cartões ── */
+.grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-5);
+  margin-bottom: var(--sp-4);
+}
+
+.cartao {
+  min-width: 0;
+  padding: var(--sp-5);
+  border-radius: var(--r-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.cartaoLargo { grid-column: 1 / -1; }
+
+.cartaoTopo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.cartaoTitulo {
+  margin: 0;
+  font-size: var(--font-base);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cartaoSubtitulo {
+  margin: 2px 0 0;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+}
+
+.cartaoNumero {
+  margin: 0;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* ── Barras horizontais (distribuições, completude, funil) ── */
+.barras {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.barra {
+  display: grid;
+  /* coluna do número com largura fixa: todas as barras começam e terminam no mesmo lugar */
+  grid-template-columns: minmax(90px, 38%) 1fr 5.5em;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 6px var(--sp-2);
+  border-radius: var(--r);
+  font-size: var(--font-sm);
+  color: var(--color-text);
+}
+
+.barraCompletude { grid-template-columns: minmax(110px, 34%) 1fr 3.2em 6.5em; }
+
+.barraLink { text-decoration: none; }
+.barraLink:hover { text-decoration: none; background: var(--color-background); }
+.barraLink:hover .barraRotulo { color: var(--color-primary); }
+
+.barraRotulo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barraTrilho {
+  display: block;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--color-background);
+  overflow: hidden;
+}
+
+.barraFill {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: 99px;
+  background: var(--serie-1);
+}
+
+.barraValor {
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.barraValor small {
+  margin-left: 4px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+.barraAtalho {
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+a.barraAtalho { color: var(--color-primary); font-weight: 600; }
+
+.funil {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.funilLinha {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: 6px;
+  font-size: var(--font-sm);
+}
+
+.funilValor {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.funilValor small { margin-left: 4px; font-weight: 400; color: var(--color-text-secondary); }
+
+.funilEtapa .barraTrilho { height: 10px; }
+
+.funilPerda {
+  margin: 4px 0 0;
+  font-size: var(--font-xs);
+  color: var(--color-text-secondary);
+}
+
+/* ── Dica dos gráficos ── */
+.dica {
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow);
+  font-size: var(--font-xs);
+  color: var(--color-text);
+}
+
+.dicaTitulo { margin: 0 0 4px; font-weight: 700; }
+
+.dicaLinha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 0;
+  color: var(--color-text-secondary);
+}
+
+.dicaLinha strong { color: var(--color-text); font-variant-numeric: tabular-nums; }
+
+.dicaCor { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+@media (max-width: 900px) {
+  .grade { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 560px) {
+  .barraCompletude { grid-template-columns: 1fr 3.2em 6.5em; }
+  .barraCompletude .barraTrilho { display: none; }
+  .barra { grid-template-columns: minmax(80px, 42%) 1fr 5.5em; }
+  .barraAbas { flex-direction: column; align-items: stretch; }
+  .periodos { align-self: flex-start; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+  .kpi { padding: var(--sp-3) var(--sp-4); }
+  .kpiValor { font-size: var(--font-2xl); }
+  .barraCompletude .barraRotulo { white-space: normal; }
+  .cartaoTopo { flex-wrap: wrap; }
+}

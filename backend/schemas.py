@@ -484,44 +484,18 @@ class PaginatedAdminUsers(BaseModel):
     pages: int
 
 
-class MinistrioStat(BaseModel):
-    ministerio_sigla: str | None
+class MotivoPendencia(BaseModel):
+    motivo: str
     total: int
 
 
-class FormacaoStat(BaseModel):
-    nivel: str
-    total: int
-
-
-class TemaStat(BaseModel):
-    tema: str
-    total: int
-
-
-class VisitasDia(BaseModel):
-    dia: str
-    visitas: int
-    pessoas: int
-
-
-class VisitasStats(BaseModel):
-    hoje: int
-    ultimos_7: int
-    ultimos_30: int
-    total: int
-    pessoas_30: int  # pessoas diferentes que acessaram nos últimos 30 dias
-    por_dia: list[VisitasDia]  # últimos 30 dias
-
-
-class AdminStats(BaseModel):
-    total_analistas: int
-    total_ativos: int
-    total_inativos: int
-    por_ministerio: list[MinistrioStat]
-    por_nivel_formacao: list[FormacaoStat]
-    por_tema: list[TemaStat]
-    visitas: VisitasStats
+class PendenciasAdminOut(BaseModel):
+    revisao: int  # cadastros esperando aprovação manual
+    revisao_motivos: list[MotivoPendencia]
+    vinculo: int  # vínculo suspenso ou alerta da reverificação
+    conflitos: int  # conflitos de CPF não resolvidos
+    temas: int  # temas novos esperando revisão da curadoria
+    bloqueadas: int  # contas com login bloqueado agora por tentativas erradas
 
 
 class ConflitoCadastroOut(BaseModel):
@@ -589,12 +563,7 @@ class CoberturaOrgao(BaseModel):
     nome: str
     sigla: str | None
     universo: int  # ATPS ativos em exercício no órgão (cópia local da base do Portal)
-    rede: int  # perfis visíveis na Rede
-
-
-class CadastrosDia(BaseModel):
-    dia: str
-    total: int
+    rede: int  # contas ativas na Rede
 
 
 class CoberturaOut(BaseModel):
@@ -604,7 +573,6 @@ class CoberturaOut(BaseModel):
     orgaos: list[CoberturaOrgao]
     sem_orgao_universo: int
     sem_orgao_rede: int
-    cadastros_por_dia: list[CadastrosDia]
 
 
 # --- Páginas de unidade ---
