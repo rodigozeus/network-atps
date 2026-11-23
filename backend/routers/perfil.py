@@ -1,4 +1,5 @@
 import io
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
@@ -8,7 +9,7 @@ from fastapi.responses import FileResponse
 from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy import func, null, or_, select
 from sqlalchemy.orm import Session
-from database import get_db
+from database import SessionLocal, get_db
 from models import (
     AcaoConsentimento, Analista, ConflitoCadastro, Formacao, Tema, TemaAtuacao, UnidadeSiorg,
     condicao_perfil_visivel,
@@ -36,6 +37,8 @@ from consentimentos import (
 from cpf_utils import cifrar_cpf, decifrar_cpf, hash_cpf, limpar_cpf
 from email_utils import enviar_email_alerta_cpf_em_uso
 from portal_transparencia import StatusVerificacao, consultar_situacao_atps
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["perfil"])
 
@@ -239,18 +242,37 @@ def regularizar(
         registrar_aceite_obrigatorios(analista, request)
 
     # Lotação em branco e Autorização v2 aceita: preenche com o exercício do Portal.
-    # Quem já tinha CPF guardado e só aceitou os termos agora ganha uma consulta para isso.
-    if lotacao_auto.pode_preencher(analista):
-        if resultado is None and analista.cpf_cifrado:
-            resultado = consultar_situacao_atps(decifrar_cpf(analista.cpf_cifrado), None)
-        if resultado is not None and resultado.confirmado:
-            lotacao_auto.preencher(db, analista, resultado.exercicio)
     if resultado is not None and resultado.confirmado:
+        if lotacao_auto.pode_preencher(analista):
+            lotacao_auto.preencher(db, analista, resultado.exercicio)
         atualizacao.registrar(db, analista, resultado.exercicio)
 
     db.commit()
     db.refresh(analista)
+
+    # Quem já tinha CPF guardado e só aceitou os termos ganha uma consulta para isso, mas depois
+    # da resposta: a pessoa entra na hora, sem esperar o Portal.
+    if resultado is None and analista.cpf_cifrado and lotacao_auto.pode_preencher(analista):
+        background_tasks.add_task(completar_pelo_portal, analista.id)
     return analista
+
+
+def completar_pelo_portal(analista_id: int) -> None:
+    """Em segundo plano: consulta o Portal e preenche o que estiver em branco no perfil."""
+    with SessionLocal() as db:
+        analista = db.get(Analista, analista_id)
+        if analista is None or not analista.cpf_cifrado or not lotacao_auto.pode_preencher(analista):
+            return
+        try:
+            resultado = consultar_situacao_atps(decifrar_cpf(analista.cpf_cifrado), None)
+        except Exception:
+            logger.exception("Portal: falha ao completar o perfil %s", analista_id)
+            return
+        if not resultado.confirmado:
+            return
+        lotacao_auto.preencher(db, analista, resultado.exercicio)
+        atualizacao.registrar(db, analista, resultado.exercicio)
+        db.commit()
 
 
 @router.get("/perfil/privacidade", response_model=list[ConsentimentoOut])

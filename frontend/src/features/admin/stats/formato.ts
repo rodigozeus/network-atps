@@ -60,11 +60,13 @@ export const TIPOS_EMAIL: Record<string, string> = {
   alerta_cpf_em_uso: 'CPF já em uso',
   vinculo_suspenso: 'Vínculo suspenso',
   conta_excluida: 'Conta excluída',
+  convite_beta: 'Convite aos testadores',
 }
 /** Cor fixa por tipo de e-mail (a cor segue o tipo, não a ordem em que aparece) */
 export const corEmail = (tipo: string) => {
   const i = Object.keys(TIPOS_EMAIL).indexOf(tipo)
-  return corSerie(i < 0 ? 8 : i + 1)
+  // só há 8 cores de série: tipos além delas (envios avulsos) ficam em cinza neutro
+  return i >= 0 && i < 8 ? corSerie(i + 1) : corToken('--grafico-eixo', '#898781')
 }
 
 // --- exportação dos números agregados ---
