@@ -295,8 +295,8 @@ class EnvioEmail(Base):
 
 
 class Acesso(Base):
-    """Uma visita: a primeira abertura da Rede numa sessão do navegador (tipo "rede", com a
-    conta) ou da página pública (tipo "sobre", sem conta). Só para contagens no painel."""
+    """Uma visita: a primeira abertura da Rede numa sessão do navegador, com a conta. Alimenta as
+    contagens e o log de acessos do painel. (O tipo "sobre", da antiga página pública, saiu.)"""
     __tablename__ = "acessos"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

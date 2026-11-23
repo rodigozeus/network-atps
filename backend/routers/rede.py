@@ -9,14 +9,12 @@ from auth import get_current_user, get_usuario_regular
 from database import get_db
 from models import Acesso, Analista, Favorito, UnidadeSiorg, condicao_perfil_visivel
 from routers.busca import _aplicar_visibilidade
-from schemas import AnelOut, MinhaRedePaginaOut, NovidadesRedeOut, PessoaOrbita, ResumoPublico
+from schemas import AnelOut, MinhaRedePaginaOut, NovidadesRedeOut, PessoaOrbita
 
 router = APIRouter(tags=["rede"])
 
 JANELA = timedelta(days=30)
 LIMITE = 12
-# Abaixo disso, a página pública não mostra números (a Rede ainda parece vazia)
-MINIMO_PARA_MOSTRAR = 30
 
 
 def _chave(texto: str | None) -> str:
@@ -64,20 +62,6 @@ def marcar_novidades_vistas(eu: Analista = Depends(get_usuario_regular), db: Ses
     eu.novidades_rede_vistas_em = datetime.now(timezone.utc)
     db.commit()
 
-
-@router.get("/publico/resumo", response_model=ResumoPublico)
-def resumo_publico(db: Session = Depends(get_db)):
-    """Números agregados para a página pública (sem login). Nada de perfis."""
-    analistas = db.scalar(select(func.count()).select_from(Analista).where(condicao_perfil_visivel())) or 0
-    if analistas < MINIMO_PARA_MOSTRAR:
-        return ResumoPublico(analistas=None, orgaos=None)
-    orgaos = db.scalar(
-        select(func.count(func.distinct(UnidadeSiorg.orgao_id)))
-        .select_from(Analista)
-        .join(UnidadeSiorg, UnidadeSiorg.id == Analista.lotacao_siorg_id)
-        .where(condicao_perfil_visivel())
-    ) or 0
-    return ResumoPublico(analistas=analistas, orgaos=orgaos or None)
 
 
 # --- Página "Minha rede": quem está mais perto de quem está logado ---
@@ -155,9 +139,3 @@ def registrar_visita(eu: Analista = Depends(get_current_user), db: Session = Dep
     db.add(Acesso(dia=_hoje_brasilia(), tipo="rede", analista_id=eu.id))
     db.commit()
 
-
-@router.post("/publico/visita", status_code=status.HTTP_204_NO_CONTENT)
-def registrar_visita_publica(db: Session = Depends(get_db)):
-    """Página pública /sobre (sem conta): conta a visita, sem guardar nada de quem visitou."""
-    db.add(Acesso(dia=_hoje_brasilia(), tipo="sobre"))
-    db.commit()

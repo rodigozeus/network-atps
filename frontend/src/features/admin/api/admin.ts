@@ -78,7 +78,6 @@ export interface AdminStats {
     ultimos_30: number
     total: number
     pessoas_30: number
-    publica_30: number
     por_dia: { dia: string; visitas: number; pessoas: number }[]
   }
 }
@@ -232,14 +231,13 @@ export async function excluirTema(id: number): Promise<void> {
 export interface Acesso {
   id: number
   quando: string | null
-  tipo: 'rede' | 'sobre'
   analista_id: number | null
   nome: string | null
   orgao: string | null
   excluida: boolean
 }
 
-export async function getAcessos(params: { q?: string; tipo?: 'rede' | 'sobre'; limite?: number; offset?: number }) {
+export async function getAcessos(params: { q?: string; limite?: number; offset?: number }) {
   const { data } = await api.get<{ total: number; itens: Acesso[] }>('/admin/acessos', { params })
   return data
 }

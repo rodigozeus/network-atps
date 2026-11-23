@@ -277,7 +277,6 @@ def get_stats(
         ultimos_30=sum(v for v, _ in por_dia.values()),
         total=rede.count(),
         pessoas_30=rede.filter(Acesso.dia >= desde30).with_entities(func.count(func.distinct(Acesso.analista_id))).scalar() or 0,
-        publica_30=db.query(Acesso).filter(Acesso.tipo == "sobre", Acesso.dia >= desde30).count(),
         por_dia=[VisitasDia(dia=(desde30 + _td(days=i)).isoformat(),
                             visitas=por_dia.get(desde30 + _td(days=i), (0, 0))[0],
                             pessoas=por_dia.get(desde30 + _td(days=i), (0, 0))[1]) for i in range(30)],
@@ -458,16 +457,14 @@ def log_acessos(
     limite: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     q: str | None = Query(None, description="Filtra pelo nome da pessoa"),
-    tipo: str | None = Query(None, pattern="^(rede|sobre)$"),
     db: Session = Depends(get_db),
     _: Analista = Depends(get_admin_estrito),
 ):
     """Últimos acessos, do mais recente ao mais antigo: uma linha por sessão do navegador em que a
-    pessoa abriu a Rede logada (tipo rede) ou por visita à página pública (tipo sobre, sem pessoa)."""
+    pessoa abriu a Rede logada."""
     from models import Acesso
-    consulta = db.query(Acesso, Analista).outerjoin(Analista, Analista.id == Acesso.analista_id)
-    if tipo:
-        consulta = consulta.filter(Acesso.tipo == tipo)
+    consulta = (db.query(Acesso, Analista).outerjoin(Analista, Analista.id == Acesso.analista_id)
+                .filter(Acesso.tipo == "rede"))
     if q and q.strip():
         consulta = consulta.filter(func.f_unaccent(func.lower(Analista.nome)).like(func.f_unaccent(func.lower(f"%{q.strip()}%"))))
     total = consulta.count()
@@ -477,7 +474,7 @@ def log_acessos(
             id=ac.id, quando=ac.criado_em, tipo=ac.tipo,
             analista_id=a.id if a else None, nome=a.nome if a else None,
             orgao=(a.ministerio_sigla or a.ministerio) if a else None,
-            excluida=a is None and ac.tipo == "rede",
+            excluida=a is None,
         )
         for ac, a in linhas
     ])

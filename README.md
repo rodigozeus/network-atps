@@ -43,7 +43,6 @@ Sem feed e sem algoritmo de engajamento: cada pessoa vê quem procurou ou escolh
 
 - **Painel administrativo** — usuários (busca, filtros, edição, ativação, exclusão), estatísticas, conflitos de CPF, exportação CSV; roles `admin` e `andeps`
 - **Cobertura** — ATPS na Rede × ATPS ativos de cada órgão (pela cópia local do Portal) e cadastros por dia
-- **Página pública `/sobre`** — apresentação da Rede, sem nenhum perfil; números agregados só a partir de 30 perfis. Link na tela de login
 - **Limite de e-mails** — 100 por hora e 300 por dia; acima disso só saem os essenciais (recuperação de senha, ativação de conta, avisos de segurança e de vínculo)
 
 ---
@@ -96,7 +95,6 @@ network-atps/
 │   │   │   ├── perfil/     # Edição (dados, formação/temas, privacidade) e perfil público
 │   │   │   ├── busca/      # Busca, cards, favoritos, novidades da rede
 │   │   │   ├── unidades/   # Órgãos e unidades (SIORG)
-│   │   │   ├── sobre/      # Página pública
 │   │   │   └── admin/      # Usuários, estatísticas, cobertura, conflitos
 │   │   ├── shared/         # componentes, hooks (useAuth, useFavoritos), api/ e utils/
 │   │   ├── index.css       # Tokens globais
@@ -137,7 +135,7 @@ network-atps/
 
 ## Navegação
 
-- Não autenticado: `/login`, `/registrar`, `/esqueci-senha`, `/redefinir-senha`, `/sobre`
+- Não autenticado: `/login`, `/registrar`, `/esqueci-senha`, `/redefinir-senha`
 - Após login: `/busca`. Quem tem pendência (CPF, termos novos, vínculo suspenso) vê a regularização em tela cheia antes de usar a Rede
 - `/analistas/:id` perfil, `/perfil` edição, `/unidades` e `/unidades/:id` órgãos e unidades, `/admin/*` painel
 

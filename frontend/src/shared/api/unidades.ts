@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { MinhaRedePagina, NovidadesRede, OrgaoResumo, ResumoPublico, Unidade } from './types'
+import type { MinhaRedePagina, NovidadesRede, OrgaoResumo, Unidade } from './types'
 
 export const unidadesApi = {
   /** Órgãos da estrutura oficial com quantas pessoas da Rede estão em cada um */
@@ -13,5 +13,4 @@ export const redeApi = {
   pagina: () => api.get<MinhaRedePagina>('/rede/pagina').then((r) => r.data),
   marcarVistas: () => api.post('/rede/novidades/visto'),
   /** Números agregados para a página pública (sem login) */
-  resumo: () => api.get<ResumoPublico>('/publico/resumo').then((r) => r.data),
 }

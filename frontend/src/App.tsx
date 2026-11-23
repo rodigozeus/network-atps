@@ -20,7 +20,6 @@ import TemasPage from '@features/admin/temas/TemasPage'
 import AcessosPage from '@features/admin/acessos/AcessosPage'
 import UnidadesPage from '@features/unidades/UnidadesPage'
 import UnidadePage from '@features/unidades/UnidadePage'
-import SobrePage from '@features/sobre/SobrePage'
 import MinhaRedePage from '@features/rede/MinhaRedePage'
 
 function PlaceholderPage({ title, desc }: { title: string; desc?: string }) {
@@ -44,7 +43,6 @@ export default function App() {
           <Route path="/registrar" element={<RegisterPage />} />
           <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
           <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
-          <Route path="/sobre" element={<SobrePage />} />
 
           {/* Páginas internas: quem tem pendência cadastral vê a regularização em tela cheia */}
           <Route element={<PrivateRoute />}>

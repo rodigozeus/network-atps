@@ -511,7 +511,6 @@ class VisitasStats(BaseModel):
     ultimos_30: int
     total: int
     pessoas_30: int  # pessoas diferentes que acessaram nos últimos 30 dias
-    publica_30: int  # visitas à página pública /sobre nos últimos 30 dias
     por_dia: list[VisitasDia]  # últimos 30 dias
 
 
@@ -606,11 +605,6 @@ class CoberturaOut(BaseModel):
     sem_orgao_universo: int
     sem_orgao_rede: int
     cadastros_por_dia: list[CadastrosDia]
-
-
-class ResumoPublico(BaseModel):
-    analistas: int | None  # None enquanto a Rede for pequena demais para mostrar
-    orgaos: int | None
 
 
 # --- Páginas de unidade ---

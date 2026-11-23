@@ -280,11 +280,6 @@ export interface NovidadesRede {
   chegaram_turma: AnalistaPublico[]
 }
 
-export interface ResumoPublico {
-  analistas: number | null
-  orgaos: number | null
-}
-
 /** Página "Minha rede": grupos de proximidade com quem está logado */
 export interface AnelRede {
   chave: 'coordenacao' | 'coordenacao_geral' | 'departamento' | 'secretaria' | 'ministerio' | 'temas' | 'favoritos'

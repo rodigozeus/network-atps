@@ -86,10 +86,6 @@ export default function StatsPage() {
           <p className={`${styles.statValue} ${styles.statValueGreen}`}>{stats.visitas.pessoas_30}</p>
         </div>
         <div className={styles.statCard}>
-          <p className={styles.statLabel}>Página pública (30 dias)</p>
-          <p className={styles.statValue}>{stats.visitas.publica_30}</p>
-        </div>
-        <div className={styles.statCard}>
           <p className={styles.statLabel}>Total desde o início</p>
           <p className={styles.statValue}>{stats.visitas.total}</p>
         </div>
