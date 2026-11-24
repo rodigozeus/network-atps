@@ -9,8 +9,8 @@
 4. Cópia da estrutura organizacional oficial (SIORG), usada nas listas de lotação.
 5. Conferência dos perfis no Portal (perfil sempre atualizado).
 6. Limpeza das novidades de perfil mais antigas que a retenção (novidades.RETENCAO_DIAS).
-7. Competência e contato de todas as unidades (SIORG), para as páginas de unidade abrirem
-   só do cache, sem esperar o SIORG.
+7. Competência e contato de todas as unidades, do arquivo mensal do SIORG no repositório de
+   dados abertos, para as páginas de unidade abrirem só do cache.
 
 Roda de madrugada (HORA_EXECUCAO, horário de Brasília), quando quase ninguém usa a Rede.
 
@@ -193,7 +193,7 @@ def conferir_perfis(db: Session, agora: datetime) -> None:
 
 
 def atualizar_detalhes_siorg(db: Session, agora: datetime) -> None:
-    logger.info("SIORG, detalhe das unidades: %s", siorg.atualizar_detalhes(db, agora))
+    logger.info("SIORG, detalhe das unidades: %s", siorg.importar_detalhes(db, agora))
 
 
 def limpar_novidades(db: Session, agora: datetime) -> None:
@@ -202,7 +202,6 @@ def limpar_novidades(db: Session, agora: datetime) -> None:
 
 def executar() -> None:
     agora = datetime.now(timezone.utc)
-    # a mais demorada (detalhe das unidades) fica por último
     for tarefa in (sincronizar_siorg, reverificar_vinculos, conferir_perfis, excluir_suspensos_vencidos,
                    avisar_novos_termos, limpar_novidades, atualizar_detalhes_siorg):
         db = SessionLocal()

@@ -5,7 +5,7 @@ Usada nas listas encadeadas de lotação (nomes e siglas oficiais) e no preenchi
 automático da lotação (lotacao_auto.py).
 
     python siorg.py              # sincroniza a estrutura agora (também roda de madrugada)
-    python siorg.py --detalhes   # busca competência/contato das unidades sem cache ou vencidas
+    python siorg.py --detalhes [--forcar]  # importa competência/contato do arquivo mensal
 """
 import logging
 import time
@@ -97,96 +97,128 @@ def sincronizar(db: Session) -> int:
     return len(linhas)
 
 
-# Competência, contato e endereço das unidades: buscados de madrugada (tarefas.py) para TODAS as
-# unidades com página (até CAMPOS_ATE) e guardados em unidades_siorg_detalhe. A página da unidade
-# só lê esse cache — nunca espera o SIORG, que às vezes demora ou fica fora do ar.
-DETALHE_VALIDADE_DIAS = 30
-DETALHE_TIMEOUT_S = 15
-DETALHE_PAUSA_S = 0.3
-DETALHE_TEMPO_MAXIMO_S = 3 * 3600  # por noite; o que faltar continua na noite seguinte
-DETALHE_FALHAS_SEGUIDAS = 10  # SIORG fora do ar: para e tenta de novo amanhã
+# Competência, contato e endereço das unidades vêm do arquivo mensal que o governo publica com a
+# estrutura completa (repositorio.dados.gov.br): um download por mês em vez de uma consulta por
+# unidade à API, que às vezes fica dias fora do ar. Importado de madrugada (tarefas.py) para TODAS
+# as unidades com página (até CAMPOS_ATE); a página da unidade só lê o cache.
+REPOSITORIO = "https://repositorio.dados.gov.br/seges/siorg/estrutura-organizacional-completa/"
+ARQUIVO_TIMEOUT_S = 120
+VAZIOS = {"", ".", "-", "..."}
 
 
-def _endereco(lista) -> str | None:
-    e = (lista or [{}])[0] or {}
-    cep = str(e.get("cep") or "")
-    partes = [
-        ", ".join(str(x) for x in (e.get("logradouro"), e.get("numero")) if x),
-        e.get("complemento"), e.get("bairro"),
-        f"CEP {cep[:5]}-{cep[5:]}" if len(cep) == 8 else None, e.get("uf"),
-    ]
-    texto = " · ".join(str(p).strip() for p in partes if p and str(p).strip())
+def _endereco(linha: dict) -> str | None:
+    cep = "".join(c for c in (linha.get("cep") or "") if c.isdigit())
+    partes = [linha.get("linhaEndereco"), linha.get("bairro"),
+              f"CEP {cep[:5]}-{cep[5:]}" if len(cep) == 8 else None, linha.get("uf")]
+    texto = " · ".join(p.strip() for p in partes if p and p.strip())
     return texto or None
 
 
+def _telefone(bruto: str) -> str:
+    """'(55) (61) 20273622' -> '(61) 2027-3622'. Outros formatos ficam como vieram."""
+    import re
+    m = re.fullmatch(r"\(55\)\s*\((\d{2})\)\s*(\d{4,5})(\d{4})", bruto.strip())
+    return f"({m[1]}) {m[2]}-{m[3]}" if m else bruto.strip()
+
+
+def _lista(bruto: str | None) -> list[str]:
+    import re
+    return [x.strip() for x in re.split(r"[;,]", bruto or "") if x.strip() and x.strip() not in VAZIOS]
+
+
+def _texto(bruto: str | None) -> str | None:
+    t = (bruto or "").strip()
+    return None if t in VAZIOS else t
+
+
 def detalhe(db: Session, unidade_id: int):
-    """Competência, contato e endereço da unidade, do cache (None se ainda não buscado)."""
+    """Competência, contato e endereço da unidade, do cache (None se ainda não importado)."""
     from models import UnidadeSiorgDetalhe
     return db.get(UnidadeSiorgDetalhe, unidade_id)
 
 
-def _baixar_detalhe(unidade_id: int) -> dict:
-    r = requests.get(f"{BASE}/unidade-organizacional/{unidade_id}/completa",
-                     headers={"Accept": "application/json"}, timeout=DETALHE_TIMEOUT_S)
+def arquivo_mais_recente():
+    """(AAAA-MM, url, quando foi publicado) do arquivo mensal mais recente no repositório.
+    A data de publicação vem da listagem (pode ser bem depois do mês do nome do arquivo)."""
+    import re
+    from datetime import datetime, timezone
+    r = requests.get(REPOSITORIO, timeout=30)
     r.raise_for_status()
-    dados = r.json()
-    return (dados.get("unidade") or (dados.get("unidades") or [None])[0]) or {}
+    achados = re.findall(
+        r'href="estrutura-organizacional-completa-(\d{4}-\d{2})\.zip">[^<]*</a>\s+(\d{2}-\w{3}-\d{4} \d{2}:\d{2})', r.text)
+    if not achados:
+        raise RuntimeError("SIORG: nenhum arquivo mensal no repositório")
+    mes, quando = max(achados)
+    publicado = datetime.strptime(quando, "%d-%b-%Y %H:%M").replace(tzinfo=timezone.utc)
+    return mes, f"{REPOSITORIO}estrutura-organizacional-completa-{mes}.zip", publicado
 
 
-def atualizar_detalhes(db: Session, agora=None, tempo_maximo_s: float = DETALHE_TEMPO_MAXIMO_S) -> dict:
-    """Busca o detalhe das unidades sem cache (primeiro) e das com cache vencido (das mais antigas
-    para as mais novas). Um cache vencido continua valendo até a nova busca dar certo."""
+def importar_detalhes(db: Session, agora=None, forcar: bool = False) -> dict:
+    """Baixa o arquivo mensal mais recente e grava o detalhe de todas as unidades com página.
+    Não baixa de novo se todas já foram importadas depois da publicação do arquivo."""
+    import csv
+    import io
     import json
-    from datetime import datetime, timedelta, timezone
-    from sqlalchemy import select
+    import tempfile
+    import zipfile
+    from datetime import datetime, timezone
+    from sqlalchemy import func, select
     from models import UnidadeSiorgDetalhe
 
     agora = agora or datetime.now(timezone.utc)
-    limite = agora - timedelta(days=DETALHE_VALIDADE_DIAS)
-    ids = db.scalars(select(UnidadeSiorg.id).where(UnidadeSiorg.profundidade <= CAMPOS_ATE)).all()
+    mes, url, publicado = arquivo_mais_recente()
+    ids = set(db.scalars(select(UnidadeSiorg.id).where(UnidadeSiorg.profundidade <= CAMPOS_ATE)))
     caches = {c.id: c for c in db.scalars(select(UnidadeSiorgDetalhe))}
 
     def quando(c):
         return c.atualizado_em if c.atualizado_em.tzinfo else c.atualizado_em.replace(tzinfo=timezone.utc)
 
-    sem_cache = [i for i in ids if i not in caches]
-    vencidas = sorted((i for i in ids if i in caches and quando(caches[i]) < limite), key=lambda i: quando(caches[i]))
-    fila = sem_cache + vencidas
+    if not forcar and ids and all(i in caches and quando(caches[i]) >= publicado for i in ids):
+        return {"arquivo": mes, "atualizadas": 0, "situacao": "já importado"}
 
-    inicio = time.monotonic()
-    contagem = {"atualizadas": 0, "falhas": 0, "pendentes": len(fila)}
-    seguidas = 0
-    for unidade_id in fila:
-        if time.monotonic() - inicio > tempo_maximo_s:
-            break
-        try:
-            u = _baixar_detalhe(unidade_id)
-        except (requests.RequestException, ValueError):
-            contagem["falhas"] += 1
-            seguidas += 1
-            if seguidas >= DETALHE_FALHAS_SEGUIDAS:
-                logger.warning("SIORG: %d falhas seguidas no detalhe das unidades; para até amanhã", seguidas)
-                break
-            continue
-        seguidas = 0
-        contato = (u.get("contato") or [{}])[0] or {}
+    with tempfile.TemporaryFile() as tmp:
+        with requests.get(url, stream=True, timeout=ARQUIVO_TIMEOUT_S) as r:
+            r.raise_for_status()
+            for bloco in r.iter_content(1 << 20):
+                tmp.write(bloco)
+        tmp.seek(0)
+        with zipfile.ZipFile(tmp) as z:
+            nome = next(n for n in z.namelist() if n.endswith(".csv"))
+            with z.open(nome) as f:
+                encontradas = 0
+                for linha in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8", errors="replace")):
+                    unidade_id = _id(linha.get("codigoUnidade"))
+                    if unidade_id not in ids:
+                        continue
+                    cache = caches.get(unidade_id)
+                    if cache is None:
+                        cache = caches[unidade_id] = UnidadeSiorgDetalhe(id=unidade_id)
+                        db.add(cache)
+                    cache.competencia = _texto(linha.get("competencia")) or _texto(linha.get("finalidade"))
+                    cache.contato = json.dumps({
+                        "telefones": [_telefone(t) for t in _lista(linha.get("telefone"))],
+                        "emails": _lista(linha.get("email")),
+                        "sites": _lista(linha.get("site")),
+                    }, ensure_ascii=False)
+                    cache.endereco = _endereco(linha)
+                    cache.atualizado_em = agora
+                    encontradas += 1
+                    if encontradas % 2000 == 0:
+                        db.commit()
+
+    # unidades criadas depois do arquivo: ficam sem detalhe, mas marcadas, para não baixar de novo
+    # toda noite; entram no próximo arquivo mensal
+    ausentes = 0
+    for unidade_id in ids:
         cache = caches.get(unidade_id)
         if cache is None:
-            cache = UnidadeSiorgDetalhe(id=unidade_id)
-            db.add(cache)
-        cache.competencia = (u.get("competencia") or u.get("finalidade") or "").strip() or None
-        cache.contato = json.dumps({
-            "telefones": [t for t in contato.get("telefone") or [] if t],
-            "emails": [e for e in contato.get("email") or [] if e],
-            "sites": [x for x in contato.get("site") or [] if x],
-        }, ensure_ascii=False)
-        cache.endereco = _endereco(u.get("endereco"))
-        cache.atualizado_em = datetime.now(timezone.utc)
-        db.commit()
-        contagem["atualizadas"] += 1
-        time.sleep(DETALHE_PAUSA_S)
-    contagem["pendentes"] -= contagem["atualizadas"]
-    return contagem
+            db.add(UnidadeSiorgDetalhe(id=unidade_id, atualizado_em=agora))
+            ausentes += 1
+        elif quando(cache) < agora and quando(cache) < publicado:
+            cache.atualizado_em = agora
+    db.commit()
+    total = db.scalar(select(func.count()).select_from(UnidadeSiorgDetalhe).where(UnidadeSiorgDetalhe.competencia.isnot(None)))
+    return {"arquivo": mes, "atualizadas": encontradas, "fora_do_arquivo": ausentes, "com_competencia": total}
 
 
 if __name__ == "__main__":
@@ -195,6 +227,6 @@ if __name__ == "__main__":
     from database import SessionLocal
     with SessionLocal() as sessao:
         if "--detalhes" in sys.argv:
-            print(atualizar_detalhes(sessao))
+            print(importar_detalhes(sessao, forcar="--forcar" in sys.argv))
         else:
             print(f"{sincronizar(sessao)} unidades sincronizadas")
