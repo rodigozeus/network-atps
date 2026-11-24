@@ -577,6 +577,22 @@ class CoberturaOut(BaseModel):
 
 # --- Páginas de unidade ---
 
+class UnidadeEncontrada(BaseModel):
+    id: int
+    nome: str
+    sigla: str | None
+    caminho: list[str]  # siglas do órgão até o nível acima
+    membros: int  # pessoas da Rede na unidade e abaixo dela
+    motivo: str  # nome | pessoas | competencia
+    trecho: str | None  # item da competência, quando o motivo é ela
+    pessoas_que_fazem: int  # lotados ali com o termo nos temas ou no "Em que posso ajudar"
+
+
+class BuscaUnidadesOut(BaseModel):
+    total: int
+    itens: list[UnidadeEncontrada]
+
+
 class OrgaoResumoOut(BaseModel):
     id: int
     nome: str

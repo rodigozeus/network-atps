@@ -253,11 +253,14 @@ class UnidadeSiorg(Base):
 
 
 class UnidadeSiorgDetalhe(Base):
-    """Competência, contato e endereço de uma unidade, buscados no SIORG sob demanda."""
+    """Competência, contato e endereço de uma unidade, do arquivo mensal do SIORG (siorg.py)."""
     __tablename__ = "unidades_siorg_detalhe"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
     competencia: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # a mesma competência em maiúsculas e sem acento, com espaço nas pontas: a busca de unidades
+    # procura " TERMO" com um LIKE simples, sem normalizar o texto a cada consulta
+    competencia_busca: Mapped[str | None] = mapped_column(Text, nullable=True)
     contato: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
     endereco: Mapped[str | None] = mapped_column(Text, nullable=True)
     atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)

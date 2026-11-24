@@ -105,6 +105,26 @@ export interface AnalistaPublico {
   lotacao_ids?: number[]
 }
 
+/** Unidade que combina com a busca (GET /busca/unidades) */
+export interface UnidadeEncontrada {
+  id: number
+  nome: string
+  sigla: string | null
+  /** siglas do órgão até o nível acima */
+  caminho: string[]
+  /** pessoas da Rede na unidade e abaixo dela */
+  membros: number
+  /** nome: no nome ou sigla; pessoas: alguém lotado ali atua com isso; competencia: no texto oficial */
+  motivo: 'nome' | 'pessoas' | 'competencia'
+  trecho: string | null
+  pessoas_que_fazem: number
+}
+
+export interface BuscaUnidadesResponse {
+  total: number
+  itens: UnidadeEncontrada[]
+}
+
 export interface BuscaResponse {
   items: AnalistaPublico[]
   total: number

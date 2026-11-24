@@ -1,0 +1,124 @@
+/* Bloco "Unidades" da busca, acima das pessoas */
+.bloco {
+  max-width: var(--conteudo);
+  margin: 0 auto 28px;
+  padding: 18px 20px 14px;
+  border-radius: 24px;
+  background: var(--card);
+  box-shadow: var(--sombra-card);
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.total {
+  padding: 1px 8px;
+  border-radius: 99px;
+  background: var(--btn);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lista li + li { border-top: 1px solid var(--line); }
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  margin: 0 -8px;
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.item:hover { background: var(--btn); text-decoration: none; }
+.item:hover .nome { color: var(--color-primary); }
+
+.texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.caminho {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.nome {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sigla { font-weight: 500; color: var(--muted); }
+
+.porque {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--topic-ink);
+}
+
+.trecho {
+  font-size: 13px;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.membros {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: var(--btn);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.seta { flex-shrink: 0; color: var(--muted); }
+
+.botao {
+  margin-top: 6px;
+  padding: 6px 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.mais {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+@media (max-width: 560px) {
+  .bloco { padding: 14px 14px 10px; border-radius: 20px; }
+  .seta { display: none; }
+}

@@ -163,6 +163,7 @@ def importar_detalhes(db: Session, agora=None, forcar: bool = False) -> dict:
     import zipfile
     from datetime import datetime, timezone
     from sqlalchemy import func, select
+    from lotacao_auto import normalizar  # aqui dentro: lotacao_auto importa deste módulo
     from models import UnidadeSiorgDetalhe
 
     agora = agora or datetime.now(timezone.utc)
@@ -195,6 +196,7 @@ def importar_detalhes(db: Session, agora=None, forcar: bool = False) -> dict:
                         cache = caches[unidade_id] = UnidadeSiorgDetalhe(id=unidade_id)
                         db.add(cache)
                     cache.competencia = _texto(linha.get("competencia")) or _texto(linha.get("finalidade"))
+                    cache.competencia_busca = f" {normalizar(cache.competencia)} " if cache.competencia else None
                     cache.contato = json.dumps({
                         "telefones": [_telefone(t) for t in _lista(linha.get("telefone"))],
                         "emails": _lista(linha.get("email")),

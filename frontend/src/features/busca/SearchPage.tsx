@@ -15,6 +15,7 @@ import RedeHero from './RedeHero'
 import AnalistaCard from './AnalistaCard'
 import AnalistaLinha from './AnalistaLinha'
 import NovidadesRede from './NovidadesRede'
+import UnidadesEncontradas from './UnidadesEncontradas'
 import styles from './busca.module.css'
 
 const PAGE_SIZE = 20
@@ -305,6 +306,10 @@ export default function SearchPage() {
             </button>
           </div>
         </div>
+
+        {filtros.q && !filtros.soFavoritos && !filtros.soNovidades && (
+          <UnidadesEncontradas q={filtros.q} ministerio={filtros.ministerio} />
+        )}
 
         {carregando ? (
           <div className={styles.carregando}><Spinner size="lg" /></div>

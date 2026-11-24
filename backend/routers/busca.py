@@ -9,7 +9,7 @@ from auth import get_usuario_regular
 from database import get_db
 from models import Analista, EventoPerfil, Favorito, Formacao, NivelFormacao, Tema, TemaAtuacao, condicao_perfil_visivel
 from novidades import condicao_novidade
-from schemas import AnalistaPublico, BuscaResponse
+from schemas import AnalistaPublico, BuscaResponse, BuscaUnidadesOut
 
 router = APIRouter(prefix="/busca", tags=["busca"])
 
@@ -70,6 +70,19 @@ def _casa_termo(termo: str, aproximado: bool):
         condicoes.append(_parecido(Analista.nome, termo))
         condicoes.append(exists().where(TemaAtuacao.analista_id == Analista.id, _parecido(TemaAtuacao.tema, termo)))
     return or_(*condicoes)
+
+
+@router.get("/unidades", response_model=BuscaUnidadesOut)
+def buscar_unidades(
+    q: str = Query(..., min_length=1, description="Palavras-chave (as mesmas da busca de pessoas)"),
+    ministerio: str | None = Query(None, description="Só unidades deste órgão (nome ou sigla)"),
+    db: Session = Depends(get_db),
+    eu: Analista = Depends(get_usuario_regular),
+):
+    """Unidades que combinam bem com a busca: pelo nome/sigla, por pessoas lotadas ali que
+    atuam com o tema, ou por um item da competência oficial. Ver busca_unidades.py."""
+    import busca_unidades
+    return busca_unidades.buscar(db, q, eu, ministerio)
 
 
 @router.get("", response_model=BuscaResponse)
