@@ -110,7 +110,7 @@ def _endereco(linha: dict) -> str | None:
     cep = "".join(c for c in (linha.get("cep") or "") if c.isdigit())
     partes = [linha.get("linhaEndereco"), linha.get("bairro"),
               f"CEP {cep[:5]}-{cep[5:]}" if len(cep) == 8 else None, linha.get("uf")]
-    texto = " · ".join(p.strip() for p in partes if p and p.strip())
+    texto = " · ".join(_limpar(p).strip() for p in partes if p and p.strip())
     return texto or None
 
 
@@ -123,11 +123,25 @@ def _telefone(bruto: str) -> str:
 
 def _lista(bruto: str | None) -> list[str]:
     import re
-    return [x.strip() for x in re.split(r"[;,]", bruto or "") if x.strip() and x.strip() not in VAZIOS]
+    return [x.strip() for x in re.split(r"[;,]", _limpar(bruto or "")) if x.strip() and x.strip() not in VAZIOS]
+
+
+def _limpar(texto: str) -> str:
+    """Conserta o que o arquivo do SIORG traz estragado: aspas e travessões que viraram "¿"
+    na conversão do sistema de origem ("CAPÍTULO II ¿ DOS FLUXOS", "¿b¿"), aspas e travessão
+    em códigos de controle do Windows e espaços/hífens invisíveis."""
+    import re
+    t = texto.replace("\u00a0", " ").replace("\u00ad", "")
+    t = t.replace("\u0093", "\u201c").replace("\u0094", "\u201d").replace("\u0096", "\u2013").replace("\u0097", "\u2014")
+    t = re.sub(r"\s\u00bf\s", " \u2013 ", t)  # "II ¿ DOS" -> "II – DOS"
+    t = re.sub(r"(?<=\w)¿(?=\w)", "-", t)  # "Coordenação¿Geral" -> "Coordenação-Geral"
+    t = re.sub(r"(^|[\s(\[])\u00bf(?=\S)", "\\1\u201c", t)  # abre aspas: " ¿de" -> " “de"
+    t = re.sub(r"(?<=\S)\u00bf", "\u201d", t)  # fecha aspas: "cio¿," -> "cio”,"
+    return t.replace("\u00bf", "\u2013")
 
 
 def _texto(bruto: str | None) -> str | None:
-    t = (bruto or "").strip()
+    t = _limpar(bruto or "").strip()
     return None if t in VAZIOS else t
 
 
