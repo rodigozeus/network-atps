@@ -10,7 +10,7 @@ const INICIAIS = 5
 /** Unidades que combinam com a busca: começa fechado, numa linha discreta acima das pessoas, e
  * só abre a lista quando a pessoa pede. Some quando nada combina bem (o backend só devolve unidade
  * por nome/sigla, por quem trabalha lá ou por um trecho da competência). */
-export default function UnidadesEncontradas({ q, ministerio }: { q: string; ministerio: string }) {
+export default function UnidadesEncontradas({ q, unidade }: { q: string; unidade: number | undefined }) {
   const [r, setR] = useState<BuscaUnidadesResponse | null>(null)
   const [aberto, setAberto] = useState(false)
   const [todas, setTodas] = useState(false)
@@ -21,9 +21,9 @@ export default function UnidadesEncontradas({ q, ministerio }: { q: string; mini
     setTodas(false)
     if (!q.trim()) return
     let vivo = true
-    buscaApi.unidades(q, ministerio).then((x) => vivo && setR(x)).catch(() => {})
+    buscaApi.unidades(q, unidade).then((x) => vivo && setR(x)).catch(() => {})
     return () => { vivo = false }
-  }, [q, ministerio])
+  }, [q, unidade])
 
   if (!r || r.total === 0) return null
   const mostrar = todas ? r.itens : r.itens.slice(0, INICIAIS)

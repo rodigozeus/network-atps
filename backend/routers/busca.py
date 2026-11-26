@@ -9,7 +9,7 @@ from auth import get_usuario_regular
 from database import get_db
 from models import Analista, EventoPerfil, Favorito, Formacao, NivelFormacao, Tema, TemaAtuacao, condicao_perfil_visivel
 from novidades import condicao_novidade
-from schemas import AnalistaPublico, BuscaResponse, BuscaUnidadesOut
+from schemas import AnalistaPublico, BuscaResponse, BuscaUnidadesOut, FiltroUnidadesOut
 
 router = APIRouter(prefix="/busca", tags=["busca"])
 
@@ -76,13 +76,26 @@ def _casa_termo(termo: str, aproximado: bool):
 def buscar_unidades(
     q: str = Query(..., min_length=1, description="Palavras-chave (as mesmas da busca de pessoas)"),
     ministerio: str | None = Query(None, description="Só unidades deste órgão (nome ou sigla)"),
+    unidade: int | None = Query(None, description="Só esta unidade (SIORG) e as que estão abaixo dela"),
     db: Session = Depends(get_db),
     eu: Analista = Depends(get_usuario_regular),
 ):
     """Unidades que combinam bem com a busca: pelo nome/sigla, por pessoas lotadas ali que
     atuam com o tema, ou por um item da competência oficial. Ver busca_unidades.py."""
     import busca_unidades
-    return busca_unidades.buscar(db, q, eu, ministerio)
+    return busca_unidades.buscar(db, q, eu, ministerio, unidade)
+
+
+@router.get("/filtro-unidades", response_model=FiltroUnidadesOut)
+def filtro_unidades(
+    unidade: int | None = Query(None, description="Unidade escolhida (SIORG); sem ela, só a lista de órgãos"),
+    db: Session = Depends(get_db),
+    _: Analista = Depends(get_usuario_regular),
+):
+    """Seletores encadeados do filtro de unidade: um nível por unidade escolhida, só com unidades
+    que têm pessoas, em ordem alfabética."""
+    import busca_unidades
+    return busca_unidades.filtro_unidades(db, unidade)
 
 
 @router.get("", response_model=BuscaResponse)
@@ -91,6 +104,7 @@ def buscar(
                                              "(nome, lotação, cargo, em que posso ajudar, temas, formação). "
                                              "Ignora acentos e maiúsculas."),
     ministerio: str | None = Query(None, description="Filtra por ministério (sigla ou nome)"),
+    unidade: int | None = Query(None, description="Lotados nesta unidade (SIORG) ou em qualquer uma abaixo dela"),
     secretaria: str | None = Query(None, description="Filtra por secretaria (sigla ou nome)"),
     tema: str | None = Query(None, description="Filtra por tema de atuação"),
     formacao: str | None = Query(None, description="Filtra por curso ou instituição"),
@@ -114,6 +128,10 @@ def buscar(
 
     if ministerio:
         query = query.filter(or_(_contem(Analista.ministerio, ministerio), _contem(Analista.ministerio_sigla, ministerio)))
+
+    if unidade is not None:
+        import busca_unidades
+        query = query.filter(Analista.lotacao_siorg_id.in_(busca_unidades.subarvore(db, unidade)))
 
     if secretaria:
         query = query.filter(or_(_contem(Analista.secretaria, secretaria), _contem(Analista.secretaria_sigla, secretaria)))

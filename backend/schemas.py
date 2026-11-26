@@ -606,6 +606,24 @@ class UnidadeRef(BaseModel):
     sigla: str | None
 
 
+class OpcaoUnidade(BaseModel):
+    id: int
+    nome: str
+    sigla: str | None
+    membros: int  # pessoas visíveis na unidade e abaixo dela
+
+
+class NivelFiltroUnidade(BaseModel):
+    pai: UnidadeRef | None  # unidade escolhida no nível de cima (None no nível dos órgãos)
+    escolhida: int | None
+    opcoes: list[OpcaoUnidade]
+
+
+class FiltroUnidadesOut(BaseModel):
+    unidade: int | None  # a escolhida mais funda (a que filtra a busca)
+    niveis: list[NivelFiltroUnidade]
+
+
 class SubunidadeOut(UnidadeRef):
     membros: int
 

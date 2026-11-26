@@ -125,6 +125,27 @@ export interface BuscaUnidadesResponse {
   itens: UnidadeEncontrada[]
 }
 
+/** Seletores encadeados do filtro de unidade (GET /busca/filtro-unidades) */
+export interface OpcaoUnidade {
+  id: number
+  nome: string
+  sigla: string | null
+  /** pessoas na unidade e abaixo dela */
+  membros: number
+}
+
+export interface NivelFiltroUnidade {
+  /** unidade escolhida no nível de cima (null no nível dos órgãos) */
+  pai: { id: number; nome: string; sigla: string | null } | null
+  escolhida: number | null
+  opcoes: OpcaoUnidade[]
+}
+
+export interface FiltroUnidades {
+  unidade: number | null
+  niveis: NivelFiltroUnidade[]
+}
+
 export interface BuscaResponse {
   items: AnalistaPublico[]
   total: number
@@ -206,6 +227,8 @@ export interface AnalistaUpdate {
 
 export interface BuscaParams {
   q?: string
+  /** Lotados nesta unidade (SIORG) ou em qualquer uma abaixo dela */
+  unidade?: number
   ministerio?: string
   secretaria?: string
   tema?: string

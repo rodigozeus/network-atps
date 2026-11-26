@@ -5,26 +5,19 @@ import {
 } from '@tabler/icons-react'
 import { buscaApi } from '@shared/api/busca'
 import { favoritosApi } from '@shared/api/favoritos'
-import { lotacoesApi } from '@shared/api/lotacoes'
 import { temasApi } from '@shared/api/temas'
-import type { AnalistaPublico, BuscaParams, NivelFormacao, OrdemBusca, TemaCatalogo } from '@shared/api/types'
+import type { AnalistaPublico, BuscaParams, TemaCatalogo } from '@shared/api/types'
 import { Spinner } from '@shared/components'
 import { useFavoritos } from '@shared/hooks/useFavoritos'
-import { NIVEIS, ORDEM_NIVEIS } from '@shared/utils/analista'
 import RedeHero from './RedeHero'
 import AnalistaCard from './AnalistaCard'
 import AnalistaLinha from './AnalistaLinha'
 import NovidadesRede from './NovidadesRede'
 import UnidadesEncontradas from './UnidadesEncontradas'
+import FiltroUnidades from './FiltroUnidades'
 import styles from './busca.module.css'
 
 const PAGE_SIZE = 20
-const ORDENS: Record<OrdemBusca, string> = {
-  relevancia: 'Perfis mais completos',
-  nome: 'Nome (A–Z)',
-  recentes: 'Chegaram há pouco',
-}
-const lerOrdem = (v: string | null): OrdemBusca => (v && v in ORDENS ? (v as OrdemBusca) : 'relevancia')
 type Vista = 'cards' | 'linhas'
 
 // Resultados já carregados (com as páginas da rolagem infinita), para o "voltar" de um perfil
@@ -48,12 +41,11 @@ export default function SearchPage() {
   // filtros vivem no endereço, para poder compartilhar e voltar
   const filtros = useMemo(() => ({
     q: params.get('q') ?? '',
-    ministerio: params.get('ministerio') ?? '',
+    // unidade escolhida mais funda nos seletores encadeados (órgão › secretaria › ...)
+    unidade: Number(params.get('unidade')) || undefined,
     tema: params.get('tema') ?? '',
-    nivel: (params.get('nivel_formacao') ?? '') as NivelFormacao | '',
     soFavoritos: params.get('favoritos') === '1',
     soNovidades: params.get('novidades') === '1',
-    ordem: lerOrdem(params.get('ordem')),
   }), [params])
 
   const [texto, setTexto] = useState(filtros.q)
@@ -65,7 +57,6 @@ export default function SearchPage() {
   const [carregandoMais, setCarregandoMais] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [rede, setRede] = useState<AnalistaPublico[]>([])
-  const [ministerios, setMinisterios] = useState<string[]>([])
   const [temas, setTemas] = useState<TemaCatalogo[]>([])
   const [vista, setVista] = useState<Vista>(lerVista)
   const [trocouVista, setTrocouVista] = useState(0)
@@ -95,12 +86,10 @@ export default function SearchPage() {
 
   const paramsApi = useCallback((page: number): BuscaParams => ({
     q: filtros.q || undefined,
-    ministerio: filtros.ministerio || undefined,
+    unidade: filtros.unidade,
     tema: filtros.tema || undefined,
-    nivel_formacao: filtros.nivel || undefined,
     favoritos: filtros.soFavoritos || undefined,
     novidades: filtros.soNovidades || undefined,
-    ordem: filtros.ordem === 'relevancia' ? undefined : filtros.ordem,
     page,
     page_size: PAGE_SIZE,
   }), [filtros])
@@ -164,15 +153,7 @@ export default function SearchPage() {
 
   // rede do topo e opções dos filtros: uma vez ao abrir
   useEffect(() => {
-    buscaApi.buscar({ page: 1, page_size: 20 }).then((r) => {
-      setRede(r.items)
-      // sem GET /lotacoes no back-end, os ministérios do filtro saem das pessoas carregadas
-      setMinisterios((atual) => atual.length ? atual
-        : [...new Set(r.items.map((a) => a.ministerio).filter((m): m is string => !!m))].sort((a, b) => a.localeCompare(b, 'pt')))
-    }).catch(() => {})
-    lotacoesApi.listar('ministerio').then((l) => {
-      if (l.length) setMinisterios(l.map((x) => x.nome).sort((a, b) => a.localeCompare(b, 'pt')))
-    }).catch(() => {})
+    buscaApi.buscar({ page: 1, page_size: 20 }).then((r) => setRede(r.items)).catch(() => {})
     temasApi.listar().then((t) => setTemas([...t].sort((a, b) => a.tema.localeCompare(b.tema, 'pt')))).catch(() => {})
   }, [])
 
@@ -203,9 +184,9 @@ export default function SearchPage() {
   // ordenação): sem isso, a linha passava do espaço e o campo de busca era espremido
   useLayoutEffect(() => {
     medirToolbar()
-  }, [medirToolbar, novidades.size, filtros.ministerio, filtros.tema, filtros.nivel, filtros.soFavoritos, filtros.soNovidades, filtros.ordem, ministerios.length, temas.length])
+  }, [medirToolbar, novidades.size, filtros.unidade, filtros.tema, filtros.soFavoritos, filtros.soNovidades, temas.length])
 
-  const ativos = [filtros.ministerio, filtros.tema, filtros.nivel].filter(Boolean).length
+  const ativos = [filtros.unidade, filtros.tema].filter(Boolean).length
     + (filtros.soFavoritos ? 1 : 0) + (filtros.soNovidades ? 1 : 0)
 
   const trocarVista = () => {
@@ -248,15 +229,8 @@ export default function SearchPage() {
               {ativos > 0 && <span className={styles.badge}>{ativos}</span>}
             </button>
             <div className={styles.painelFiltros} id="painel-filtros">
-              <label className={styles.select}>
-                <select value={filtros.ministerio} onChange={(e) => mudarFiltro('ministerio', e.target.value)}
-                  aria-label="Filtrar por órgão" className={filtros.ministerio ? styles.ativo : ''}>
-                  <option value="">Todos os órgãos</option>
-                  {ministerios.map((m) => <option key={m} value={m}>{m}</option>)}
-                  {filtros.ministerio && !ministerios.includes(filtros.ministerio) && <option value={filtros.ministerio}>{filtros.ministerio}</option>}
-                </select>
-                <IconChevronDown size={18} aria-hidden />
-              </label>
+              <FiltroUnidades unidade={filtros.unidade} onMudouNiveis={medirToolbar}
+                onChange={(u) => mudarFiltro('unidade', u ? String(u) : '')} />
               <label className={styles.select}>
                 <select value={filtros.tema} onChange={(e) => mudarFiltro('tema', e.target.value)}
                   aria-label="Filtrar por tema" className={filtros.tema ? styles.ativo : ''}>
@@ -267,14 +241,6 @@ export default function SearchPage() {
                     </optgroup>
                   ))}
                   {filtros.tema && !temas.some((t) => t.tema === filtros.tema) && <option value={filtros.tema}>{filtros.tema}</option>}
-                </select>
-                <IconChevronDown size={18} aria-hidden />
-              </label>
-              <label className={styles.select}>
-                <select value={filtros.nivel} onChange={(e) => mudarFiltro('nivel_formacao', e.target.value)}
-                  aria-label="Filtrar por formação" className={filtros.nivel ? styles.ativo : ''}>
-                  <option value="">Toda formação</option>
-                  {ORDEM_NIVEIS.map((n) => <option key={n} value={n}>{NIVEIS[n]}</option>)}
                 </select>
                 <IconChevronDown size={18} aria-hidden />
               </label>
@@ -292,13 +258,6 @@ export default function SearchPage() {
                   {novidades.size > 0 && <span className={styles.badgeClaro}>{novidades.size}</span>}
                 </button>
               )}
-              <label className={[styles.select, styles.ordem].join(' ')}>
-                <select value={filtros.ordem} onChange={(e) => mudarFiltro('ordem', e.target.value === 'relevancia' ? '' : e.target.value)}
-                  aria-label="Ordenar por" title={filtros.ordem === 'recentes' ? 'Quem entrou na Rede há menos tempo' : 'Seus favoritos aparecem primeiro'}>
-                  {(Object.keys(ORDENS) as OrdemBusca[]).map((o) => <option key={o} value={o}>{ORDENS[o]}</option>)}
-                </select>
-                <IconChevronDown size={18} aria-hidden />
-              </label>
             </div>
             <button type="button" className={styles.vistaBtn} onClick={trocarVista} data-trocou={trocouVista % 2}
               aria-label={vista === 'cards' ? 'Ver em lista' : 'Ver em cards'} title={vista === 'cards' ? 'Ver em lista' : 'Ver em cards'}>
@@ -308,7 +267,7 @@ export default function SearchPage() {
         </div>
 
         {filtros.q && !filtros.soFavoritos && !filtros.soNovidades && (
-          <UnidadesEncontradas q={filtros.q} ministerio={filtros.ministerio} />
+          <UnidadesEncontradas q={filtros.q} unidade={filtros.unidade} />
         )}
 
         {carregando ? (

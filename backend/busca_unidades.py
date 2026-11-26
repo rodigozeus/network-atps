@@ -75,7 +75,7 @@ def _trecho(competencia: str, termos: list[str]) -> str | None:
     return None
 
 
-def buscar(db: Session, q: str, eu: Analista, ministerio: str | None = None) -> dict:
+def buscar(db: Session, q: str, eu: Analista, ministerio: str | None = None, unidade: int | None = None) -> dict:
     termos = _termos(q)
     if not termos:
         return {"total": 0, "itens": []}
@@ -86,9 +86,12 @@ def buscar(db: Session, q: str, eu: Analista, ministerio: str | None = None) -> 
         alvo = normalizar(ministerio)
         orgaos_permitidos = {i for i, u in us.items() if u[2] == 0 and alvo in (normalizar(u[3]), normalizar(u[4] or ""))}
 
+    dentro = subarvore(db, unidade) if unidade in us else None
+
     def permitida(i: int | None) -> bool:
         u = us.get(i)
-        return u is not None and u[2] <= PROFUNDIDADE_PAGINA and (orgaos_permitidos is None or u[1] in orgaos_permitidos)
+        return (u is not None and u[2] <= PROFUNDIDADE_PAGINA and (orgaos_permitidos is None or u[1] in orgaos_permitidos)
+                and (dentro is None or i in dentro))
 
     motivo: dict[int, str] = {}
 
@@ -155,3 +158,65 @@ def buscar(db: Session, q: str, eu: Analista, ministerio: str | None = None) -> 
             "motivo": motivo[i], "trecho": trechos.get(i), "pessoas_que_fazem": que_fazem[i],
         } for i in finais[:LIMITE]],
     }
+
+
+# --- Filtro de unidades da busca de pessoas (seletores encadeados) ---
+
+def _filhos(us: dict) -> dict[int, list[int]]:
+    if _cache.get("filhos_de") is not us:
+        filhos: dict[int, list[int]] = {}
+        for i, u in us.items():
+            if u[0] is not None:
+                filhos.setdefault(u[0], []).append(i)
+        _cache["filhos"], _cache["filhos_de"] = filhos, us
+    return _cache["filhos"]
+
+
+def subarvore(db: Session, unidade_id: int) -> set[int]:
+    """A unidade e todas as que estão abaixo dela (em qualquer profundidade)."""
+    us = _unidades(db)
+    filhos = _filhos(us)
+    ids, pilha = set(), [unidade_id]
+    while pilha:
+        i = pilha.pop()
+        if i in ids:
+            continue
+        ids.add(i)
+        pilha.extend(filhos.get(i, []))
+    return ids
+
+
+def filtro_unidades(db: Session, unidade_id: int | None) -> dict:
+    """Seletores encadeados: um nível por unidade escolhida (órgão, secretaria, ... até o mais
+    fundo). Cada nível lista só as unidades com pessoas visíveis nelas ou abaixo delas, em ordem
+    alfabética; o último nível é o das filhas da unidade escolhida (se alguma tiver pessoas)."""
+    us = _unidades(db)
+    filhos = _filhos(us)
+    membros: Counter = Counter()
+    for (lot,) in db.query(Analista.lotacao_siorg_id).filter(condicao_perfil_visivel(), Analista.lotacao_siorg_id.isnot(None)):
+        atual = lot
+        while atual in us:
+            membros[atual] += 1
+            atual = us[atual][0]
+
+    caminho: list[int] = []
+    atual = unidade_id if unidade_id in us else None
+    while atual is not None and atual in us:
+        caminho.append(atual)
+        atual = us[atual][0]
+    caminho.reverse()
+
+    def opcoes(ids) -> list[dict]:
+        com_gente = [i for i in ids if membros[i] > 0]
+        com_gente.sort(key=lambda i: normalizar(us[i][3]))
+        return [{"id": i, "nome": us[i][3], "sigla": us[i][4], "membros": membros[i]} for i in com_gente]
+
+    niveis = [{"pai": None, "escolhida": caminho[0] if caminho else None,
+               "opcoes": opcoes(i for i, u in us.items() if u[0] is None and u[2] == 0)}]
+    for k, escolhida in enumerate(caminho):
+        filhas = opcoes(filhos.get(escolhida, []))
+        if not filhas:
+            break
+        niveis.append({"pai": {"id": escolhida, "nome": us[escolhida][3], "sigla": us[escolhida][4]},
+                       "escolhida": caminho[k + 1] if k + 1 < len(caminho) else None, "opcoes": filhas})
+    return {"unidade": caminho[-1] if caminho else None, "niveis": niveis}
