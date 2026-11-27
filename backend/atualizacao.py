@@ -37,6 +37,16 @@ def cargo_equivale(atual: str | None, do_portal: str) -> bool:
     return len(a) == len(p) and all(x[:6] == y[:6] for x, y in zip(a, p))
 
 
+def _dentro_da_presidencia(a: Analista, destino: list) -> bool:
+    """No SIAPE, SECOM, Casa Civil, SG etc. aparecem só como "Presidência da República".
+    Sem unidade que case, trocar o órgão do perfil pela PR só perderia informação."""
+    return (
+        len(destino) == 1
+        and (destino[0].sigla or "").upper() == "PR"
+        and "PRESIDENCIA DA REPUBLICA" in normalizar(a.ministerio or "")
+    )
+
+
 def calcular(db: Session, a: Analista, ex: Exercicio | None) -> dict | None:
     if ex is None or lotacao_auto.versao_autorizacao(a) < VERSAO_AUTORIZACAO_AMPLIADA:
         return None
@@ -53,6 +63,8 @@ def calcular(db: Session, a: Analista, ex: Exercicio | None) -> dict | None:
             diferente = normalizar(a.ministerio) != normalizar(destino[0].nome) and (
                 normalizar(a.ministerio_sigla or "") != normalizar(destino[0].sigla or "")
             )
+        if diferente and _dentro_da_presidencia(a, destino):
+            diferente = False
         if diferente:
             sugestao["lotacao"] = {
                 "siorg_id": destino[-1].id,

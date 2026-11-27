@@ -22,6 +22,7 @@ from email_utils import (
     enviar_email_alerta_cpf_em_uso,
 )
 from portal_transparencia import MOTIVOS, StatusVerificacao, consultar_situacao_atps
+import atualizacao
 import lotacao_auto
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -94,7 +95,9 @@ def register(
             detail="E-mail já cadastrado",
         )
 
-    if resultado.confirmado and lotacao_auto.preencher(db, analista, resultado.exercicio):
+    if resultado.confirmado:
+        lotacao_auto.preencher(db, analista, resultado.exercicio)
+        atualizacao.registrar(db, analista, resultado.exercicio)
         db.commit()
 
     if analista.ativo:

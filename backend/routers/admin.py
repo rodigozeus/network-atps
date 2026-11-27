@@ -13,7 +13,7 @@ from models import Analista, BaseAtps, ConflitoCadastro, NivelFormacao, Role, Te
 import estatisticas
 import lotacao_siorg
 import novidades
-from routers.perfil import remover_foto
+from routers.perfil import completar_pelo_portal, remover_foto
 from schemas import (
     AnalistaAdminOut,
     AnalistaAdminUpdate,
@@ -154,7 +154,8 @@ def editar_usuario(
     if novidades.foto_lotacao(analista) != lotacao_antes:
         analista.lotacao_siorg_id = lotacao_siorg.resolver(db, analista)
 
-    if updates.get('ativo') is True and analista.pendente_revisao:
+    aprovou = updates.get('ativo') is True and analista.pendente_revisao
+    if aprovou:
         _confirmar_vinculo_manual(analista)
 
     db.commit()
@@ -162,6 +163,8 @@ def editar_usuario(
 
     if ativou_conta:
         background_tasks.add_task(enviar_email_conta_ativada, analista.email_pessoal, analista.nome)
+    if aprovou:
+        background_tasks.add_task(completar_pelo_portal, analista.id)
 
     return analista
 
@@ -224,7 +227,8 @@ def reativar_usuario(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analista não encontrado")
 
     ativou_conta = not analista.ativo
-    if analista.pendente_revisao:
+    aprovou = analista.pendente_revisao
+    if aprovou:
         _confirmar_vinculo_manual(analista)
     analista.ativo = True
     db.commit()
@@ -232,6 +236,8 @@ def reativar_usuario(
 
     if ativou_conta:
         background_tasks.add_task(enviar_email_conta_ativada, analista.email_pessoal, analista.nome)
+    if aprovou:
+        background_tasks.add_task(completar_pelo_portal, analista.id)
 
     return analista
 
@@ -344,6 +350,7 @@ def resolver_conflito(
 @router.post("/usuarios/{analista_id}/confirmar-vinculo", response_model=AnalistaAdminOut)
 def confirmar_vinculo(
     analista_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _: Analista = Depends(get_current_admin),
 ):
@@ -354,6 +361,7 @@ def confirmar_vinculo(
     _confirmar_vinculo_manual(analista)
     db.commit()
     db.refresh(analista)
+    background_tasks.add_task(completar_pelo_portal, analista.id)
     return analista
 
 

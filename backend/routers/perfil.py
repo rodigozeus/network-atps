@@ -26,6 +26,7 @@ from schemas import (
 )
 from auth import get_current_user, get_usuario_regular, verify_password
 import atualizacao
+import base_local
 import catalogo_temas
 import lotacao_auto
 import lotacao_siorg
@@ -252,19 +253,23 @@ def regularizar(
 
     # Quem já tinha CPF guardado e só aceitou os termos ganha uma consulta para isso, mas depois
     # da resposta: a pessoa entra na hora, sem esperar o Portal.
-    if resultado is None and analista.cpf_cifrado and lotacao_auto.pode_preencher(analista):
+    if resultado is None and analista.cpf_cifrado and lotacao_auto.precisa_conferir(analista):
         background_tasks.add_task(completar_pelo_portal, analista.id)
     return analista
 
 
 def completar_pelo_portal(analista_id: int) -> None:
-    """Em segundo plano: consulta o Portal e preenche o que estiver em branco no perfil."""
+    """Em segundo plano: consulta o Portal, preenche o que estiver em branco no perfil e
+    guarda a sugestão do que mudou. Também chamada depois da aprovação pelo admin."""
     with SessionLocal() as db:
         analista = db.get(Analista, analista_id)
-        if analista is None or not analista.cpf_cifrado or not lotacao_auto.pode_preencher(analista):
+        if analista is None or not analista.cpf_cifrado or not lotacao_auto.precisa_conferir(analista):
             return
         try:
-            resultado = consultar_situacao_atps(decifrar_cpf(analista.cpf_cifrado), None)
+            cpf = decifrar_cpf(analista.cpf_cifrado)
+            resultado = consultar_situacao_atps(cpf, None)
+            if resultado.status == StatusVerificacao.inconclusivo:
+                resultado = base_local.consultar(cpf, analista.nome) or resultado
         except Exception:
             logger.exception("Portal: falha ao completar o perfil %s", analista_id)
             return

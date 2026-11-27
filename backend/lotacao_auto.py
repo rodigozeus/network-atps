@@ -2,13 +2,15 @@
 Transparência, casados com a estrutura oficial do SIORG.
 
 Só acontece com a Autorização de consulta do CPF v2 aceita, e só quando a lotação do
-perfil está em branco. O ministério casa pela sigla (o Portal e o SIORG usam a mesma).
+perfil está em branco ou, na primeira conferência, quando o que foi digitado é o mesmo
+lugar do Portal com menos detalhe ou outra grafia (perfis anteriores ao recurso). O ministério casa pela sigla (o Portal e o SIORG usam a mesma).
 A unidade vem do SIAPE abreviada e truncada em 40 caracteres ("CGERAL DE INCL PROD, ENFR
 A POB E A FOME"): casa quando cada palavra é prefixo da palavra oficial correspondente,
 na ordem, e há um único melhor candidato. Na dúvida, preenche só o ministério.
 """
 import re
 import unicodedata
+from types import SimpleNamespace
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -128,6 +130,44 @@ def pode_preencher(a: Analista) -> bool:
     return lotacao or ampliada
 
 
+def precisa_conferir(a: Analista) -> bool:
+    """Vale consultar o Portal agora: há algo em branco, ou a autorização ampliada foi
+    aceita e o perfil nunca foi conferido (lotação digitada à mão antes do recurso)."""
+    return pode_preencher(a) or (
+        versao_autorizacao(a) >= VERSAO_AUTORIZACAO_AMPLIADA and a.conferido_portal_em is None
+    )
+
+
+def mesma_unidade(digitado: str | None, u: UnidadeSiorg) -> bool:
+    """O nome digitado no perfil é a unidade oficial, escrita igual, pela sigla ou
+    abreviada de um dos dois lados ("Infor., Monit." x "Informação, Monitoramento")."""
+    d = normalizar(digitado or "")
+    if not d:
+        return False
+    if d == normalizar(u.nome) or (u.sigla and d == normalizar(u.sigla)):
+        return True
+    oficial, perfil = SimpleNamespace(nome=u.nome), SimpleNamespace(nome=digitado)
+    return casar_unidade(digitado, [oficial]) is not None or casar_unidade(u.nome, [perfil]) is not None
+
+
+def completa(db: Session, a: Analista, destino: list[UnidadeSiorg]) -> bool:
+    """A lotação do perfil aponta para o mesmo lugar que o Portal, só com menos detalhe ou
+    com nomes digitados de outro jeito: pode virar o caminho oficial sem perguntar."""
+    import lotacao_siorg  # importa CAMPOS daqui
+
+    if not destino:
+        return False
+    tem = {p: (getattr(a, CAMPOS[p][0]) or "").strip() for p in CAMPOS}
+    if not tem[0]:
+        return False
+    # o perfil detalha além do que o Portal sabe: trocar perderia informação
+    if any(tem[p] for p in CAMPOS if p > destino[-1].profundidade):
+        return False
+    if not all(not tem[u.profundidade] or mesma_unidade(tem[u.profundidade], u) for u in destino):
+        return False
+    return [u.id for u in lotacao_siorg.caminho(db, a.lotacao_siorg_id)] != [u.id for u in destino]
+
+
 # Nomes antigos que o SIAPE ainda usa para órgãos renomeados -> sigla atual no SIORG
 APELIDOS_ORGAO = {
     "MINISTERIO DO MEIO AMBIENTE": "MMA",  # hoje: Ministério do Meio Ambiente e Mudança do Clima
@@ -207,9 +247,12 @@ def preencher(db: Session, a: Analista, ex: Exercicio | None) -> bool:
         return False
     v = versao_autorizacao(a)
     mudou = False
-    if v >= VERSAO_MINIMA_AUTORIZACAO and not (a.ministerio or "").strip():
+    if v >= VERSAO_MINIMA_AUTORIZACAO:
         caminho = caminho_para(db, ex)
-        if caminho:
+        # completa só na primeira conferência: depois disso, o que o titular tirou de
+        # propósito não volta sozinho (mudanças viram sugestão, em atualizacao.py)
+        primeira = a.conferido_portal_em is None
+        if caminho and (not (a.ministerio or "").strip() or (primeira and completa(db, a, caminho))):
             aplicar_lotacao(db, a, caminho)
             mudou = True
     if v >= VERSAO_AUTORIZACAO_AMPLIADA:
