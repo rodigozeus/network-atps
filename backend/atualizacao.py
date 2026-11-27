@@ -6,7 +6,6 @@ Uma sugestão descartada não volta, a menos que o Portal mostre outra mudança.
 """
 import hashlib
 import json
-import re
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
@@ -14,27 +13,13 @@ from sqlalchemy.orm import Session
 import lotacao_auto
 import lotacao_siorg
 from documentos_legais import VERSAO_AUTORIZACAO_AMPLIADA
-from lotacao_auto import CAMPOS, normalizar
+from lotacao_auto import CAMPOS, cargo_equivale, cargo_vazio, normalizar
 from models import Analista
 from portal_transparencia import Exercicio
 
 
 def _agora() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _palavras_cargo(texto: str | None) -> list[str]:
-    # "Coordenador(a)-Geral · FCE 1.13" -> ["COORDENADOR", "GERAL"]
-    t = normalizar(re.sub(r"\(A\)|\(a\)|·.*$", " ", texto or ""))
-    return [p for p in re.split(r"[ -]+", t) if p and p not in {"DE", "DA", "DO", "E"}]
-
-
-def cargo_equivale(atual: str | None, do_portal: str) -> bool:
-    """"Coordenador" e "Coordenador(a) · FCE 1.10" são o mesmo cargo; "Coordenador-Geral" não."""
-    a, p = _palavras_cargo(atual), _palavras_cargo(do_portal)
-    if not a:
-        return False
-    return len(a) == len(p) and all(x[:6] == y[:6] for x, y in zip(a, p))
 
 
 def _dentro_da_presidencia(a: Analista, destino: list) -> bool:
@@ -71,7 +56,7 @@ def calcular(db: Session, a: Analista, ex: Exercicio | None) -> dict | None:
                 "caminho": [{"nivel": CAMPOS[u.profundidade][0], "nome": u.nome, "sigla": u.sigla} for u in destino],
             }
 
-    if ex.funcao and (a.cargo_fce or "").strip() and not cargo_equivale(a.cargo_fce, ex.funcao):
+    if ex.funcao and not cargo_vazio(a.cargo_fce) and not cargo_equivale(a.cargo_fce, ex.funcao):
         sugestao["cargo"] = ex.funcao
 
     if not sugestao:

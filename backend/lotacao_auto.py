@@ -122,11 +122,34 @@ TURMAS_POR_ANO_INGRESSO = {
 }
 
 
+def _palavras_cargo(texto: str | None) -> list[str]:
+    # "Coordenador(a)-Geral · FCE 1.13" -> ["COORDENADOR", "GERAL"]
+    t = normalizar(re.sub(r"\(A\)|\(a\)|·.*$", " ", texto or ""))
+    return [p for p in re.split(r"[ -]+", t) if p and p not in {"DE", "DA", "DO", "E"}]
+
+
+def cargo_equivale(atual: str | None, do_portal: str) -> bool:
+    """"Coordenador" e "Coordenador(a) · FCE 1.10" são o mesmo cargo; "Coordenador-Geral" não."""
+    a, p = _palavras_cargo(atual), _palavras_cargo(do_portal)
+    if not a:
+        return False
+    return len(a) == len(p) and all(x[:6] == y[:6] for x, y in zip(a, p))
+
+
+def cargo_vazio(cargo: str | None) -> bool:
+    """Sem função comissionada de fato: em branco, só pontuação ("-") ou o nome da
+    própria carreira, que não é cargo."""
+    n = normalizar(cargo or "")
+    return not re.search(r"[A-Z]", n) or n.startswith("ANALISTA TECNIC") or n in {
+        "NAO", "NENHUM", "NENHUMA", "NAO SE APLICA", "NAO TENHO", "SEM FUNCAO", "SEM CARGO",
+    }
+
+
 def pode_preencher(a: Analista) -> bool:
     """Há algo em branco que o Portal pode preencher, com a autorização aceita para isso."""
     v = versao_autorizacao(a)
     lotacao = v >= VERSAO_MINIMA_AUTORIZACAO and not (a.ministerio or "").strip()
-    ampliada = v >= VERSAO_AUTORIZACAO_AMPLIADA and (not (a.cargo_fce or "").strip() or a.turma is None)
+    ampliada = v >= VERSAO_AUTORIZACAO_AMPLIADA and (cargo_vazio(a.cargo_fce) or a.turma is None)
     return lotacao or ampliada
 
 
@@ -256,7 +279,13 @@ def preencher(db: Session, a: Analista, ex: Exercicio | None) -> bool:
             aplicar_lotacao(db, a, caminho)
             mudou = True
     if v >= VERSAO_AUTORIZACAO_AMPLIADA:
-        if ex.funcao and not (a.cargo_fce or "").strip():
+        # em branco: preenche; o mesmo cargo digitado sem o código ("Coordenador-geral"):
+        # troca pela versão do Portal ("Coordenador(a)-Geral · FCE 1.13"). Só com a API,
+        # porque a cópia local é mensal e pode trazer um nível de FCE já superado.
+        mesmo_cargo = bool(ex.funcao) and ex.fonte == "api" and (
+            a.cargo_fce != ex.funcao[:100] and cargo_equivale(a.cargo_fce, ex.funcao)
+        )
+        if ex.funcao and (cargo_vazio(a.cargo_fce) or mesmo_cargo):
             a.cargo_fce = ex.funcao[:100]
             a.cargo_origem = "portal"
             mudou = True
